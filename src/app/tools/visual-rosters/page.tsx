@@ -165,6 +165,33 @@ const tdStyle: React.CSSProperties = {
   borderBottom: "1px solid var(--glass-border)",
 };
 
+// Dark map styles for a sleek look
+const DARK_MAP_STYLES = [
+  { elementType: "geometry", stylers: [{ color: "#0d1117" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0d1117" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
+  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#21262d" }] },
+  { featureType: "administrative.land_parcel", elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
+  { featureType: "administrative.province", elementType: "geometry.stroke", stylers: [{ color: "#21262d" }] },
+  { featureType: "landscape.man_made", elementType: "geometry.stroke", stylers: [{ color: "#21262d" }] },
+  { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#0d1117" }] },
+  { featureType: "landscape.natural.terrain", elementType: "geometry", stylers: [{ color: "#161b22" }] },
+  { featureType: "poi", elementType: "geometry", stylers: [{ color: "#161b22" }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
+  { featureType: "poi.park", elementType: "geometry.fill", stylers: [{ color: "#0d1117" }] },
+  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#3d4f5f" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#161b22" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#21262d" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#21262d" }] },
+  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#30363d" }] },
+  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#8b949e" }] },
+  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#161b22" }] },
+  { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#010409" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#3d4f5f" }] },
+];
+
 // Map Component
 function PlayerMap({
   rosters,
@@ -178,6 +205,7 @@ function PlayerMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const hasInitializedRef = useRef(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
@@ -208,7 +236,7 @@ function PlayerMap({
     };
   }, []);
 
-  // Initialize map and markers
+  // Initialize map and markers (only when rosters change, NOT when highlightedPlayer changes)
   useEffect(() => {
     if (!mapLoaded || !mapRef.current || rosters.length === 0) return;
 
@@ -238,13 +266,7 @@ function PlayerMap({
         mapId: "roster-map",
         center: bounds.getCenter(),
         zoom: 4,
-        styles: [
-          { elementType: "geometry", stylers: [{ color: "#1a1a2e" }] },
-          { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a2e" }] },
-          { elementType: "labels.text.fill", stylers: [{ color: "#8892b0" }] },
-          { featureType: "water", elementType: "geometry", stylers: [{ color: "#0f0f1a" }] },
-          { featureType: "road", elementType: "geometry", stylers: [{ color: "#2d2d44" }] },
-        ],
+        styles: DARK_MAP_STYLES,
         disableDefaultUI: false,
         zoomControl: true,
         mapTypeControl: false,
@@ -262,13 +284,12 @@ function PlayerMap({
       if (!player.coordinates) return;
 
       const markerContent = document.createElement("div");
-      const isHighlighted = highlightedPlayer === player.name;
       markerContent.innerHTML = `
         <div style="
-          width: ${isHighlighted ? "20px" : "14px"};
-          height: ${isHighlighted ? "20px" : "14px"};
+          width: 14px;
+          height: 14px;
           background-color: ${roster.primaryColor};
-          border: 2px solid ${isHighlighted ? "#fff" : roster.secondaryColor};
+          border: 2px solid ${roster.secondaryColor};
           border-radius: 50%;
           box-shadow: 0 2px 6px rgba(0,0,0,0.4);
           transition: all 0.2s;
@@ -306,11 +327,14 @@ function PlayerMap({
       markersRef.current.push(marker);
     });
 
-    // Fit bounds with padding
-    mapInstanceRef.current.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
-  }, [mapLoaded, rosters, highlightedPlayer, onPlayerHover]);
+    // Only fit bounds on initial load or when rosters change
+    if (!hasInitializedRef.current || rosters.length > 0) {
+      mapInstanceRef.current.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+      hasInitializedRef.current = true;
+    }
+  }, [mapLoaded, rosters, onPlayerHover]); // Removed highlightedPlayer from dependencies
 
-  // Update marker styles when highlighted player changes
+  // Update marker styles when highlighted player changes (without re-fitting bounds)
   useEffect(() => {
     if (!mapLoaded) return;
 
@@ -381,8 +405,8 @@ function PlayerMap({
         ref={mapRef}
         style={{
           width: "100%",
-          height: "500px",
-          backgroundColor: "#1a1a2e",
+          height: "650px",
+          backgroundColor: "#0d1117",
         }}
       >
         {!mapLoaded && (
@@ -815,7 +839,7 @@ export default function VisualRostersPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              style={{ marginTop: "24px" }}
+              style={{ marginTop: "24px", marginBottom: "150px" }}
             >
               <PlayerMap
                 rosters={activeRosters}
