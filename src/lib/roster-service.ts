@@ -350,11 +350,40 @@ function getLeagueConfig(league: League) {
   return LEAGUES.find((l) => l.id === league);
 }
 
-function getCurrentSeason(): number {
+// Different leagues use different year conventions in their URLs
+function getCurrentSeasonYear(league: League): number {
   const now = new Date();
-  const month = now.getMonth();
+  const month = now.getMonth(); // 0-11
   const year = now.getFullYear();
-  return month >= 7 ? year + 1 : year;
+
+  switch (league) {
+    case "nba":
+    case "ncaa-basketball":
+      // Basketball uses the ending year (2024-25 season = 2025)
+      return month >= 7 ? year + 1 : year;
+
+    case "nfl":
+    case "ncaa-football":
+      // Football uses the starting year (2024-25 season = 2024)
+      // NFL season starts in September (month 8)
+      return month >= 8 ? year : year - 1;
+
+    case "mlb":
+      // Baseball uses calendar year, season runs April-October
+      return year;
+
+    case "nhl":
+      // Hockey uses starting year like football (season starts October)
+      return month >= 9 ? year : year - 1;
+
+    case "soccer":
+    case "euroleague":
+      // These don't typically use year in URL
+      return year;
+
+    default:
+      return month >= 7 ? year + 1 : year;
+  }
 }
 
 function getSportsRefUrl(league: League, teamSlug: string, year: number): string {
@@ -999,11 +1028,40 @@ async function fetchSportsRefPage(url: string): Promise<string> {
   return await response.text();
 }
 
+// Get roster table patterns for different leagues
+function getRosterTablePatterns(league: League): RegExp[] {
+  switch (league) {
+    case "nfl":
+      return [
+        /<table[^>]*id="roster"[^>]*>[\s\S]*?<\/table>/i,
+        /<table[^>]*id="starters"[^>]*>[\s\S]*?<\/table>/i,
+        /<table[^>]*id="team_roster"[^>]*>[\s\S]*?<\/table>/i,
+        /<table[^>]*class="[^"]*sortable[^"]*stats_table[^"]*"[^>]*>[\s\S]*?<\/table>/i,
+      ];
+    case "mlb":
+      return [
+        /<table[^>]*id="roster"[^>]*>[\s\S]*?<\/table>/i,
+        /<table[^>]*id="team_batting"[^>]*>[\s\S]*?<\/table>/i,
+        /<table[^>]*id="appearances"[^>]*>[\s\S]*?<\/table>/i,
+      ];
+    case "nhl":
+      return [
+        /<table[^>]*id="roster"[^>]*>[\s\S]*?<\/table>/i,
+        /<table[^>]*id="skaters"[^>]*>[\s\S]*?<\/table>/i,
+      ];
+    default:
+      return [
+        /<table[^>]*id="roster"[^>]*>[\s\S]*?<\/table>/i,
+        /<table[^>]*class="[^"]*roster[^"]*"[^>]*>[\s\S]*?<\/table>/i,
+      ];
+  }
+}
+
 export async function fetchTeamRoster(
   league: League,
   teamQuery: string
 ): Promise<TeamRoster & { fromCache?: boolean }> {
-  const currentSeason = getCurrentSeason();
+  const currentSeason = getCurrentSeasonYear(league);
   const teamSlug = getTeamSlug(league, teamQuery);
 
   // Generate cache key for this roster
@@ -1022,6 +1080,7 @@ export async function fetchTeamRoster(
   console.log(`Cache MISS for ${teamQuery} - fetching fresh data`);
 
   const url = getSportsRefUrl(league, teamSlug, currentSeason);
+  console.log(`Fetching roster from: ${url}`);
 
   // Fetch the actual HTML from sports-reference.com
   let htmlContent: string;
@@ -1029,15 +1088,26 @@ export async function fetchTeamRoster(
     htmlContent = await fetchSportsRefPage(url);
   } catch (fetchError) {
     console.error("Failed to fetch sports-reference page:", fetchError);
-    throw new Error(`Could not find team "${teamQuery}" on sports-reference.com. Try using the official team name (e.g., "duke" not "Duke Blue Devils").`);
+    throw new Error(`Could not find team "${teamQuery}" on sports-reference.com. URL: ${url}. Try using the official team name.`);
   }
 
-  // Extract roster table from the HTML
-  const rosterTableMatch = htmlContent.match(/<table[^>]*id="roster"[^>]*>[\s\S]*?<\/table>/i) ||
-                           htmlContent.match(/<table[^>]*class="[^"]*roster[^"]*"[^>]*>[\s\S]*?<\/table>/i);
+  // Extract roster table from the HTML using league-specific patterns
+  const tablePatterns = getRosterTablePatterns(league);
+  let rosterTableMatch: RegExpMatchArray | null = null;
+
+  for (const pattern of tablePatterns) {
+    rosterTableMatch = htmlContent.match(pattern);
+    if (rosterTableMatch) {
+      console.log(`Found roster table with pattern: ${pattern.source.substring(0, 50)}...`);
+      break;
+    }
+  }
 
   if (!rosterTableMatch) {
-    throw new Error("Could not find roster table on the page. The team page may have a different structure.");
+    // Log available table IDs for debugging
+    const tableIds = htmlContent.match(/id="[^"]+"/g)?.slice(0, 20) || [];
+    console.error(`No roster table found. Available IDs: ${tableIds.join(", ")}`);
+    throw new Error(`Could not find roster table on the page for ${league}. The team page may have a different structure.`);
   }
 
   const tableHtml = rosterTableMatch[0];
