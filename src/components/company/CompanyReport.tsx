@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -9,8 +10,8 @@ import {
   MessageSquareQuote,
   DollarSign,
   Scale,
-  ExternalLink,
   Layers,
+  ChevronDown,
 } from "lucide-react";
 import { CompanyAnalysis } from "@/types/company";
 
@@ -199,18 +200,83 @@ function Section({
   // Always expanded - no collapse functionality
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <div className="flex w-full items-center justify-between p-5 text-left border-b border-glass-border">
-        <div className="flex items-center gap-3">
-          <Icon className="h-5 w-5 text-accent" />
-          <span className="font-medium text-foreground">{title}</span>
+      <div
+        style={{
+          display: "flex",
+          width: "100%",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "20px 24px",
+          textAlign: "left",
+          borderBottom: "1px solid var(--glass-border)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <Icon style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+          <span style={{ fontWeight: 500, color: "var(--foreground)" }}>{title}</span>
           {count !== undefined && (
-            <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs text-accent">
+            <span
+              style={{
+                borderRadius: "9999px",
+                backgroundColor: "rgba(var(--accent-rgb), 0.2)",
+                padding: "2px 8px",
+                fontSize: "12px",
+                color: "var(--accent)",
+              }}
+            >
               {count}
             </span>
           )}
         </div>
       </div>
-      <div className="p-5">{children}</div>
+      <div style={{ padding: "24px" }}>{children}</div>
+    </div>
+  );
+}
+
+// Expandable grid component for subsidiaries and affiliates
+function ExpandableGrid<T>({
+  items,
+  renderItem,
+  initialCount = 10,
+}: {
+  items: T[];
+  renderItem: (item: T, index: number) => React.ReactNode;
+  initialCount?: number;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const displayedItems = showAll ? items : items.slice(0, initialCount);
+  const hasMore = items.length > initialCount;
+
+  return (
+    <div>
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {displayedItems.map((item, i) => renderItem(item, i))}
+      </div>
+      {hasMore && !showAll && (
+        <button
+          onClick={() => setShowAll(true)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            width: "100%",
+            marginTop: "20px",
+            padding: "12px 20px",
+            borderRadius: "8px",
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
+            border: "1px solid var(--glass-border)",
+            color: "var(--foreground-muted)",
+            fontSize: "14px",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+        >
+          <ChevronDown style={{ width: "16px", height: "16px" }} />
+          Show {items.length - initialCount} more
+        </button>
+      )}
     </div>
   );
 }
@@ -224,37 +290,48 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
       style={{ display: "flex", flexDirection: "column", gap: "24px", paddingBottom: "80px" }}
     >
       {/* Header */}
-      <div className="glass rounded-2xl p-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-3">
-              <h2 className="text-2xl font-bold text-foreground">{report.companyName}</h2>
-              {report.ticker && (
-                <span className="rounded bg-accent/20 px-2 py-0.5 text-sm font-mono text-accent">
-                  {report.ticker}
-                </span>
+      <div className="glass rounded-2xl" style={{ padding: "32px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", justifyContent: "space-between" }}>
+            <div style={{ flex: 1, minWidth: "280px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                <h2 style={{ fontSize: "24px", fontWeight: 700, color: "var(--foreground)" }}>{report.companyName}</h2>
+                {report.ticker && (
+                  <span
+                    style={{
+                      borderRadius: "4px",
+                      backgroundColor: "rgba(var(--accent-rgb), 0.2)",
+                      padding: "4px 8px",
+                      fontSize: "14px",
+                      fontFamily: "monospace",
+                      color: "var(--accent)",
+                    }}
+                  >
+                    {report.ticker}
+                  </span>
+                )}
+              </div>
+              <p style={{ color: "var(--foreground-muted)", marginBottom: "16px" }}>{report.industry}</p>
+              <p style={{ fontSize: "14px", color: "var(--foreground-muted)", lineHeight: 1.7 }}>{report.description}</p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "12px" }}>
+              <PoliticalLeaningBadge leaning={report.overallLeaning} />
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px" }}>
+                <span style={{ color: "var(--foreground-muted)" }}>Confidence:</span>
+                <span style={{ fontWeight: 500, color: "var(--accent)" }}>{report.confidenceScore}%</span>
+              </div>
+              {cached && (
+                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>Cached result</span>
               )}
             </div>
-            <p className="text-foreground-muted mb-4">{report.industry}</p>
-            <p className="text-sm text-foreground-muted leading-relaxed">{report.description}</p>
-          </div>
-          <div className="flex flex-col items-end gap-3">
-            <PoliticalLeaningBadge leaning={report.overallLeaning} />
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-foreground-muted">Confidence:</span>
-              <span className="font-medium text-accent">{report.confidenceScore}%</span>
-            </div>
-            {cached && (
-              <span className="text-xs text-foreground-muted">Cached result</span>
-            )}
           </div>
         </div>
       </div>
 
       {/* Political Compass */}
       {(report.economicScore !== undefined && report.governmentScore !== undefined) && (
-        <div className="glass rounded-2xl p-8">
-          <h3 className="text-lg font-semibold text-foreground mb-6 text-center">Political Compass</h3>
+        <div className="glass rounded-2xl" style={{ padding: "32px" }}>
+          <h3 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)", marginBottom: "24px", textAlign: "center" }}>Political Compass</h3>
           <div style={{ padding: "40px 24px" }}>
             <PoliticalCompass
               economicScore={report.economicScore}
@@ -262,16 +339,16 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
               companyName={report.companyName}
             />
           </div>
-          <div className="flex justify-center gap-12 mt-6 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-foreground-muted">Economic:</span>
-              <span className="font-medium text-foreground">
+          <div style={{ display: "flex", justifyContent: "center", gap: "48px", marginTop: "24px", fontSize: "14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ color: "var(--foreground-muted)" }}>Economic:</span>
+              <span style={{ fontWeight: 500, color: "var(--foreground)" }}>
                 {report.economicScore > 0 ? '+' : ''}{report.economicScore}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-foreground-muted">Government:</span>
-              <span className="font-medium text-foreground">
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ color: "var(--foreground-muted)" }}>Government:</span>
+              <span style={{ fontWeight: 500, color: "var(--foreground)" }}>
                 {report.governmentScore > 0 ? '+' : ''}{report.governmentScore}
               </span>
             </div>
@@ -281,14 +358,14 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
 
       {/* Positions */}
       <Section title="Political Positions" icon={Scale} count={report.positions.length}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {report.positions.map((position, i) => (
-            <div key={i} className="border-l-2 border-accent/30 pl-4 py-1">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-medium text-foreground">{position.topic}</span>
-                <span className="text-sm text-accent">• {position.stance}</span>
+            <div key={i} style={{ borderLeft: "2px solid rgba(var(--accent-rgb), 0.3)", paddingLeft: "16px", paddingTop: "4px", paddingBottom: "4px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <span style={{ fontWeight: 500, color: "var(--foreground)" }}>{position.topic}</span>
+                <span style={{ fontSize: "14px", color: "var(--accent)" }}>• {position.stance}</span>
               </div>
-              <p className="text-sm text-foreground-muted leading-relaxed">{position.description}</p>
+              <p style={{ fontSize: "14px", color: "var(--foreground-muted)", lineHeight: 1.7 }}>{position.description}</p>
             </div>
           ))}
         </div>
@@ -297,55 +374,82 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
       {/* Subsidiaries */}
       {report.subsidiaries && report.subsidiaries.length > 0 && (
         <Section title="Subsidiaries & Owned Companies" icon={Layers} count={report.subsidiaries.length}>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {report.subsidiaries.map((subsidiary, i) => (
-              <div key={i} className="rounded-lg bg-white/5 p-4">
-                <div className="font-medium text-foreground mb-1">{subsidiary.name}</div>
-                <div className="text-xs text-accent mb-2">{subsidiary.industry}</div>
-                <p className="text-sm text-foreground-muted leading-relaxed">{subsidiary.description}</p>
+          <ExpandableGrid
+            items={report.subsidiaries}
+            initialCount={10}
+            renderItem={(subsidiary, i) => (
+              <div
+                key={i}
+                style={{
+                  borderRadius: "12px",
+                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                  padding: "20px",
+                }}
+              >
+                <div style={{ fontWeight: 500, color: "var(--foreground)", marginBottom: "6px" }}>{subsidiary.name}</div>
+                <div style={{ fontSize: "12px", color: "var(--accent)", marginBottom: "10px" }}>{subsidiary.industry}</div>
+                <p style={{ fontSize: "14px", color: "var(--foreground-muted)", lineHeight: 1.7 }}>{subsidiary.description}</p>
                 {subsidiary.acquisitionYear && (
-                  <div className="text-xs text-foreground-muted mt-2">Acquired: {subsidiary.acquisitionYear}</div>
+                  <div style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "12px" }}>Acquired: {subsidiary.acquisitionYear}</div>
                 )}
               </div>
-            ))}
-          </div>
+            )}
+          />
         </Section>
       )}
 
       {/* Affiliates */}
       <Section title="Partners, Affiliates & Associates" icon={Users} count={report.affiliates.length}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {report.affiliates.map((affiliate, i) => (
-            <div key={i} className="rounded-lg bg-white/5 p-4">
-              <div className="font-medium text-foreground mb-1">{affiliate.name}</div>
-              <div className="text-xs text-accent mb-2">{affiliate.relationship}</div>
-              <p className="text-sm text-foreground-muted leading-relaxed">{affiliate.description}</p>
+        <ExpandableGrid
+          items={report.affiliates}
+          initialCount={10}
+          renderItem={(affiliate, i) => (
+            <div
+              key={i}
+              style={{
+                borderRadius: "12px",
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                padding: "20px",
+              }}
+            >
+              <div style={{ fontWeight: 500, color: "var(--foreground)", marginBottom: "6px" }}>{affiliate.name}</div>
+              <div style={{ fontSize: "12px", color: "var(--accent)", marginBottom: "10px" }}>{affiliate.relationship}</div>
+              <p style={{ fontSize: "14px", color: "var(--foreground-muted)", lineHeight: 1.7 }}>{affiliate.description}</p>
             </div>
-          ))}
-        </div>
+          )}
+        />
       </Section>
 
       {/* News */}
       <Section title="Recent News" icon={Newspaper} count={report.newsItems.length}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {report.newsItems.map((item, i) => (
-            <div key={i} className="border-b border-glass-border pb-4 last:border-0 last:pb-0">
-              <div className="flex items-start justify-between gap-3">
-                <h4 className="font-medium text-foreground">{item.headline}</h4>
+            <div key={i} style={{ borderBottom: i < report.newsItems.length - 1 ? "1px solid var(--glass-border)" : "none", paddingBottom: i < report.newsItems.length - 1 ? "20px" : "0" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                <h4 style={{ fontWeight: 500, color: "var(--foreground)" }}>{item.headline}</h4>
                 <span
-                  className={`shrink-0 rounded px-2 py-0.5 text-xs ${
-                    item.sentiment === "positive"
-                      ? "bg-green-500/20 text-green-400"
+                  style={{
+                    flexShrink: 0,
+                    borderRadius: "4px",
+                    padding: "4px 8px",
+                    fontSize: "12px",
+                    backgroundColor: item.sentiment === "positive"
+                      ? "rgba(34, 197, 94, 0.2)"
                       : item.sentiment === "negative"
-                        ? "bg-red-500/20 text-red-400"
-                        : "bg-gray-500/20 text-gray-400"
-                  }`}
+                        ? "rgba(239, 68, 68, 0.2)"
+                        : "rgba(107, 114, 128, 0.2)",
+                    color: item.sentiment === "positive"
+                      ? "#22c55e"
+                      : item.sentiment === "negative"
+                        ? "#ef4444"
+                        : "#9ca3af",
+                  }}
                 >
                   {item.sentiment}
                 </span>
               </div>
-              <p className="mt-2 text-sm text-foreground-muted leading-relaxed">{item.summary}</p>
-              <div className="mt-3 flex items-center gap-2 text-xs text-foreground-muted">
+              <p style={{ marginTop: "10px", fontSize: "14px", color: "var(--foreground-muted)", lineHeight: 1.7 }}>{item.summary}</p>
+              <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "var(--foreground-muted)" }}>
                 <span>{item.source}</span>
                 <span>•</span>
                 <span>{item.date}</span>
@@ -357,29 +461,45 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
 
       {/* Donations */}
       <Section title="Political Donations" icon={DollarSign} count={report.donations.length}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {report.donations.map((donation, i) => (
             <div
               key={i}
-              className="flex items-center justify-between rounded-lg bg-white/5 p-4"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderRadius: "12px",
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                padding: "20px",
+              }}
             >
               <div>
-                <span className="font-medium text-foreground">{donation.recipient}</span>
+                <span style={{ fontWeight: 500, color: "var(--foreground)" }}>{donation.recipient}</span>
                 <span
-                  className={`ml-2 rounded px-2 py-0.5 text-xs ${
-                    donation.party === "Democrat"
-                      ? "bg-blue-500/20 text-blue-400"
+                  style={{
+                    marginLeft: "10px",
+                    borderRadius: "4px",
+                    padding: "4px 8px",
+                    fontSize: "12px",
+                    backgroundColor: donation.party === "Democrat"
+                      ? "rgba(59, 130, 246, 0.2)"
                       : donation.party === "Republican"
-                        ? "bg-red-500/20 text-red-400"
-                        : "bg-gray-500/20 text-gray-400"
-                  }`}
+                        ? "rgba(239, 68, 68, 0.2)"
+                        : "rgba(107, 114, 128, 0.2)",
+                    color: donation.party === "Democrat"
+                      ? "#3b82f6"
+                      : donation.party === "Republican"
+                        ? "#ef4444"
+                        : "#9ca3af",
+                  }}
                 >
                   {donation.party}
                 </span>
               </div>
-              <div className="text-right">
-                <div className="font-medium text-accent">{donation.amount}</div>
-                <div className="text-xs text-foreground-muted mt-1">{donation.date}</div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontWeight: 500, color: "var(--accent)" }}>{donation.amount}</div>
+                <div style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "4px" }}>{donation.date}</div>
               </div>
             </div>
           ))}
@@ -392,15 +512,15 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
         icon={MessageSquareQuote}
         count={report.publicStatements.length}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {report.publicStatements.map((statement, i) => (
-            <div key={i} className="border-l-2 border-accent/30 pl-4 py-1">
-              <blockquote className="text-foreground italic leading-relaxed">"{statement.statement}"</blockquote>
-              <div className="mt-3 text-sm">
-                <span className="font-medium text-foreground">{statement.speaker}</span>
-                <span className="text-foreground-muted"> • {statement.role}</span>
+            <div key={i} style={{ borderLeft: "2px solid rgba(var(--accent-rgb), 0.3)", paddingLeft: "16px", paddingTop: "4px", paddingBottom: "4px" }}>
+              <blockquote style={{ color: "var(--foreground)", fontStyle: "italic", lineHeight: 1.7 }}>"{statement.statement}"</blockquote>
+              <div style={{ marginTop: "12px", fontSize: "14px" }}>
+                <span style={{ fontWeight: 500, color: "var(--foreground)" }}>{statement.speaker}</span>
+                <span style={{ color: "var(--foreground-muted)" }}> • {statement.role}</span>
               </div>
-              <div className="mt-2 flex items-center gap-2 text-xs text-foreground-muted">
+              <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "var(--foreground-muted)" }}>
                 <span>{statement.topic}</span>
                 <span>•</span>
                 <span>{statement.date}</span>
@@ -416,20 +536,24 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
         icon={TrendingUp}
         count={report.revenueAllocation.length}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {report.revenueAllocation.map((item, i) => (
             <div key={i}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-foreground">{item.category}</span>
-                <span className="text-sm text-accent">{item.percentage}%</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>{item.category}</span>
+                <span style={{ fontSize: "14px", color: "var(--accent)" }}>{item.percentage}%</span>
               </div>
-              <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+              <div style={{ height: "8px", borderRadius: "9999px", backgroundColor: "rgba(255, 255, 255, 0.1)", overflow: "hidden" }}>
                 <div
-                  className="h-full rounded-full bg-accent"
-                  style={{ width: `${item.percentage}%` }}
+                  style={{
+                    height: "100%",
+                    borderRadius: "9999px",
+                    backgroundColor: "var(--accent)",
+                    width: `${item.percentage}%`,
+                  }}
                 />
               </div>
-              <p className="mt-2 text-xs text-foreground-muted leading-relaxed">{item.description}</p>
+              <p style={{ marginTop: "10px", fontSize: "12px", color: "var(--foreground-muted)", lineHeight: 1.7 }}>{item.description}</p>
             </div>
           ))}
         </div>
@@ -441,16 +565,27 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
         icon={Building2}
         count={report.lobbyingActivities.length}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {report.lobbyingActivities.map((activity, i) => (
-            <div key={i} className="flex items-start justify-between gap-4 rounded-lg bg-white/5 p-4">
-              <div className="flex-1">
-                <div className="font-medium text-foreground mb-2">{activity.issue}</div>
-                <p className="text-sm text-foreground-muted leading-relaxed">{activity.description}</p>
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: "16px",
+                borderRadius: "12px",
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                padding: "20px",
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 500, color: "var(--foreground)", marginBottom: "10px" }}>{activity.issue}</div>
+                <p style={{ fontSize: "14px", color: "var(--foreground-muted)", lineHeight: 1.7 }}>{activity.description}</p>
               </div>
-              <div className="text-right shrink-0">
-                <div className="font-medium text-accent">{activity.amount}</div>
-                <div className="text-xs text-foreground-muted mt-1">{activity.year}</div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontWeight: 500, color: "var(--accent)" }}>{activity.amount}</div>
+                <div style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "4px" }}>{activity.year}</div>
               </div>
             </div>
           ))}
