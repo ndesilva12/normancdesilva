@@ -19,7 +19,7 @@ function LiveDateTime() {
   }, []);
 
   if (!dateTime) {
-    return <div className="h-20" />;
+    return <div style={{ height: "80px" }} />;
   }
 
   const formattedDate = dateTime.toLocaleDateString("en-US", {
@@ -36,11 +36,25 @@ function LiveDateTime() {
   });
 
   return (
-    <div className="text-center">
-      <h1 className="mb-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+    <div style={{ textAlign: "center" }}>
+      <h1
+        style={{
+          fontSize: "clamp(28px, 5vw, 48px)",
+          fontWeight: 700,
+          color: "var(--foreground)",
+          marginBottom: "12px",
+          letterSpacing: "-0.02em",
+        }}
+      >
         {formattedDate}
       </h1>
-      <p className="text-2xl font-light text-accent sm:text-3xl">
+      <p
+        style={{
+          fontSize: "clamp(24px, 4vw, 36px)",
+          fontWeight: 300,
+          color: "var(--accent)",
+        }}
+      >
         {formattedTime}
       </p>
     </div>
@@ -59,22 +73,68 @@ function WebSearch() {
   };
 
   return (
-    <form onSubmit={handleSearch} className="w-full max-w-2xl" style={{ margin: "0 auto" }}>
-      <div className="glass flex items-center gap-4 rounded-2xl p-4 pl-6">
-        <Search className="h-6 w-6 shrink-0 text-foreground-muted" />
+    <form
+      onSubmit={handleSearch}
+      style={{
+        width: "100%",
+        maxWidth: "700px",
+        margin: "0 auto",
+      }}
+    >
+      <div
+        className="glass"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          borderRadius: "16px",
+          padding: "16px",
+          paddingLeft: "24px",
+        }}
+      >
+        <Search
+          style={{
+            width: "24px",
+            height: "24px",
+            flexShrink: 0,
+            color: "var(--foreground-muted)",
+          }}
+        />
         <input
           type="text"
           placeholder="Search the web..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent py-3 text-lg text-foreground placeholder:text-foreground-muted focus:outline-none"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            fontSize: "18px",
+            color: "var(--foreground)",
+            padding: "12px 0",
+          }}
         />
         <button
           type="submit"
-          className="flex shrink-0 items-center gap-2 rounded-xl bg-accent px-6 py-4 text-base font-medium text-background transition-colors hover:bg-accent-light"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            flexShrink: 0,
+            borderRadius: "12px",
+            backgroundColor: "var(--accent)",
+            padding: "16px 24px",
+            fontSize: "16px",
+            fontWeight: 500,
+            color: "var(--background)",
+            border: "none",
+            cursor: "pointer",
+          }}
         >
           <span>Search</span>
-          <ExternalLink className="h-5 w-5" />
+          <ExternalLink style={{ width: "20px", height: "20px" }} />
         </button>
       </div>
     </form>
@@ -93,17 +153,28 @@ export default function Home() {
   }, [selectedCategory]);
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
 
-      <main className="flex-1 w-full">
-        <div className="w-full max-w-5xl px-6 pt-16 pb-12 sm:px-8 lg:px-12" style={{ margin: "0 auto" }}>
+      <main style={{ flex: 1, width: "100%" }}>
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "1200px",
+            margin: "0 auto",
+            padding: "80px 24px 60px 24px",
+          }}
+        >
           {/* Date/Time Section */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-12 flex w-full justify-center"
+            style={{
+              marginBottom: "60px",
+              display: "flex",
+              justifyContent: "center",
+            }}
           >
             <LiveDateTime />
           </motion.section>
@@ -113,7 +184,11 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="mb-16 flex w-full justify-center"
+            style={{
+              marginBottom: "80px",
+              display: "flex",
+              justifyContent: "center",
+            }}
           >
             <WebSearch />
           </motion.section>
@@ -123,22 +198,42 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="w-full"
+            style={{ width: "100%" }}
           >
             {/* Category Pills */}
-            <div className="mb-10 flex flex-wrap items-center justify-center gap-3">
+            <div
+              style={{
+                marginBottom: "48px",
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "12px",
+              }}
+            >
               {categories.map((category) => (
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`
-                    whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-medium transition-all duration-200
-                    ${
+                  className={selectedCategory !== category.id ? "glass" : ""}
+                  style={{
+                    whiteSpace: "nowrap",
+                    borderRadius: "9999px",
+                    padding: "12px 24px",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    backgroundColor:
                       selectedCategory === category.id
-                        ? "bg-accent text-background"
-                        : "glass text-foreground-muted hover:bg-glass-hover hover:text-foreground"
-                    }
-                  `}
+                        ? "var(--accent)"
+                        : "transparent",
+                    color:
+                      selectedCategory === category.id
+                        ? "var(--background)"
+                        : "var(--foreground-muted)",
+                  }}
                 >
                   {category.label}
                 </button>
@@ -147,14 +242,20 @@ export default function Home() {
 
             {/* Tools Grid */}
             {filteredTools.length > 0 ? (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                  gap: "24px",
+                }}
+              >
                 {filteredTools.map((tool, index) => (
                   <ToolCard key={tool.id} tool={tool} index={index} />
                 ))}
               </div>
             ) : (
-              <div className="py-16 text-center">
-                <p className="text-foreground-muted">
+              <div style={{ padding: "64px 0", textAlign: "center" }}>
+                <p style={{ color: "var(--foreground-muted)" }}>
                   No tools found in this category.
                 </p>
               </div>
@@ -166,11 +267,20 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="mt-16 border-t border-glass-border py-8 text-center text-sm text-foreground-muted"
+            style={{
+              marginTop: "80px",
+              borderTop: "1px solid var(--glass-border)",
+              padding: "32px 0",
+              textAlign: "center",
+              fontSize: "14px",
+              color: "var(--foreground-muted)",
+            }}
           >
             <p>
               Built by{" "}
-              <span className="font-medium text-foreground">Norman C. de Silva</span>
+              <span style={{ fontWeight: 500, color: "var(--foreground)" }}>
+                Norman C. de Silva
+              </span>
             </p>
           </motion.footer>
         </div>

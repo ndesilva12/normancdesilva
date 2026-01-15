@@ -22,45 +22,80 @@ export function ToolCard({ tool, index }: ToolCardProps) {
     >
       <Link
         href={isDisabled ? "#" : tool.href}
-        className={`group relative block h-full ${isDisabled ? "cursor-not-allowed" : ""}`}
+        style={{
+          display: "block",
+          height: "100%",
+          cursor: isDisabled ? "not-allowed" : "pointer",
+        }}
         onClick={(e) => isDisabled && e.preventDefault()}
       >
         <div
-          className={`
-            glass h-full rounded-2xl p-6
-            transition-all duration-300 ease-out
-            ${isDisabled ? "opacity-50" : "hover:bg-glass-hover hover:border-accent/20"}
-          `}
+          className="glass"
+          style={{
+            height: "100%",
+            borderRadius: "16px",
+            padding: "24px",
+            opacity: isDisabled ? 0.5 : 1,
+            transition: "all 0.3s ease-out",
+          }}
         >
           {/* Header Row: Icon + Status */}
-          <div className="mb-5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div
+            style={{
+              marginBottom: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div
-                className={`
-                  flex h-12 w-12 items-center justify-center rounded-xl
-                  bg-white/5 transition-colors duration-300
-                  ${!isDisabled ? "group-hover:bg-accent/10" : ""}
-                `}
+                style={{
+                  display: "flex",
+                  width: "48px",
+                  height: "48px",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "12px",
+                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                }}
               >
                 <Icon
-                  className={`
-                    h-6 w-6 text-foreground-muted transition-colors duration-300
-                    ${!isDisabled ? "group-hover:text-accent" : ""}
-                  `}
+                  style={{
+                    width: "24px",
+                    height: "24px",
+                    color: "var(--foreground-muted)",
+                  }}
                 />
               </div>
               {tool.aiPowered && (
-                <Sparkles className="h-5 w-5 text-accent" />
+                <Sparkles
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    color: "var(--accent)",
+                  }}
+                />
               )}
             </div>
             {tool.status !== "available" && (
               <span
-                className={`
-                  rounded-full px-3 py-1.5 text-xs font-medium uppercase tracking-wider
-                  ${tool.status === "beta"
-                    ? "bg-accent/20 text-accent"
-                    : "bg-white/10 text-foreground-muted"}
-                `}
+                style={{
+                  borderRadius: "9999px",
+                  padding: "6px 12px",
+                  fontSize: "11px",
+                  fontWeight: 500,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  backgroundColor:
+                    tool.status === "beta"
+                      ? "rgba(6, 182, 212, 0.2)"
+                      : "rgba(255, 255, 255, 0.1)",
+                  color:
+                    tool.status === "beta"
+                      ? "var(--accent)"
+                      : "var(--foreground-muted)",
+                }}
               >
                 {tool.status === "beta" ? "Beta" : "Soon"}
               </span>
@@ -68,21 +103,48 @@ export function ToolCard({ tool, index }: ToolCardProps) {
           </div>
 
           {/* Content */}
-          <h3 className="mb-2 text-lg font-semibold text-foreground">
+          <h3
+            style={{
+              marginBottom: "8px",
+              fontSize: "18px",
+              fontWeight: 600,
+              color: "var(--foreground)",
+            }}
+          >
             {tool.name}
           </h3>
-          <p className="mb-5 text-sm leading-relaxed text-foreground-muted">
+          <p
+            style={{
+              marginBottom: "20px",
+              fontSize: "14px",
+              lineHeight: 1.6,
+              color: "var(--foreground-muted)",
+            }}
+          >
             {tool.description}
           </p>
 
           {/* Footer */}
-          <div className="flex items-center justify-between">
-            <span className={`text-sm font-medium ${categoryColors[tool.category]}`}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span
+              className={categoryColors[tool.category]}
+              style={{ fontSize: "14px", fontWeight: 500 }}
+            >
               {categoryLabels[tool.category]}
             </span>
             {!isDisabled && (
               <ArrowUpRight
-                className="h-5 w-5 text-foreground-muted opacity-0 transition-all duration-300 group-hover:text-accent group-hover:opacity-100"
+                style={{
+                  width: "20px",
+                  height: "20px",
+                  color: "var(--foreground-muted)",
+                }}
               />
             )}
           </div>

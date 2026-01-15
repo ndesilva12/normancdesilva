@@ -28,12 +28,37 @@ export function CompanySearchBar({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full">
-      <div className="glass flex items-center gap-4 rounded-2xl p-4 pl-6">
+    <form onSubmit={handleSubmit} style={{ width: "100%" }}>
+      <div
+        className="glass"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          borderRadius: "16px",
+          padding: "16px",
+          paddingLeft: "24px",
+        }}
+      >
         {isLoading ? (
-          <Loader2 className="h-6 w-6 shrink-0 animate-spin text-accent" />
+          <Loader2
+            style={{
+              width: "24px",
+              height: "24px",
+              flexShrink: 0,
+              color: "var(--accent)",
+              animation: "spin 1s linear infinite",
+            }}
+          />
         ) : (
-          <Search className="h-6 w-6 shrink-0 text-foreground-muted" />
+          <Search
+            style={{
+              width: "24px",
+              height: "24px",
+              flexShrink: 0,
+              color: "var(--foreground-muted)",
+            }}
+          />
         )}
         <input
           type="text"
@@ -41,21 +66,49 @@ export function CompanySearchBar({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           disabled={isLoading}
-          className="min-w-0 flex-1 bg-transparent py-3 text-lg text-foreground placeholder:text-foreground-muted focus:outline-none disabled:opacity-50"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            fontSize: "18px",
+            color: "var(--foreground)",
+            padding: "12px 0",
+            opacity: isLoading ? 0.5 : 1,
+          }}
         />
         {query && !isLoading && (
           <button
             type="button"
             onClick={handleClear}
-            className="shrink-0 p-2 text-foreground-muted hover:text-foreground transition-colors"
+            style={{
+              flexShrink: 0,
+              padding: "8px",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--foreground-muted)",
+            }}
           >
-            <X className="h-6 w-6" />
+            <X style={{ width: "24px", height: "24px" }} />
           </button>
         )}
         <button
           type="submit"
           disabled={!query.trim() || isLoading}
-          className="shrink-0 rounded-xl bg-accent px-6 py-4 text-base font-medium text-background transition-colors hover:bg-accent-light disabled:cursor-not-allowed disabled:opacity-50"
+          style={{
+            flexShrink: 0,
+            borderRadius: "12px",
+            backgroundColor: "var(--accent)",
+            padding: "16px 28px",
+            fontSize: "16px",
+            fontWeight: 500,
+            color: "var(--background)",
+            border: "none",
+            cursor: !query.trim() || isLoading ? "not-allowed" : "pointer",
+            opacity: !query.trim() || isLoading ? 0.5 : 1,
+          }}
         >
           {isLoading ? "Analyzing..." : "Analyze"}
         </button>
