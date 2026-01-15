@@ -2,6 +2,7 @@ import {
   Building2,
   Users,
   Newspaper,
+  Music,
 } from "lucide-react";
 import { Tool } from "@/types/tool";
 
@@ -35,6 +36,15 @@ export const tools: Tool[] = [
     category: "news",
     status: "available",
   },
+  {
+    id: "spotify",
+    name: "Spotify",
+    description: "Control Spotify playback, browse playlists, and search for music right from your dashboard.",
+    icon: Music,
+    href: "/tools/spotify",
+    category: "media",
+    status: "available",
+  },
 ];
 
 export const categories = [
@@ -42,4 +52,5 @@ export const categories = [
   { id: "ai", label: "AI Tools" },
   { id: "sports", label: "Sports" },
   { id: "news", label: "News" },
+  { id: "media", label: "Media" },
 ] as const;

@@ -19,7 +19,8 @@ export type ToolCategory =
   | "creative"
   | "developer"
   | "sports"
-  | "news";
+  | "news"
+  | "media";
 
 export const categoryLabels: Record<ToolCategory, string> = {
   productivity: "Productivity",
@@ -30,6 +31,7 @@ export const categoryLabels: Record<ToolCategory, string> = {
   developer: "Developer",
   sports: "Sports",
   news: "News",
+  media: "Media",
 };
 
 // All categories use cyan color (single accent color)
@@ -42,4 +44,5 @@ export const categoryColors: Record<ToolCategory, string> = {
   developer: "text-accent",
   sports: "text-accent",
   news: "text-accent",
+  media: "text-accent",
 };
