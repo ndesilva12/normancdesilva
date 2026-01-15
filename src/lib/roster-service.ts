@@ -1,6 +1,7 @@
 import { League, TeamRoster, Player, LEAGUES } from "@/types/roster";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GROK_API_KEY = process.env.GROK_API_KEY;
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
 interface GeminiResponse {
@@ -11,6 +12,48 @@ interface GeminiResponse {
       }[];
     };
   }[];
+}
+
+interface GrokResponse {
+  choices: {
+    message: {
+      content: string;
+    };
+  }[];
+}
+
+// Call Grok API for player history parsing (better at structured extraction)
+async function callGrok(prompt: string): Promise<string> {
+  if (!GROK_API_KEY) {
+    throw new Error("Grok API key not configured");
+  }
+
+  const response = await fetch("https://api.x.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${GROK_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "grok-2-latest",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.1,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Grok API error:", response.status, errorText);
+    throw new Error(`Grok API error: ${response.status}`);
+  }
+
+  const data: GrokResponse = await response.json();
+  return data.choices[0]?.message?.content || "";
 }
 
 async function callGemini(prompt: string, useSearch: boolean = false): Promise<string> {
@@ -192,43 +235,62 @@ async function fetchPlayerHistory(
     // Extract the relevant stats tables
     const statsTables = extractStatsTables(html);
 
-    // Use Gemini to parse the player's history from the stats tables
-    const prompt = `Parse this player's career history from their sports-reference stats tables.
+    console.log(`Extracted ${statsTables.length} chars of stats tables for ${playerName}`);
 
-The tables below show year-by-year statistics. Each row typically has:
-- Season/Year (e.g., "2024-25", "2023-24", or just "2024")
-- School/Team name (the team they played for that season)
+    // Use Grok to parse the player's history (better at structured extraction)
+    const prompt = `Extract this player's year-by-year team history from these sports-reference.com stats tables.
 
-Extract the team name for each season from the table rows.
-
-Stats Tables:
+STATS TABLES HTML:
 ${statsTables}
 
-Current season is ${currentSeason}. Return data for the last 5 seasons.
+The "Per Game" or "Totals" table has rows where each row = one season. Look for:
+- A "Season" column with years like "2024-25" or "2023-24"
+- A "School" or "Team" column showing which team they played for
 
-Return ONLY valid JSON (no markdown, no explanation):
+Example table row structure:
+<tr><th>2024-25</th><td><a href="...">Iowa</a></td>...</tr>
+<tr><th>2023-24</th><td><a href="...">Drake</a></td>...</tr>
+
+This player transferred if different years show different schools.
+
+Current season: ${currentSeason}
+
+Return JSON only (no markdown):
 {
-  "previousSchools": ["Team1", "Team2"],
+  "previousSchools": ["OldestSchool", "NextSchool"],
   "seasons": [
-    {"year": "${currentSeason}", "team": "Team Name from table"},
-    {"year": "${currentSeason - 1}", "team": "Team Name or null"},
-    {"year": "${currentSeason - 2}", "team": "Team Name or null"},
-    {"year": "${currentSeason - 3}", "team": "Team Name or null"},
-    {"year": "${currentSeason - 4}", "team": "Team Name or null"}
+    {"year": "${currentSeason}", "team": "TEAM_FROM_TABLE"},
+    {"year": "${currentSeason - 1}", "team": "TEAM_OR_NULL"},
+    {"year": "${currentSeason - 2}", "team": "TEAM_OR_NULL"},
+    {"year": "${currentSeason - 3}", "team": "TEAM_OR_NULL"},
+    {"year": "${currentSeason - 4}", "team": "TEAM_OR_NULL"}
   ]
 }
 
-IMPORTANT:
-- previousSchools = teams BEFORE their current team (oldest first). Empty array if they've only played for one team.
-- Look at each table row - the "School" or "Team" column shows where they played that year
-- If a player transferred, they'll have different team names in different years
-- Use null for years before they started playing (e.g., high school years)`;
+Rules:
+- previousSchools: List schools BEFORE current school (empty [] if no transfers)
+- seasons: Use actual team name from table for each year, null if not in table
+- Parse the HTML table rows to find the school/team for each season year`;
 
-    const response = await callGemini(prompt, false);
+    // Try Grok first, fall back to Gemini
+    let response: string;
+    try {
+      if (GROK_API_KEY) {
+        response = await callGrok(prompt);
+      } else {
+        response = await callGemini(prompt, false);
+      }
+    } catch {
+      // Fall back to Gemini if Grok fails
+      response = await callGemini(prompt, false);
+    }
+
     const jsonMatch = response.match(/\{[\s\S]*\}/);
 
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log(`Parsed history for ${playerName}:`, JSON.stringify(parsed));
+      return parsed;
     }
   } catch (error) {
     console.error(`Failed to fetch history for ${playerName}:`, error);
