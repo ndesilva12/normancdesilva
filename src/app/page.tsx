@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import { Search, ExternalLink } from "lucide-react";
 import { Header } from "@/components/Header";
 import { ToolCard } from "@/components/ToolCard";
 import { tools, categories } from "@/lib/tools";
@@ -47,20 +47,55 @@ function LiveDateTime() {
   );
 }
 
+function WebSearch() {
+  const [query, setQuery] = useState("");
+
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault();
+    if (query.trim()) {
+      const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query.trim())}`;
+      window.open(searchUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSearch} className="mx-auto w-full max-w-2xl">
+      <div className="relative flex items-center">
+        <Search className="absolute left-5 h-6 w-6 text-foreground-muted" />
+        <input
+          type="text"
+          placeholder="Search the web..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="glass w-full rounded-2xl py-4 pl-14 pr-32 text-lg text-foreground placeholder:text-foreground-muted focus:border-accent/30 focus:bg-glass-hover focus:outline-none"
+        />
+        <button
+          type="submit"
+          className="absolute right-3 flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-accent-light"
+        >
+          Search
+          <ExternalLink className="h-4 w-4" />
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export default function Home() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [toolFilter, setToolFilter] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const filteredTools = useMemo(() => {
     return tools.filter((tool) => {
       const matchesSearch =
-        tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tool.description.toLowerCase().includes(searchQuery.toLowerCase());
+        toolFilter === "" ||
+        tool.name.toLowerCase().includes(toolFilter.toLowerCase()) ||
+        tool.description.toLowerCase().includes(toolFilter.toLowerCase());
       const matchesCategory =
         selectedCategory === "all" || tool.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [toolFilter, selectedCategory]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -73,34 +108,29 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-12 flex justify-center"
+            className="mb-8 flex justify-center"
           >
             <LiveDateTime />
           </motion.section>
 
-          {/* Search and Filter */}
+          {/* Main Web Search */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="mb-10"
+            className="mb-16"
           >
-            {/* Search Bar */}
-            <div className="mx-auto mb-8 max-w-lg">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-foreground-muted" />
-                <input
-                  type="text"
-                  placeholder="Search tools..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="glass w-full rounded-xl py-3 pl-12 pr-4 text-foreground placeholder:text-foreground-muted focus:border-accent/30 focus:bg-glass-hover focus:outline-none"
-                />
-              </div>
-            </div>
+            <WebSearch />
+          </motion.section>
 
+          {/* Tools Section */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
             {/* Category Pills */}
-            <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="mb-8 flex flex-wrap items-center justify-center gap-3">
               {categories.map((category) => (
                 <button
                   key={category.id}
@@ -118,10 +148,8 @@ export default function Home() {
                 </button>
               ))}
             </div>
-          </motion.section>
 
-          {/* Tools Grid */}
-          <section>
+            {/* Tools Grid */}
             {filteredTools.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredTools.map((tool, index) => (
@@ -129,17 +157,13 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="py-20 text-center"
-              >
+              <div className="py-20 text-center">
                 <p className="text-foreground-muted">
-                  No tools found matching your search.
+                  No tools found in this category.
                 </p>
-              </motion.div>
+              </div>
             )}
-          </section>
+          </motion.section>
 
           {/* Footer */}
           <motion.footer
