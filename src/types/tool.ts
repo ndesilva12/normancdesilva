@@ -28,11 +28,12 @@ export const categoryLabels: Record<ToolCategory, string> = {
   developer: "Developer",
 };
 
+// All categories use cyan color (single accent color)
 export const categoryColors: Record<ToolCategory, string> = {
-  productivity: "text-emerald-400",
-  ai: "text-cyan-400",
-  utilities: "text-amber-400",
-  finance: "text-violet-400",
-  creative: "text-pink-400",
-  developer: "text-blue-400",
+  productivity: "text-accent",
+  ai: "text-accent",
+  utilities: "text-accent",
+  finance: "text-accent",
+  creative: "text-accent",
+  developer: "text-accent",
 };

@@ -1,6 +1,6 @@
 {
-  "name": "Eve Tools | Norman C. de Silva",
-  "short_name": "Eve Tools",
+  "name": "The Dashboard",
+  "short_name": "Dashboard",
   "description": "A curated collection of AI-powered tools for everyday productivity",
   "start_url": "/",
   "display": "standalone",
@@ -22,6 +22,5 @@
     }
   ],
   "categories": ["productivity", "utilities"],
-  "screenshots": [],
   "prefer_related_applications": false
 }

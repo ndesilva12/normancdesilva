@@ -1,23 +1,24 @@
 import type { Metadata, Viewport } from "next";
+import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Eve Tools | Norman C. de Silva",
+  title: "The Dashboard",
   description: "A curated collection of AI-powered tools for everyday productivity",
-  keywords: ["tools", "AI", "productivity", "utilities", "Norman de Silva"],
+  keywords: ["tools", "AI", "productivity", "utilities", "dashboard"],
   authors: [{ name: "Norman C. de Silva" }],
   creator: "Norman C. de Silva",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Eve Tools",
+    title: "The Dashboard",
   },
   openGraph: {
     type: "website",
-    title: "Eve Tools | Norman C. de Silva",
+    title: "The Dashboard",
     description: "A curated collection of AI-powered tools for everyday productivity",
-    siteName: "Eve Tools",
+    siteName: "The Dashboard",
   },
 };
 
@@ -36,11 +37,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <div className="min-h-screen bg-background bg-grid">
-          <div className="bg-radial min-h-screen">
-            {children}
+        <Providers>
+          <div className="min-h-screen bg-background bg-grid">
+            <div className="bg-radial min-h-screen">
+              {children}
+            </div>
           </div>
-        </div>
+        </Providers>
       </body>
     </html>
   );
