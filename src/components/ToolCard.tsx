@@ -27,39 +27,39 @@ export function ToolCard({ tool, index }: ToolCardProps) {
       >
         <div
           className={`
-            glass h-full rounded-xl p-5
+            glass h-full rounded-2xl p-6
             transition-all duration-300 ease-out
             ${isDisabled ? "opacity-50" : "hover:bg-glass-hover hover:border-accent/20"}
           `}
         >
           {/* Header Row: Icon + Status */}
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="mb-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
               <div
                 className={`
-                  flex h-10 w-10 items-center justify-center rounded-lg
+                  flex h-12 w-12 items-center justify-center rounded-xl
                   bg-white/5 transition-colors duration-300
                   ${!isDisabled ? "group-hover:bg-accent/10" : ""}
                 `}
               >
                 <Icon
                   className={`
-                    h-5 w-5 text-foreground-muted transition-colors duration-300
+                    h-6 w-6 text-foreground-muted transition-colors duration-300
                     ${!isDisabled ? "group-hover:text-accent" : ""}
                   `}
                 />
               </div>
               {tool.aiPowered && (
-                <Sparkles className="h-4 w-4 text-accent" />
+                <Sparkles className="h-5 w-5 text-accent" />
               )}
             </div>
             {tool.status !== "available" && (
               <span
                 className={`
-                  rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider
+                  rounded-full px-3 py-1.5 text-xs font-medium uppercase tracking-wider
                   ${tool.status === "beta"
                     ? "bg-accent/20 text-accent"
-                    : "bg-white/5 text-foreground-muted"}
+                    : "bg-white/10 text-foreground-muted"}
                 `}
               >
                 {tool.status === "beta" ? "Beta" : "Soon"}
@@ -68,21 +68,21 @@ export function ToolCard({ tool, index }: ToolCardProps) {
           </div>
 
           {/* Content */}
-          <h3 className="mb-1.5 text-base font-semibold text-foreground">
+          <h3 className="mb-2 text-lg font-semibold text-foreground">
             {tool.name}
           </h3>
-          <p className="mb-3 text-sm leading-relaxed text-foreground-muted">
+          <p className="mb-5 text-sm leading-relaxed text-foreground-muted">
             {tool.description}
           </p>
 
           {/* Footer */}
           <div className="flex items-center justify-between">
-            <span className={`text-xs font-medium ${categoryColors[tool.category]}`}>
+            <span className={`text-sm font-medium ${categoryColors[tool.category]}`}>
               {categoryLabels[tool.category]}
             </span>
             {!isDisabled && (
               <ArrowUpRight
-                className="h-4 w-4 text-foreground-muted opacity-0 transition-all duration-300 group-hover:text-accent group-hover:opacity-100"
+                className="h-5 w-5 text-foreground-muted opacity-0 transition-all duration-300 group-hover:text-accent group-hover:opacity-100"
               />
             )}
           </div>

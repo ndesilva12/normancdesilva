@@ -29,11 +29,11 @@ export function CompanySearchBar({
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="glass flex items-center gap-3 rounded-2xl p-3 pl-5">
+      <div className="glass flex items-center gap-4 rounded-2xl p-4 pl-6">
         {isLoading ? (
-          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-accent" />
+          <Loader2 className="h-6 w-6 shrink-0 animate-spin text-accent" />
         ) : (
-          <Search className="h-5 w-5 shrink-0 text-foreground-muted" />
+          <Search className="h-6 w-6 shrink-0 text-foreground-muted" />
         )}
         <input
           type="text"
@@ -41,21 +41,21 @@ export function CompanySearchBar({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           disabled={isLoading}
-          className="min-w-0 flex-1 bg-transparent py-2 text-base text-foreground placeholder:text-foreground-muted focus:outline-none disabled:opacity-50"
+          className="min-w-0 flex-1 bg-transparent py-3 text-lg text-foreground placeholder:text-foreground-muted focus:outline-none disabled:opacity-50"
         />
         {query && !isLoading && (
           <button
             type="button"
             onClick={handleClear}
-            className="shrink-0 p-1 text-foreground-muted hover:text-foreground transition-colors"
+            className="shrink-0 p-2 text-foreground-muted hover:text-foreground transition-colors"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
           </button>
         )}
         <button
           type="submit"
           disabled={!query.trim() || isLoading}
-          className="shrink-0 rounded-xl bg-accent px-5 py-3 text-sm font-medium text-background transition-colors hover:bg-accent-light disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 rounded-xl bg-accent px-6 py-4 text-base font-medium text-background transition-colors hover:bg-accent-light disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? "Analyzing..." : "Analyze"}
         </button>

@@ -48,7 +48,7 @@ export default function CompanyPoliticsPage() {
 
       <main className="flex-1 w-full">
         <div
-          className="w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8"
+          className="w-full max-w-4xl px-6 pt-12 pb-16 sm:px-8 lg:px-12"
           style={{ margin: "0 auto" }}
         >
           {/* Back Link */}
@@ -56,14 +56,14 @@ export default function CompanyPoliticsPage() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
-            className="mb-6"
+            className="mb-12"
           >
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-foreground-muted hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-foreground-muted hover:text-foreground hover:bg-white/5 transition-all"
             >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
+              <ArrowLeft className="h-5 w-5" />
+              <span className="text-base">Back to Dashboard</span>
             </Link>
           </motion.div>
 
@@ -72,13 +72,13 @@ export default function CompanyPoliticsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mb-8 text-center"
+            className="mb-12 text-center"
           >
-            <h1 className="text-3xl font-bold text-foreground mb-2">
+            <h1 className="text-4xl font-bold text-foreground mb-4">
               Company Politics Search
             </h1>
-            <p className="text-foreground-muted flex items-center justify-center gap-2">
-              <Sparkles className="h-4 w-4 text-accent" />
+            <p className="text-lg text-foreground-muted flex items-center justify-center gap-3">
+              <Sparkles className="h-5 w-5 text-accent" />
               AI-powered analysis of corporate political leanings
             </p>
           </motion.div>
@@ -88,7 +88,7 @@ export default function CompanyPoliticsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-8"
+            className="mb-12"
           >
             <CompanySearchBar
               onSearch={handleSearch}
@@ -102,11 +102,11 @@ export default function CompanyPoliticsPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-8 glass rounded-xl p-4 border-red-500/30"
+              className="mb-12 glass rounded-2xl p-6 border-red-500/30"
             >
-              <div className="flex items-center gap-3 text-red-400">
-                <AlertCircle className="h-5 w-5" />
-                <span>{error}</span>
+              <div className="flex items-center gap-4 text-red-400">
+                <AlertCircle className="h-6 w-6 shrink-0" />
+                <span className="text-base">{error}</span>
               </div>
             </motion.div>
           )}
@@ -116,11 +116,11 @@ export default function CompanyPoliticsPage() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center py-12"
+              className="text-center py-16"
             >
-              <div className="inline-flex items-center gap-3 glass rounded-xl px-6 py-4">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-                <span className="text-foreground-muted">
+              <div className="inline-flex items-center gap-4 glass rounded-2xl px-8 py-6">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                <span className="text-base text-foreground-muted">
                   Analyzing company politics... This may take a moment.
                 </span>
               </div>
@@ -138,17 +138,17 @@ export default function CompanyPoliticsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="text-center py-12"
+              className="text-center py-16"
             >
-              <div className="glass rounded-xl p-8 max-w-md" style={{ margin: "0 auto" }}>
-                <h3 className="text-lg font-medium text-foreground mb-2">
+              <div className="glass rounded-2xl p-10 max-w-lg" style={{ margin: "0 auto" }}>
+                <h3 className="text-xl font-medium text-foreground mb-4">
                   How it works
                 </h3>
-                <p className="text-sm text-foreground-muted mb-4">
+                <p className="text-base text-foreground-muted mb-6 leading-relaxed">
                   Enter any company name to get a detailed analysis of their political
                   positions, donations, lobbying activities, and public statements.
                 </p>
-                <div className="text-xs text-foreground-muted">
+                <div className="text-sm text-foreground-muted">
                   Results are cached for 7 days to minimize API costs.
                 </div>
               </div>
