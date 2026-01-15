@@ -33,8 +33,8 @@ export function ToolCard({ tool, index }: ToolCardProps) {
           className="glass"
           style={{
             height: "100%",
-            borderRadius: "16px",
-            padding: "24px",
+            borderRadius: "12px",
+            padding: "16px",
             opacity: isDisabled ? 0.5 : 1,
             transition: "all 0.3s ease-out",
           }}
@@ -42,28 +42,28 @@ export function ToolCard({ tool, index }: ToolCardProps) {
           {/* Header Row: Icon + Status */}
           <div
             style={{
-              marginBottom: "20px",
+              marginBottom: "12px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <div
                 style={{
                   display: "flex",
-                  width: "48px",
-                  height: "48px",
+                  width: "40px",
+                  height: "40px",
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: "12px",
+                  borderRadius: "10px",
                   backgroundColor: "rgba(255, 255, 255, 0.05)",
                 }}
               >
                 <Icon
                   style={{
-                    width: "24px",
-                    height: "24px",
+                    width: "20px",
+                    height: "20px",
                     color: "var(--foreground-muted)",
                   }}
                 />
@@ -71,8 +71,8 @@ export function ToolCard({ tool, index }: ToolCardProps) {
               {tool.aiPowered && (
                 <Sparkles
                   style={{
-                    width: "20px",
-                    height: "20px",
+                    width: "16px",
+                    height: "16px",
                     color: "var(--accent)",
                   }}
                 />
@@ -82,8 +82,8 @@ export function ToolCard({ tool, index }: ToolCardProps) {
               <span
                 style={{
                   borderRadius: "9999px",
-                  padding: "6px 12px",
-                  fontSize: "11px",
+                  padding: "4px 10px",
+                  fontSize: "10px",
                   fontWeight: 500,
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
@@ -105,8 +105,8 @@ export function ToolCard({ tool, index }: ToolCardProps) {
           {/* Content */}
           <h3
             style={{
-              marginBottom: "8px",
-              fontSize: "18px",
+              marginBottom: "6px",
+              fontSize: "15px",
               fontWeight: 600,
               color: "var(--foreground)",
             }}
@@ -115,9 +115,9 @@ export function ToolCard({ tool, index }: ToolCardProps) {
           </h3>
           <p
             style={{
-              marginBottom: "20px",
-              fontSize: "14px",
-              lineHeight: 1.6,
+              marginBottom: "12px",
+              fontSize: "13px",
+              lineHeight: 1.5,
               color: "var(--foreground-muted)",
             }}
           >
@@ -134,15 +134,15 @@ export function ToolCard({ tool, index }: ToolCardProps) {
           >
             <span
               className={categoryColors[tool.category]}
-              style={{ fontSize: "14px", fontWeight: 500 }}
+              style={{ fontSize: "12px", fontWeight: 500 }}
             >
               {categoryLabels[tool.category]}
             </span>
             {!isDisabled && (
               <ArrowUpRight
                 style={{
-                  width: "20px",
-                  height: "20px",
+                  width: "16px",
+                  height: "16px",
                   color: "var(--foreground-muted)",
                 }}
               />

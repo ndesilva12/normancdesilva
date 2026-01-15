@@ -34,17 +34,17 @@ export function CompanySearchBar({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "16px",
-          borderRadius: "16px",
-          padding: "16px",
-          paddingLeft: "24px",
+          gap: "12px",
+          borderRadius: "12px",
+          padding: "10px",
+          paddingLeft: "16px",
         }}
       >
         {isLoading ? (
           <Loader2
             style={{
-              width: "24px",
-              height: "24px",
+              width: "20px",
+              height: "20px",
               flexShrink: 0,
               color: "var(--accent)",
               animation: "spin 1s linear infinite",
@@ -53,8 +53,8 @@ export function CompanySearchBar({
         ) : (
           <Search
             style={{
-              width: "24px",
-              height: "24px",
+              width: "20px",
+              height: "20px",
               flexShrink: 0,
               color: "var(--foreground-muted)",
             }}
@@ -72,9 +72,9 @@ export function CompanySearchBar({
             background: "transparent",
             border: "none",
             outline: "none",
-            fontSize: "18px",
+            fontSize: "15px",
             color: "var(--foreground)",
-            padding: "12px 0",
+            padding: "8px 0",
             opacity: isLoading ? 0.5 : 1,
           }}
         />
@@ -84,14 +84,14 @@ export function CompanySearchBar({
             onClick={handleClear}
             style={{
               flexShrink: 0,
-              padding: "8px",
+              padding: "6px",
               background: "transparent",
               border: "none",
               cursor: "pointer",
               color: "var(--foreground-muted)",
             }}
           >
-            <X style={{ width: "24px", height: "24px" }} />
+            <X style={{ width: "18px", height: "18px" }} />
           </button>
         )}
         <button
@@ -99,10 +99,10 @@ export function CompanySearchBar({
           disabled={!query.trim() || isLoading}
           style={{
             flexShrink: 0,
-            borderRadius: "12px",
+            borderRadius: "8px",
             backgroundColor: "var(--accent)",
-            padding: "16px 28px",
-            fontSize: "16px",
+            padding: "10px 20px",
+            fontSize: "14px",
             fontWeight: 500,
             color: "var(--background)",
             border: "none",

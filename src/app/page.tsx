@@ -86,16 +86,16 @@ function WebSearch() {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "16px",
-          borderRadius: "16px",
-          padding: "16px",
-          paddingLeft: "24px",
+          gap: "12px",
+          borderRadius: "12px",
+          padding: "10px",
+          paddingLeft: "16px",
         }}
       >
         <Search
           style={{
-            width: "24px",
-            height: "24px",
+            width: "20px",
+            height: "20px",
             flexShrink: 0,
             color: "var(--foreground-muted)",
           }}
@@ -111,9 +111,9 @@ function WebSearch() {
             background: "transparent",
             border: "none",
             outline: "none",
-            fontSize: "18px",
+            fontSize: "15px",
             color: "var(--foreground)",
-            padding: "12px 0",
+            padding: "8px 0",
           }}
         />
         <button
@@ -121,12 +121,12 @@ function WebSearch() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "8px",
+            gap: "6px",
             flexShrink: 0,
-            borderRadius: "12px",
+            borderRadius: "8px",
             backgroundColor: "var(--accent)",
-            padding: "16px 24px",
-            fontSize: "16px",
+            padding: "10px 18px",
+            fontSize: "14px",
             fontWeight: 500,
             color: "var(--background)",
             border: "none",
@@ -134,7 +134,7 @@ function WebSearch() {
           }}
         >
           <span>Search</span>
-          <ExternalLink style={{ width: "20px", height: "20px" }} />
+          <ExternalLink style={{ width: "16px", height: "16px" }} />
         </button>
       </div>
     </form>
@@ -162,7 +162,7 @@ export default function Home() {
             width: "100%",
             maxWidth: "1200px",
             margin: "0 auto",
-            padding: "80px 24px 60px 24px",
+            padding: "40px 24px 40px 24px",
           }}
         >
           {/* Date/Time Section */}
@@ -171,7 +171,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             style={{
-              marginBottom: "60px",
+              marginBottom: "28px",
               display: "flex",
               justifyContent: "center",
             }}
@@ -185,7 +185,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
             style={{
-              marginBottom: "80px",
+              marginBottom: "40px",
               display: "flex",
               justifyContent: "center",
             }}
@@ -203,12 +203,12 @@ export default function Home() {
             {/* Category Pills */}
             <div
               style={{
-                marginBottom: "48px",
+                marginBottom: "28px",
                 display: "flex",
                 flexWrap: "wrap",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: "12px",
+                gap: "10px",
               }}
             >
               {categories.map((category) => (
@@ -219,8 +219,8 @@ export default function Home() {
                   style={{
                     whiteSpace: "nowrap",
                     borderRadius: "9999px",
-                    padding: "12px 24px",
-                    fontSize: "14px",
+                    padding: "8px 18px",
+                    fontSize: "13px",
                     fontWeight: 500,
                     border: "none",
                     cursor: "pointer",
@@ -245,8 +245,8 @@ export default function Home() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-                  gap: "24px",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                  gap: "16px",
                 }}
               >
                 {filteredTools.map((tool, index) => (
@@ -268,9 +268,9 @@ export default function Home() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.3 }}
             style={{
-              marginTop: "80px",
+              marginTop: "48px",
               borderTop: "1px solid var(--glass-border)",
-              padding: "32px 0",
+              padding: "24px 0",
               textAlign: "center",
               fontSize: "14px",
               color: "var(--foreground-muted)",
