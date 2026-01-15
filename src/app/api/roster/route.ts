@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchTeamRoster } from "@/lib/roster-service";
+import { getCachedRoster, cacheRoster } from "@/lib/roster-cache";
 import { League, LEAGUES } from "@/types/roster";
 
 export async function GET(request: NextRequest) {
@@ -42,11 +43,26 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Check cache first
+    const cachedRoster = getCachedRoster(league, team);
+    if (cachedRoster) {
+      return NextResponse.json({
+        success: true,
+        data: cachedRoster,
+        cached: true,
+      });
+    }
+
+    // Fetch from API
     const roster = await fetchTeamRoster(league, team);
+
+    // Cache the result
+    cacheRoster(league, team, roster);
 
     return NextResponse.json({
       success: true,
       data: roster,
+      cached: false,
     });
   } catch (error) {
     console.error("Error fetching roster:", error);
@@ -62,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     if (errorMessage.includes("429")) {
       return NextResponse.json(
-        { error: "Rate limit exceeded", details: "Too many requests, please try again later" },
+        { error: "Rate limit exceeded", details: "Gemini API rate limit hit. Please wait 30-60 seconds and try again." },
         { status: 429 }
       );
     }
