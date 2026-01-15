@@ -2,13 +2,19 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Calendar } from "lucide-react";
+import Link from "next/link";
 import { Header } from "@/components/Header";
 import { ToolCard } from "@/components/ToolCard";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
-import { Reminders } from "@/components/Reminders";
+import { Actions } from "@/components/Actions";
 import { tools, categories } from "@/lib/tools";
 
-function LiveDateTime() {
+interface LiveDateTimeProps {
+  onOpenCalendar?: () => void;
+}
+
+function LiveDateTime({ onOpenCalendar }: LiveDateTimeProps) {
   const [dateTime, setDateTime] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -37,21 +43,42 @@ function LiveDateTime() {
   });
 
   return (
-    <div style={{ textAlign: "center" }}>
-      <h1
-        style={{
-          fontSize: "clamp(28px, 5vw, 48px)",
-          fontWeight: 700,
-          color: "var(--foreground)",
-          marginBottom: "12px",
-          letterSpacing: "-0.02em",
-        }}
-      >
-        {formattedDate}
-      </h1>
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+        <h1
+          style={{
+            fontSize: "clamp(24px, 4vw, 40px)",
+            fontWeight: 700,
+            color: "var(--foreground)",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          {formattedDate}
+        </h1>
+        <Link
+          href="/tools/calendar"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "36px",
+            height: "36px",
+            borderRadius: "8px",
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            border: "1px solid var(--glass-border)",
+            color: "var(--accent)",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            textDecoration: "none",
+          }}
+          title="Open Calendar"
+        >
+          <Calendar style={{ width: "18px", height: "18px" }} />
+        </Link>
+      </div>
       <p
         style={{
-          fontSize: "clamp(24px, 4vw, 36px)",
+          fontSize: "clamp(20px, 3vw, 32px)",
           fontWeight: 300,
           color: "var(--accent)",
         }}
@@ -65,6 +92,41 @@ function LiveDateTime() {
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+
+  // Check Google Calendar auth status
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const response = await fetch("/api/auth/google/status");
+        const data = await response.json();
+        setIsGoogleConnected(data.authenticated);
+      } catch {
+        setIsGoogleConnected(false);
+      }
+    }
+    checkAuth();
+
+    // Check for auth callback
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("auth_success")) {
+      setIsGoogleConnected(true);
+      // Clean up URL
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  const handleConnectGoogle = async () => {
+    try {
+      const response = await fetch("/api/auth/google");
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Failed to connect Google:", error);
+    }
+  };
 
   const filteredTools = useMemo(() => {
     return tools.filter((tool) => {
@@ -87,21 +149,25 @@ export default function Home() {
             padding: "40px 24px 100px 24px",
           }}
         >
-          {/* Date/Time & Reminders Section */}
+          {/* Date/Time & Actions Section - Side by Side */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             style={{
-              marginBottom: "28px",
+              marginBottom: "32px",
               display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "20px",
+              flexWrap: "wrap",
+              alignItems: "flex-start",
+              justifyContent: "center",
+              gap: "32px",
             }}
           >
             <LiveDateTime />
-            <Reminders />
+            <Actions
+              isGoogleConnected={isGoogleConnected}
+              onConnectGoogle={handleConnectGoogle}
+            />
           </motion.section>
 
           {/* Multi-Source Search */}
