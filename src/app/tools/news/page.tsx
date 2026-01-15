@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Newspaper, ExternalLink, Loader2, RefreshCw, Clock, Tag } from "lucide-react";
+import { ArrowLeft, Newspaper, ExternalLink, Loader2, RefreshCw, Clock, Tag, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 
@@ -16,49 +16,73 @@ interface NewsArticle {
   thumbnail?: string;
 }
 
-type NewsSource = "zerohedge" | "reason" | "mises";
+interface TrendingTopic {
+  topic: string;
+  description?: string;
+  searchUrl: string;
+}
 
-const NEWS_SOURCES: { id: NewsSource; name: string; url: string }[] = [
-  { id: "zerohedge", name: "ZeroHedge", url: "https://www.zerohedge.com" },
-  { id: "reason", name: "Reason", url: "https://reason.com" },
-  { id: "mises", name: "Mises Institute", url: "https://mises.org" },
+type NewsSource = "zerohedge" | "reason" | "mises" | "x-trending";
+
+const NEWS_SOURCES: { id: NewsSource; name: string; url: string; isRss: boolean }[] = [
+  { id: "zerohedge", name: "ZeroHedge", url: "https://www.zerohedge.com", isRss: true },
+  { id: "reason", name: "Reason", url: "https://reason.com", isRss: true },
+  { id: "mises", name: "Mises Institute", url: "https://mises.org", isRss: true },
+  { id: "x-trending", name: "X Trending", url: "https://x.com", isRss: false },
 ];
 
 export default function NewsPage() {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
+  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<NewsSource>("zerohedge");
 
-  const loadNews = useCallback(async (source: NewsSource) => {
+  const loadContent = useCallback(async (source: NewsSource) => {
     setIsLoading(true);
     setError(null);
+    setArticles([]);
+    setTrendingTopics([]);
 
     try {
-      const response = await fetch(`/api/news?source=${source}`);
-      const data = await response.json();
+      if (source === "x-trending") {
+        // Fetch X trending topics via xAI
+        const response = await fetch("/api/x-trending");
+        const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch news");
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch trending topics");
+        }
+
+        setTrendingTopics(data.topics || []);
+      } else {
+        // Fetch RSS news
+        const response = await fetch(`/api/news?source=${source}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch news");
+        }
+
+        setArticles(data.articles || []);
       }
-
-      setArticles(data.articles || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load news");
+      setError(err instanceof Error ? err.message : "Failed to load content");
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadNews(selectedSource);
-  }, [selectedSource, loadNews]);
+    loadContent(selectedSource);
+  }, [selectedSource, loadContent]);
 
   const handleSourceChange = (source: NewsSource) => {
     setSelectedSource(source);
   };
 
   const currentSource = NEWS_SOURCES.find((s) => s.id === selectedSource);
+  const isXTrending = selectedSource === "x-trending";
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
@@ -154,7 +178,7 @@ export default function NewsPage() {
               </div>
               <div style={{ display: "flex", gap: "12px" }}>
                 <button
-                  onClick={() => loadNews(selectedSource)}
+                  onClick={() => loadContent(selectedSource)}
                   disabled={isLoading}
                   style={{
                     display: "flex",
@@ -254,7 +278,7 @@ export default function NewsPage() {
                 {error}
               </p>
               <button
-                onClick={() => loadNews(selectedSource)}
+                onClick={() => loadContent(selectedSource)}
                 style={{
                   padding: "10px 20px",
                   borderRadius: "8px",
@@ -273,140 +297,244 @@ export default function NewsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              {/* Articles Grid */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {articles.map((article, index) => (
-                  <motion.a
-                    key={article.link}
-                    href={article.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03 }}
-                    className="glass"
-                    style={{
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                      display: "flex",
-                      textDecoration: "none",
-                      transition: "transform 0.2s, box-shadow 0.2s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateY(-2px)";
-                      e.currentTarget.style.boxShadow = "0 8px 30px rgba(0, 0, 0, 0.2)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "translateY(0)";
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
-                  >
-                    {/* Thumbnail */}
-                    {article.thumbnail && (
-                      <div
+              {/* X Trending Topics */}
+              {isXTrending ? (
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {trendingTopics.map((topic, index) => (
+                      <motion.a
+                        key={topic.topic}
+                        href={topic.searchUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.02 }}
+                        className="glass"
                         style={{
-                          width: "200px",
-                          minHeight: "140px",
-                          flexShrink: 0,
-                          backgroundImage: `url(${article.thumbnail})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
+                          borderRadius: "10px",
+                          padding: "16px 20px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "16px",
+                          textDecoration: "none",
+                          transition: "transform 0.2s, box-shadow 0.2s",
                         }}
-                      />
-                    )}
-
-                    {/* Content */}
-                    <div style={{ flex: 1, padding: "16px 20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                      {/* Title */}
-                      <h3
-                        style={{
-                          fontSize: "16px",
-                          fontWeight: 600,
-                          color: "var(--foreground)",
-                          lineHeight: 1.4,
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateX(4px)";
+                          e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateX(0)";
+                          e.currentTarget.style.boxShadow = "none";
                         }}
                       >
-                        {article.title}
-                      </h3>
-
-                      {/* Description */}
-                      <p
-                        style={{
-                          fontSize: "14px",
-                          color: "var(--foreground-muted)",
-                          lineHeight: 1.6,
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                          flex: 1,
-                        }}
-                      >
-                        {article.description}
-                      </p>
-
-                      {/* Meta */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-                        {/* Time */}
-                        {article.pubDate && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <Clock style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-                            <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                              {formatDate(article.pubDate)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Author */}
-                        {article.creator && (
-                          <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                            by {article.creator}
-                          </span>
-                        )}
-
-                        {/* Categories */}
-                        {article.categories && article.categories.length > 0 && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <Tag style={{ width: "12px", height: "12px", color: "var(--foreground-muted)" }} />
-                            <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                              {article.categories.slice(0, 2).join(", ")}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* External link icon */}
+                        <div
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "8px",
+                            backgroundColor: "rgba(29, 155, 240, 0.15)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <TrendingUp style={{ width: "18px", height: "18px", color: "#1d9bf0" }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h3
+                            style={{
+                              fontSize: "15px",
+                              fontWeight: 600,
+                              color: "var(--foreground)",
+                              marginBottom: topic.description ? "4px" : 0,
+                            }}
+                          >
+                            {topic.topic}
+                          </h3>
+                          {topic.description && (
+                            <p
+                              style={{
+                                fontSize: "13px",
+                                color: "var(--foreground-muted)",
+                                lineHeight: 1.4,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {topic.description}
+                            </p>
+                          )}
+                        </div>
                         <ExternalLink
                           style={{
-                            width: "14px",
-                            height: "14px",
-                            color: "var(--accent)",
-                            marginLeft: "auto",
+                            width: "16px",
+                            height: "16px",
+                            color: "#1d9bf0",
+                            flexShrink: 0,
                           }}
                         />
-                      </div>
-                    </div>
-                  </motion.a>
-                ))}
-              </div>
+                      </motion.a>
+                    ))}
+                  </div>
 
-              {articles.length === 0 && (
-                <div
-                  className="glass"
-                  style={{
-                    borderRadius: "12px",
-                    padding: "40px",
-                    textAlign: "center",
-                  }}
-                >
-                  <Newspaper style={{ width: "40px", height: "40px", color: "var(--foreground-muted)", margin: "0 auto 16px" }} />
-                  <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-                    No articles available
-                  </p>
-                </div>
+                  {trendingTopics.length === 0 && (
+                    <div
+                      className="glass"
+                      style={{
+                        borderRadius: "12px",
+                        padding: "40px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <TrendingUp style={{ width: "40px", height: "40px", color: "var(--foreground-muted)", margin: "0 auto 16px" }} />
+                      <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
+                        No trending topics available
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Articles Grid */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {articles.map((article, index) => (
+                      <motion.a
+                        key={article.link}
+                        href={article.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className="glass"
+                        style={{
+                          borderRadius: "12px",
+                          overflow: "hidden",
+                          display: "flex",
+                          textDecoration: "none",
+                          transition: "transform 0.2s, box-shadow 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                          e.currentTarget.style.boxShadow = "0 8px 30px rgba(0, 0, 0, 0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
+                      >
+                        {/* Thumbnail */}
+                        {article.thumbnail && (
+                          <div
+                            style={{
+                              width: "200px",
+                              minHeight: "140px",
+                              flexShrink: 0,
+                              backgroundImage: `url(${article.thumbnail})`,
+                              backgroundSize: "cover",
+                              backgroundPosition: "center",
+                            }}
+                          />
+                        )}
+
+                        {/* Content */}
+                        <div style={{ flex: 1, padding: "16px 20px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                          {/* Title */}
+                          <h3
+                            style={{
+                              fontSize: "16px",
+                              fontWeight: 600,
+                              color: "var(--foreground)",
+                              lineHeight: 1.4,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {article.title}
+                          </h3>
+
+                          {/* Description */}
+                          <p
+                            style={{
+                              fontSize: "14px",
+                              color: "var(--foreground-muted)",
+                              lineHeight: 1.6,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              flex: 1,
+                            }}
+                          >
+                            {article.description}
+                          </p>
+
+                          {/* Meta */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                            {/* Time */}
+                            {article.pubDate && (
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <Clock style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                                  {formatDate(article.pubDate)}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Author */}
+                            {article.creator && (
+                              <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                                by {article.creator}
+                              </span>
+                            )}
+
+                            {/* Categories */}
+                            {article.categories && article.categories.length > 0 && (
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <Tag style={{ width: "12px", height: "12px", color: "var(--foreground-muted)" }} />
+                                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                                  {article.categories.slice(0, 2).join(", ")}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* External link icon */}
+                            <ExternalLink
+                              style={{
+                                width: "14px",
+                                height: "14px",
+                                color: "var(--accent)",
+                                marginLeft: "auto",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </motion.a>
+                    ))}
+                  </div>
+
+                  {articles.length === 0 && (
+                    <div
+                      className="glass"
+                      style={{
+                        borderRadius: "12px",
+                        padding: "40px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <Newspaper style={{ width: "40px", height: "40px", color: "var(--foreground-muted)", margin: "0 auto 16px" }} />
+                      <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
+                        No articles available
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </motion.div>
           )}
