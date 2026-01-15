@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect, FormEvent } from "react";
-import { Search, ChevronDown, ExternalLink, X, Loader2, Check } from "lucide-react";
+import { useState, useEffect, FormEvent, useCallback } from "react";
+import { Search, ExternalLink, X, Loader2, TrendingUp } from "lucide-react";
 import {
   SearchSource,
   SEARCH_SOURCES,
   getSearchUrl,
   SearchResult,
 } from "@/lib/search-service";
+
+interface TrendingSearch {
+  title: string;
+  searchUrl: string;
+}
 
 interface MultiSourceSearchProps {
   onResultsChange?: (results: SearchResult[]) => void;
@@ -16,21 +21,30 @@ interface MultiSourceSearchProps {
 export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
   const [query, setQuery] = useState("");
   const [selectedSources, setSelectedSources] = useState<SearchSource[]>(["duck"]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [trends, setTrends] = useState<TrendingSearch[]>([]);
+  const [trendsLoading, setTrendsLoading] = useState(true);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
+  // Fetch Google Trends on mount
+  const fetchTrends = useCallback(async () => {
+    setTrendsLoading(true);
+    try {
+      const response = await fetch("/api/google-trends");
+      const data = await response.json();
+      if (data.trends && data.trends.length > 0) {
+        setTrends(data.trends.slice(0, 10));
       }
+    } catch (error) {
+      console.error("Error fetching trends:", error);
+    } finally {
+      setTrendsLoading(false);
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    fetchTrends();
+  }, [fetchTrends]);
 
   const toggleSource = (source: SearchSource) => {
     setSelectedSources((prev) => {
@@ -43,12 +57,8 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
     });
   };
 
-  const getSelectedSourcesLabel = () => {
-    if (selectedSources.length === 1) {
-      const source = SEARCH_SOURCES.find((s) => s.id === selectedSources[0]);
-      return source?.name || "Select";
-    }
-    return `${selectedSources.length} sources`;
+  const handleTrendClick = (trend: TrendingSearch) => {
+    setQuery(trend.title);
   };
 
   const handleSearch = async (e: FormEvent) => {
@@ -143,7 +153,71 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
 
   return (
     <div style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}>
+      {/* Google Trends Row - Above Search Bar */}
+      {trends.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "12px",
+            flexWrap: "wrap",
+            justifyContent: "center",
+          }}
+        >
+          <TrendingUp
+            style={{
+              width: "14px",
+              height: "14px",
+              color: "var(--foreground-muted)",
+              flexShrink: 0,
+            }}
+          />
+          {trends.map((trend, index) => (
+            <button
+              key={index}
+              onClick={() => handleTrendClick(trend)}
+              style={{
+                background: "none",
+                border: "none",
+                padding: "4px 0",
+                fontSize: "13px",
+                color: "var(--foreground-muted)",
+                cursor: "pointer",
+                transition: "color 0.15s",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground-muted)")}
+            >
+              {trend.title}
+              {index < trends.length - 1 && (
+                <span style={{ marginLeft: "8px", opacity: 0.3 }}>•</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {trendsLoading && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            marginBottom: "12px",
+            fontSize: "13px",
+            color: "var(--foreground-muted)",
+          }}
+        >
+          <Loader2 style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite" }} />
+          Loading trends...
+        </div>
+      )}
+
       <form onSubmit={handleSearch}>
+        {/* Search Bar */}
         <div
           className="glass"
           style={{
@@ -180,127 +254,6 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             }}
           />
 
-          {/* Source selector dropdown */}
-          <div ref={dropdownRef} style={{ position: "relative" }}>
-            <button
-              type="button"
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 12px",
-                borderRadius: "8px",
-                border: "1px solid var(--glass-border)",
-                background: "rgba(255, 255, 255, 0.05)",
-                color: "var(--foreground)",
-                fontSize: "13px",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              <span>{getSelectedSourcesLabel()}</span>
-              <ChevronDown
-                style={{
-                  width: "14px",
-                  height: "14px",
-                  transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
-                  transition: "transform 0.2s",
-                }}
-              />
-            </button>
-
-            {isDropdownOpen && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 8px)",
-                  right: 0,
-                  width: "280px",
-                  maxHeight: "400px",
-                  overflowY: "auto",
-                  backgroundColor: "var(--glass-background)",
-                  backdropFilter: "blur(20px)",
-                  border: "1px solid var(--glass-border)",
-                  borderRadius: "12px",
-                  padding: "8px",
-                  zIndex: 100,
-                  boxShadow: "0 10px 40px rgba(0, 0, 0, 0.3)",
-                }}
-              >
-                <div style={{ padding: "8px 12px", fontSize: "11px", fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  Web Search
-                </div>
-                {SEARCH_SOURCES.filter((s) => s.type === "web").map((source) => (
-                  <button
-                    key={source.id}
-                    type="button"
-                    onClick={() => toggleSource(source.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "none",
-                      background: selectedSources.includes(source.id)
-                        ? "rgba(var(--accent-rgb), 0.15)"
-                        : "transparent",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "background 0.15s",
-                    }}
-                  >
-                    <span style={{ fontSize: "18px", width: "24px", textAlign: "center" }}>{source.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>{source.name}</div>
-                      <div style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>{source.description}</div>
-                    </div>
-                    {selectedSources.includes(source.id) && (
-                      <Check style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
-                    )}
-                  </button>
-                ))}
-
-                <div style={{ padding: "12px 12px 8px", fontSize: "11px", fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.5px", borderTop: "1px solid var(--glass-border)", marginTop: "8px" }}>
-                  AI Assistants
-                </div>
-                {SEARCH_SOURCES.filter((s) => s.type === "ai").map((source) => (
-                  <button
-                    key={source.id}
-                    type="button"
-                    onClick={() => toggleSource(source.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "none",
-                      background: selectedSources.includes(source.id)
-                        ? "rgba(var(--accent-rgb), 0.15)"
-                        : "transparent",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "background 0.15s",
-                    }}
-                  >
-                    <span style={{ fontSize: "18px", width: "24px", textAlign: "center" }}>{source.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>{source.name}</div>
-                      <div style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>{source.description}</div>
-                    </div>
-                    {selectedSources.includes(source.id) && (
-                      <Check style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
           <button
             type="submit"
             disabled={isSearching || !query.trim()}
@@ -329,6 +282,49 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               </>
             )}
           </button>
+        </div>
+
+        {/* Source Selector Buttons - Below Search Bar */}
+        <div
+          style={{
+            marginTop: "16px",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+          }}
+        >
+          {SEARCH_SOURCES.map((source) => (
+            <button
+              key={source.id}
+              type="button"
+              onClick={() => toggleSource(source.id)}
+              className={!selectedSources.includes(source.id) ? "glass" : ""}
+              style={{
+                whiteSpace: "nowrap",
+                borderRadius: "9999px",
+                padding: "8px 18px",
+                fontSize: "13px",
+                fontWeight: 500,
+                border: "none",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                backgroundColor: selectedSources.includes(source.id)
+                  ? "var(--accent)"
+                  : "transparent",
+                color: selectedSources.includes(source.id)
+                  ? "var(--background)"
+                  : "var(--foreground-muted)",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <span style={{ fontSize: "14px" }}>{source.icon}</span>
+              {source.name}
+            </button>
+          ))}
         </div>
       </form>
 

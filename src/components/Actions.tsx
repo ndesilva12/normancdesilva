@@ -464,8 +464,8 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
             padding: "16px",
             zIndex: 9999,
             boxShadow: "0 10px 40px rgba(0, 0, 0, 0.7)",
-            backgroundColor: "#1a1a2e",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
+            backgroundColor: "#1c1c1c",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
           }}
         >
             {/* Google Calendar Connection */}

@@ -26,9 +26,9 @@ type NewsSource = "zerohedge" | "reason" | "mises" | "x-trending";
 
 const NEWS_SOURCES: { id: NewsSource; name: string; url: string; isRss: boolean }[] = [
   { id: "zerohedge", name: "ZeroHedge", url: "https://www.zerohedge.com", isRss: true },
+  { id: "x-trending", name: "X Trending", url: "https://x.com", isRss: false },
   { id: "reason", name: "Reason", url: "https://reason.com", isRss: true },
   { id: "mises", name: "Mises Institute", url: "https://mises.org", isRss: true },
-  { id: "x-trending", name: "X Trending", url: "https://x.com", isRss: false },
 ];
 
 export default function NewsPage() {

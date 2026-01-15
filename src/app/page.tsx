@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Calendar, ChevronDown, ExternalLink } from "lucide-react";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import { Header } from "@/components/Header";
 import { ToolCard } from "@/components/ToolCard";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { Actions, ACTIONS_STORAGE_KEY, type ActionItem } from "@/components/Actions";
-import { tools, categories } from "@/lib/tools";
+import { tools } from "@/lib/tools";
 
 // Collapsed Calendar Widget
 function CalendarWidget() {
@@ -282,7 +282,6 @@ function LiveDateTime({
 
 
 export default function Home() {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [hasSearchResults, setHasSearchResults] = useState(false);
 
@@ -319,14 +318,6 @@ export default function Home() {
       console.error("Failed to connect Google:", error);
     }
   };
-
-  const filteredTools = useMemo(() => {
-    return tools.filter((tool) => {
-      const matchesCategory =
-        selectedCategory === "all" || tool.category === selectedCategory;
-      return matchesCategory;
-    });
-  }, [selectedCategory]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
@@ -376,66 +367,18 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.2 }}
               style={{ width: "100%" }}
             >
-              {/* Category Pills */}
+              {/* Tools Grid */}
               <div
                 style={{
-                  marginBottom: "28px",
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "10px",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                  gap: "16px",
                 }}
               >
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={selectedCategory !== category.id ? "glass" : ""}
-                    style={{
-                      whiteSpace: "nowrap",
-                      borderRadius: "9999px",
-                      padding: "8px 18px",
-                      fontSize: "13px",
-                      fontWeight: 500,
-                      border: "none",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                      backgroundColor:
-                        selectedCategory === category.id
-                          ? "var(--accent)"
-                          : "transparent",
-                      color:
-                        selectedCategory === category.id
-                          ? "var(--background)"
-                          : "var(--foreground-muted)",
-                    }}
-                  >
-                    {category.label}
-                  </button>
+                {tools.map((tool, index) => (
+                  <ToolCard key={tool.id} tool={tool} index={index} />
                 ))}
               </div>
-
-              {/* Tools Grid */}
-              {filteredTools.length > 0 ? (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                    gap: "16px",
-                  }}
-                >
-                  {filteredTools.map((tool, index) => (
-                    <ToolCard key={tool.id} tool={tool} index={index} />
-                  ))}
-                </div>
-              ) : (
-                <div style={{ padding: "64px 0", textAlign: "center" }}>
-                  <p style={{ color: "var(--foreground-muted)" }}>
-                    No tools found in this category.
-                  </p>
-                </div>
-              )}
             </motion.section>
           )}
 
