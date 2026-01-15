@@ -131,6 +131,53 @@ function extractPlayerUrls(rosterHtml: string, league: League): Map<string, stri
   return playerUrls;
 }
 
+// Extract stats tables from player page HTML
+function extractStatsTables(html: string): string {
+  // Look for common table IDs used by sports-reference sites
+  const tablePatterns = [
+    // Per Game stats (most common for basketball)
+    /<table[^>]*id="players_per_game"[^>]*>[\s\S]*?<\/table>/i,
+    /<table[^>]*id="per_game"[^>]*>[\s\S]*?<\/table>/i,
+    // Totals table
+    /<table[^>]*id="players_totals"[^>]*>[\s\S]*?<\/table>/i,
+    /<table[^>]*id="totals"[^>]*>[\s\S]*?<\/table>/i,
+    // Generic stats tables
+    /<table[^>]*id="stats"[^>]*>[\s\S]*?<\/table>/i,
+    /<table[^>]*class="[^"]*stats_table[^"]*"[^>]*>[\s\S]*?<\/table>/i,
+    // Career/season tables
+    /<table[^>]*id="player_stats"[^>]*>[\s\S]*?<\/table>/i,
+  ];
+
+  const foundTables: string[] = [];
+
+  for (const pattern of tablePatterns) {
+    const match = html.match(pattern);
+    if (match) {
+      foundTables.push(match[0]);
+    }
+  }
+
+  // If we found specific tables, return them
+  if (foundTables.length > 0) {
+    return foundTables.join("\n\n");
+  }
+
+  // Fallback: try to find any table with year/season data
+  const genericTableMatch = html.match(/<table[^>]*>[\s\S]*?<\/table>/gi);
+  if (genericTableMatch) {
+    // Filter to tables that look like they have season data (contain year patterns like "2024" or "2023-24")
+    const seasonTables = genericTableMatch.filter(table =>
+      /20\d{2}(-\d{2})?/.test(table) && table.length < 50000
+    );
+    if (seasonTables.length > 0) {
+      return seasonTables.slice(0, 2).join("\n\n"); // Return first 2 matching tables
+    }
+  }
+
+  // Last resort: return a chunk of the page
+  return html.substring(0, 20000);
+}
+
 // Fetch and parse a single player's page for their history
 async function fetchPlayerHistory(
   playerName: string,
@@ -142,48 +189,40 @@ async function fetchPlayerHistory(
     console.log(`Fetching player page for ${playerName}: ${playerUrl}`);
     const html = await fetchSportsRefPage(playerUrl);
 
-    const leagueConfig = getLeagueConfig(league);
-    const sportType = league.includes("basketball") || league === "nba" || league === "euroleague"
-      ? "basketball"
-      : league.includes("football") || league === "nfl"
-        ? "football"
-        : league === "mlb"
-          ? "baseball"
-          : league === "nhl"
-            ? "hockey"
-            : "soccer";
+    // Extract the relevant stats tables
+    const statsTables = extractStatsTables(html);
 
-    // Use Gemini to parse the player's history from their page
-    const prompt = `Parse this player's ${sportType} career history from their stats page.
+    // Use Gemini to parse the player's history from the stats tables
+    const prompt = `Parse this player's career history from their sports-reference stats tables.
 
-Extract:
-1. All teams they played for (in order, oldest to newest)
-2. Which years/seasons they played at each team
+The tables below show year-by-year statistics. Each row typically has:
+- Season/Year (e.g., "2024-25", "2023-24", or just "2024")
+- School/Team name (the team they played for that season)
 
-Look for:
-- A stats table showing year-by-year or season-by-season data with team names
-- Any career stats tables
-- Transfer/trade information
+Extract the team name for each season from the table rows.
 
-The current season is ${currentSeason}. Return the last 5 seasons.
+Stats Tables:
+${statsTables}
 
-HTML content (relevant sections):
-${html.substring(0, 15000)}
+Current season is ${currentSeason}. Return data for the last 5 seasons.
 
-Return ONLY valid JSON (no markdown):
+Return ONLY valid JSON (no markdown, no explanation):
 {
   "previousSchools": ["Team1", "Team2"],
   "seasons": [
-    {"year": "${currentSeason}", "team": "Current Team"},
-    {"year": "${currentSeason - 1}", "team": "Team or null"},
-    {"year": "${currentSeason - 2}", "team": "Team or null"},
-    {"year": "${currentSeason - 3}", "team": "Team or null"},
-    {"year": "${currentSeason - 4}", "team": "Team or null"}
+    {"year": "${currentSeason}", "team": "Team Name from table"},
+    {"year": "${currentSeason - 1}", "team": "Team Name or null"},
+    {"year": "${currentSeason - 2}", "team": "Team Name or null"},
+    {"year": "${currentSeason - 3}", "team": "Team Name or null"},
+    {"year": "${currentSeason - 4}", "team": "Team Name or null"}
   ]
 }
 
-- previousSchools should list teams BEFORE the current one (empty array if no transfers)
-- Use null for years the player wasn't playing professionally`;
+IMPORTANT:
+- previousSchools = teams BEFORE their current team (oldest first). Empty array if they've only played for one team.
+- Look at each table row - the "School" or "Team" column shows where they played that year
+- If a player transferred, they'll have different team names in different years
+- Use null for years before they started playing (e.g., high school years)`;
 
     const response = await callGemini(prompt, false);
     const jsonMatch = response.match(/\{[\s\S]*\}/);
