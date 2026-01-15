@@ -27,7 +27,10 @@ export default function CompanyPoliticsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to analyze company");
+        const errorMsg = data.details
+          ? `${data.error}: ${data.details}`
+          : data.error || "Failed to analyze company";
+        throw new Error(errorMsg);
       }
 
       setReport(data.data);
