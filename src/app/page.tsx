@@ -59,21 +59,21 @@ function WebSearch() {
   };
 
   return (
-    <form onSubmit={handleSearch} className="w-full max-w-2xl" style={{ margin: "0 auto" }}>
-      <div className="relative flex items-center">
-        <Search className="absolute left-5 h-6 w-6 text-foreground-muted" />
+    <form onSubmit={handleSearch} className="w-full max-w-xl" style={{ margin: "0 auto" }}>
+      <div className="glass flex items-center gap-3 rounded-2xl p-2 pl-5">
+        <Search className="h-5 w-5 shrink-0 text-foreground-muted" />
         <input
           type="text"
           placeholder="Search the web..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="glass w-full rounded-2xl py-4 pl-14 pr-32 text-lg text-foreground placeholder:text-foreground-muted focus:border-accent/30 focus:bg-glass-hover focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent py-2 text-base text-foreground placeholder:text-foreground-muted focus:outline-none"
         />
         <button
           type="submit"
-          className="absolute right-3 flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-accent-light"
+          className="flex shrink-0 items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-medium text-background transition-colors hover:bg-accent-light"
         >
-          Search
+          <span>Search</span>
           <ExternalLink className="h-4 w-4" />
         </button>
       </div>
@@ -97,13 +97,13 @@ export default function Home() {
       <Header />
 
       <main className="flex-1 w-full">
-        <div className="w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8" style={{ margin: "0 auto" }}>
+        <div className="w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8" style={{ margin: "0 auto" }}>
           {/* Date/Time Section */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-8 flex w-full justify-center"
+            className="mb-6 flex w-full justify-center"
           >
             <LiveDateTime />
           </motion.section>
@@ -113,7 +113,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="mb-16 flex w-full justify-center"
+            className="mb-12 flex w-full justify-center"
           >
             <WebSearch />
           </motion.section>
@@ -126,13 +126,13 @@ export default function Home() {
             className="w-full"
           >
             {/* Category Pills */}
-            <div className="mb-8 flex flex-wrap items-center justify-center gap-3">
+            <div className="mb-6 flex flex-wrap items-center justify-center gap-2">
               {categories.map((category) => (
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
                   className={`
-                    whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-medium transition-all duration-200
+                    whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all duration-200
                     ${
                       selectedCategory === category.id
                         ? "bg-accent text-background"
@@ -147,13 +147,13 @@ export default function Home() {
 
             {/* Tools Grid */}
             {filteredTools.length > 0 ? (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredTools.map((tool, index) => (
                   <ToolCard key={tool.id} tool={tool} index={index} />
                 ))}
               </div>
             ) : (
-              <div className="py-20 text-center">
+              <div className="py-16 text-center">
                 <p className="text-foreground-muted">
                   No tools found in this category.
                 </p>
@@ -166,7 +166,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="mt-16 border-t border-glass-border py-8 text-center text-sm text-foreground-muted"
+            className="mt-12 border-t border-glass-border py-6 text-center text-sm text-foreground-muted"
           >
             <p>
               Built by{" "}

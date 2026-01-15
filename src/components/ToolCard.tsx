@@ -18,7 +18,7 @@ export function ToolCard({ tool, index }: ToolCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
+      transition={{ duration: 0.4, delay: index * 0.03 }}
     >
       <Link
         href={isDisabled ? "#" : tool.href}
@@ -27,54 +27,51 @@ export function ToolCard({ tool, index }: ToolCardProps) {
       >
         <div
           className={`
-            glass glass-hover h-full rounded-2xl p-6
+            glass h-full rounded-xl p-5
             transition-all duration-300 ease-out
-            ${isDisabled ? "opacity-50" : ""}
-            ${!isDisabled ? "hover:scale-[1.02] hover:accent-glow" : ""}
+            ${isDisabled ? "opacity-50" : "hover:bg-glass-hover hover:border-accent/20"}
           `}
         >
-          {/* Status Badge */}
-          {tool.status !== "available" && (
-            <div className="absolute right-4 top-4">
+          {/* Header Row: Icon + Status */}
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div
+                className={`
+                  flex h-10 w-10 items-center justify-center rounded-lg
+                  bg-white/5 transition-colors duration-300
+                  ${!isDisabled ? "group-hover:bg-accent/10" : ""}
+                `}
+              >
+                <Icon
+                  className={`
+                    h-5 w-5 text-foreground-muted transition-colors duration-300
+                    ${!isDisabled ? "group-hover:text-accent" : ""}
+                  `}
+                />
+              </div>
+              {tool.aiPowered && (
+                <Sparkles className="h-4 w-4 text-accent" />
+              )}
+            </div>
+            {tool.status !== "available" && (
               <span
                 className={`
-                  rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider
+                  rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider
                   ${tool.status === "beta"
-                    ? "bg-cyan-500/20 text-cyan-400"
+                    ? "bg-accent/20 text-accent"
                     : "bg-white/5 text-foreground-muted"}
                 `}
               >
                 {tool.status === "beta" ? "Beta" : "Soon"}
               </span>
-            </div>
-          )}
-
-          {/* Icon */}
-          <div className="mb-4 flex items-center gap-3">
-            <div
-              className={`
-                flex h-12 w-12 items-center justify-center rounded-xl
-                bg-white/5 transition-colors duration-300
-                ${!isDisabled ? "group-hover:bg-cyan-500/10" : ""}
-              `}
-            >
-              <Icon
-                className={`
-                  h-6 w-6 text-foreground-muted transition-colors duration-300
-                  ${!isDisabled ? "group-hover:text-accent" : ""}
-                `}
-              />
-            </div>
-            {tool.aiPowered && (
-              <Sparkles className="h-4 w-4 text-cyan-400" />
             )}
           </div>
 
           {/* Content */}
-          <h3 className="mb-2 text-lg font-semibold text-foreground">
+          <h3 className="mb-1.5 text-base font-semibold text-foreground">
             {tool.name}
           </h3>
-          <p className="mb-4 text-sm leading-relaxed text-foreground-muted">
+          <p className="mb-3 text-sm leading-relaxed text-foreground-muted">
             {tool.description}
           </p>
 
@@ -85,7 +82,7 @@ export function ToolCard({ tool, index }: ToolCardProps) {
             </span>
             {!isDisabled && (
               <ArrowUpRight
-                className="h-4 w-4 text-foreground-muted opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-accent group-hover:opacity-100"
+                className="h-4 w-4 text-foreground-muted opacity-0 transition-all duration-300 group-hover:text-accent group-hover:opacity-100"
               />
             )}
           </div>
