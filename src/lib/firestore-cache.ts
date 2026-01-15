@@ -3,10 +3,21 @@ import { Timestamp, FieldValue } from "firebase-admin/firestore";
 
 // Cache TTL configuration (in hours)
 export const CACHE_TTL = {
-  roster: 24,        // Rosters update daily during season
-  company: 168,      // Company data - 1 week (changes less frequently)
-  geocode: 720,      // Geocoded locations - 30 days (rarely changes)
+  // Roster TTLs
+  collegeRoster: 2160,  // 90 days (3 months) - college rosters are stable
+  proRoster: 168,       // 7 days - pro rosters change more frequently
+  // Company TTLs
+  company: 2160,        // 90 days - company data is fairly stable
+  companyNews: 24,      // 24 hours - news should be refreshed daily
+  // Other
+  geocode: 8760,        // 1 year - geocoded locations rarely change
 };
+
+// Helper to get roster TTL based on league type
+export function getRosterTTL(league: string): number {
+  const collegeLeagues = ["ncaa-basketball", "ncaa-football"];
+  return collegeLeagues.includes(league) ? CACHE_TTL.collegeRoster : CACHE_TTL.proRoster;
+}
 
 export interface CacheEntry<T> {
   data: T;
