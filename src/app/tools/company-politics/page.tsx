@@ -52,7 +52,7 @@ export default function CompanyPoliticsPage() {
             width: "100%",
             maxWidth: "900px",
             margin: "0 auto",
-            padding: "32px 24px 48px 24px",
+            padding: "32px 24px 100px 24px",
           }}
         >
           {/* Back Link */}

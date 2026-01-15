@@ -162,7 +162,7 @@ export default function Home() {
             width: "100%",
             maxWidth: "1200px",
             margin: "0 auto",
-            padding: "40px 24px 40px 24px",
+            padding: "40px 24px 100px 24px",
           }}
         >
           {/* Date/Time Section */}

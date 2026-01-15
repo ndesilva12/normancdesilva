@@ -127,7 +127,12 @@ Respond with a JSON object in this exact format:
   ]
 }
 
-IMPORTANT: Provide up to 25 items for subsidiaries and affiliates arrays. Provide 3-5 items for other arrays. Be factual and cite real events where possible. If information is limited, indicate lower confidence score.`;
+IMPORTANT REQUIREMENTS:
+1. For "subsidiaries" array: Provide an EXTENSIVE LIST of at least 20-50 companies owned by this parent company. Include ALL known subsidiaries, acquisitions, owned brands, and controlled entities. This should be a comprehensive inventory.
+2. For "affiliates" array: Provide an EXTENSIVE LIST of at least 20-50 business partners, joint ventures, strategic alliances, major suppliers, distribution partners, technology partners, and associated companies. Be thorough and comprehensive.
+3. For other arrays (newsItems, donations, publicStatements, etc.): Provide 3-5 items each.
+4. Be factual and cite real events where possible.
+5. If information is limited, indicate lower confidence score.`;
 
   const response = await callAI(prompt);
 

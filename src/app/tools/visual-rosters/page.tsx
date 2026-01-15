@@ -628,7 +628,7 @@ export default function VisualRostersPage() {
             width: "100%",
             maxWidth: "1400px",
             margin: "0 auto",
-            padding: "32px 24px",
+            padding: "32px 24px 100px 24px",
           }}
         >
           {/* Back Link */}

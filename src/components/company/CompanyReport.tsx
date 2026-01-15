@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -10,8 +9,6 @@ import {
   MessageSquareQuote,
   DollarSign,
   Scale,
-  ChevronDown,
-  ChevronUp,
   ExternalLink,
   Layers,
 } from "lucide-react";
@@ -23,29 +20,8 @@ interface CompanyReportProps {
 }
 
 function PoliticalLeaningBadge({ leaning }: { leaning: string }) {
-  const getColor = () => {
-    switch (leaning) {
-      case "Far Left":
-        return "bg-blue-600";
-      case "Left":
-        return "bg-blue-500";
-      case "Center-Left":
-        return "bg-blue-400";
-      case "Center":
-        return "bg-gray-500";
-      case "Center-Right":
-        return "bg-red-400";
-      case "Right":
-        return "bg-red-500";
-      case "Far Right":
-        return "bg-red-600";
-      default:
-        return "bg-gray-500";
-    }
-  };
-
   return (
-    <span className={`${getColor()} rounded-full px-4 py-1.5 text-sm font-medium text-white`}>
+    <span className="bg-gray-600 rounded-full px-4 py-1.5 text-sm font-medium text-white">
       {leaning}
     </span>
   );
@@ -77,11 +53,8 @@ function PoliticalCompass({ economicScore, governmentScore, companyName }: { eco
           left: 0,
         }}
       >
-        {/* Background quadrants */}
-        <rect x="0" y="0" width="100" height="100" fill="rgba(147, 51, 234, 0.15)" /> {/* Top-Left: Authoritarian Left */}
-        <rect x="100" y="0" width="100" height="100" fill="rgba(59, 130, 246, 0.15)" /> {/* Top-Right: Authoritarian Right */}
-        <rect x="0" y="100" width="100" height="100" fill="rgba(34, 197, 94, 0.15)" /> {/* Bottom-Left: Libertarian Left */}
-        <rect x="100" y="100" width="100" height="100" fill="rgba(234, 179, 8, 0.15)" /> {/* Bottom-Right: Libertarian Right */}
+        {/* No colored quadrants - just neutral background */}
+        <rect x="0" y="0" width="200" height="200" fill="rgba(128, 128, 128, 0.08)" />
 
         {/* Grid lines */}
         <line x1="100" y1="0" x2="100" y2="200" stroke="var(--glass-border)" strokeWidth="2" />
@@ -174,17 +147,17 @@ function PoliticalCompass({ economicScore, governmentScore, companyName }: { eco
         Right
       </div>
 
-      {/* Quadrant labels */}
-      <div style={{ position: "absolute", top: "8px", left: "8px", fontSize: "10px", color: "rgba(147, 51, 234, 0.8)", fontWeight: 500 }}>
+      {/* Quadrant labels - neutral colors */}
+      <div style={{ position: "absolute", top: "8px", left: "8px", fontSize: "10px", color: "var(--foreground-muted)", fontWeight: 500 }}>
         Auth Left
       </div>
-      <div style={{ position: "absolute", top: "8px", right: "8px", fontSize: "10px", color: "rgba(59, 130, 246, 0.8)", fontWeight: 500 }}>
+      <div style={{ position: "absolute", top: "8px", right: "8px", fontSize: "10px", color: "var(--foreground-muted)", fontWeight: 500 }}>
         Auth Right
       </div>
-      <div style={{ position: "absolute", bottom: "8px", left: "8px", fontSize: "10px", color: "rgba(34, 197, 94, 0.8)", fontWeight: 500 }}>
+      <div style={{ position: "absolute", bottom: "8px", left: "8px", fontSize: "10px", color: "var(--foreground-muted)", fontWeight: 500 }}>
         Lib Left
       </div>
-      <div style={{ position: "absolute", bottom: "8px", right: "8px", fontSize: "10px", color: "rgba(234, 179, 8, 0.8)", fontWeight: 500 }}>
+      <div style={{ position: "absolute", bottom: "8px", right: "8px", fontSize: "10px", color: "var(--foreground-muted)", fontWeight: 500 }}>
         Lib Right
       </div>
 
@@ -216,23 +189,17 @@ function Section({
   title,
   icon: Icon,
   children,
-  defaultOpen = true,
   count,
 }: {
   title: string;
   icon: React.ElementType;
   children: React.ReactNode;
-  defaultOpen?: boolean;
   count?: number;
 }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
+  // Always expanded - no collapse functionality
   return (
     <div className="glass rounded-xl overflow-hidden">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between p-4 text-left hover:bg-glass-hover transition-colors"
-      >
+      <div className="flex w-full items-center justify-between p-5 text-left border-b border-glass-border">
         <div className="flex items-center gap-3">
           <Icon className="h-5 w-5 text-accent" />
           <span className="font-medium text-foreground">{title}</span>
@@ -242,13 +209,8 @@ function Section({
             </span>
           )}
         </div>
-        {isOpen ? (
-          <ChevronUp className="h-5 w-5 text-foreground-muted" />
-        ) : (
-          <ChevronDown className="h-5 w-5 text-foreground-muted" />
-        )}
-      </button>
-      {isOpen && <div className="border-t border-glass-border p-4">{children}</div>}
+      </div>
+      <div className="p-5">{children}</div>
     </div>
   );
 }
@@ -259,13 +221,13 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="space-y-4"
+      style={{ display: "flex", flexDirection: "column", gap: "24px", paddingBottom: "80px" }}
     >
       {/* Header */}
-      <div className="glass rounded-2xl p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="glass rounded-2xl p-8">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-3">
               <h2 className="text-2xl font-bold text-foreground">{report.companyName}</h2>
               {report.ticker && (
                 <span className="rounded bg-accent/20 px-2 py-0.5 text-sm font-mono text-accent">
@@ -273,10 +235,10 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
                 </span>
               )}
             </div>
-            <p className="text-foreground-muted mb-3">{report.industry}</p>
+            <p className="text-foreground-muted mb-4">{report.industry}</p>
             <p className="text-sm text-foreground-muted leading-relaxed">{report.description}</p>
           </div>
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col items-end gap-3">
             <PoliticalLeaningBadge leaning={report.overallLeaning} />
             <div className="flex items-center gap-2 text-sm">
               <span className="text-foreground-muted">Confidence:</span>
@@ -291,25 +253,25 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
 
       {/* Political Compass */}
       {(report.economicScore !== undefined && report.governmentScore !== undefined) && (
-        <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4 text-center">Political Compass</h3>
-          <div style={{ padding: "32px 24px" }}>
+        <div className="glass rounded-2xl p-8">
+          <h3 className="text-lg font-semibold text-foreground mb-6 text-center">Political Compass</h3>
+          <div style={{ padding: "40px 24px" }}>
             <PoliticalCompass
               economicScore={report.economicScore}
               governmentScore={report.governmentScore}
               companyName={report.companyName}
             />
           </div>
-          <div className="flex justify-center gap-8 mt-4 text-sm">
+          <div className="flex justify-center gap-12 mt-6 text-sm">
             <div className="flex items-center gap-2">
               <span className="text-foreground-muted">Economic:</span>
-              <span className={`font-medium ${report.economicScore < 0 ? 'text-blue-400' : report.economicScore > 0 ? 'text-red-400' : 'text-gray-400'}`}>
+              <span className="font-medium text-foreground">
                 {report.economicScore > 0 ? '+' : ''}{report.economicScore}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-foreground-muted">Government:</span>
-              <span className={`font-medium ${report.governmentScore > 0 ? 'text-purple-400' : report.governmentScore < 0 ? 'text-green-400' : 'text-gray-400'}`}>
+              <span className="font-medium text-foreground">
                 {report.governmentScore > 0 ? '+' : ''}{report.governmentScore}
               </span>
             </div>
@@ -319,14 +281,14 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
 
       {/* Positions */}
       <Section title="Political Positions" icon={Scale} count={report.positions.length}>
-        <div className="space-y-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {report.positions.map((position, i) => (
-            <div key={i} className="border-l-2 border-accent/30 pl-4">
-              <div className="flex items-center gap-2 mb-1">
+            <div key={i} className="border-l-2 border-accent/30 pl-4 py-1">
+              <div className="flex items-center gap-2 mb-2">
                 <span className="font-medium text-foreground">{position.topic}</span>
                 <span className="text-sm text-accent">• {position.stance}</span>
               </div>
-              <p className="text-sm text-foreground-muted">{position.description}</p>
+              <p className="text-sm text-foreground-muted leading-relaxed">{position.description}</p>
             </div>
           ))}
         </div>
@@ -334,15 +296,15 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
 
       {/* Subsidiaries */}
       {report.subsidiaries && report.subsidiaries.length > 0 && (
-        <Section title="Subsidiaries (Companies Owned)" icon={Layers} count={report.subsidiaries.length}>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Section title="Subsidiaries & Owned Companies" icon={Layers} count={report.subsidiaries.length}>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.subsidiaries.map((subsidiary, i) => (
-              <div key={i} className="rounded-lg bg-white/5 p-3">
-                <div className="font-medium text-foreground">{subsidiary.name}</div>
-                <div className="text-xs text-accent mb-1">{subsidiary.industry}</div>
-                <p className="text-sm text-foreground-muted">{subsidiary.description}</p>
+              <div key={i} className="rounded-lg bg-white/5 p-4">
+                <div className="font-medium text-foreground mb-1">{subsidiary.name}</div>
+                <div className="text-xs text-accent mb-2">{subsidiary.industry}</div>
+                <p className="text-sm text-foreground-muted leading-relaxed">{subsidiary.description}</p>
                 {subsidiary.acquisitionYear && (
-                  <div className="text-xs text-foreground-muted mt-1">Acquired: {subsidiary.acquisitionYear}</div>
+                  <div className="text-xs text-foreground-muted mt-2">Acquired: {subsidiary.acquisitionYear}</div>
                 )}
               </div>
             ))}
@@ -351,24 +313,24 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
       )}
 
       {/* Affiliates */}
-      <Section title="Key Affiliates & Partners" icon={Users} count={report.affiliates.length}>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <Section title="Partners, Affiliates & Associates" icon={Users} count={report.affiliates.length}>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {report.affiliates.map((affiliate, i) => (
-            <div key={i} className="rounded-lg bg-white/5 p-3">
-              <div className="font-medium text-foreground">{affiliate.name}</div>
-              <div className="text-xs text-accent mb-1">{affiliate.relationship}</div>
-              <p className="text-sm text-foreground-muted">{affiliate.description}</p>
+            <div key={i} className="rounded-lg bg-white/5 p-4">
+              <div className="font-medium text-foreground mb-1">{affiliate.name}</div>
+              <div className="text-xs text-accent mb-2">{affiliate.relationship}</div>
+              <p className="text-sm text-foreground-muted leading-relaxed">{affiliate.description}</p>
             </div>
           ))}
         </div>
       </Section>
 
       {/* News */}
-      <Section title="Recent News" icon={Newspaper} count={report.newsItems.length} defaultOpen={false}>
-        <div className="space-y-3">
+      <Section title="Recent News" icon={Newspaper} count={report.newsItems.length}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {report.newsItems.map((item, i) => (
-            <div key={i} className="border-b border-glass-border pb-3 last:border-0 last:pb-0">
-              <div className="flex items-start justify-between gap-2">
+            <div key={i} className="border-b border-glass-border pb-4 last:border-0 last:pb-0">
+              <div className="flex items-start justify-between gap-3">
                 <h4 className="font-medium text-foreground">{item.headline}</h4>
                 <span
                   className={`shrink-0 rounded px-2 py-0.5 text-xs ${
@@ -382,8 +344,8 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
                   {item.sentiment}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-foreground-muted">{item.summary}</p>
-              <div className="mt-2 flex items-center gap-2 text-xs text-foreground-muted">
+              <p className="mt-2 text-sm text-foreground-muted leading-relaxed">{item.summary}</p>
+              <div className="mt-3 flex items-center gap-2 text-xs text-foreground-muted">
                 <span>{item.source}</span>
                 <span>•</span>
                 <span>{item.date}</span>
@@ -394,12 +356,12 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
       </Section>
 
       {/* Donations */}
-      <Section title="Political Donations" icon={DollarSign} count={report.donations.length} defaultOpen={false}>
-        <div className="space-y-2">
+      <Section title="Political Donations" icon={DollarSign} count={report.donations.length}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {report.donations.map((donation, i) => (
             <div
               key={i}
-              className="flex items-center justify-between rounded-lg bg-white/5 p-3"
+              className="flex items-center justify-between rounded-lg bg-white/5 p-4"
             >
               <div>
                 <span className="font-medium text-foreground">{donation.recipient}</span>
@@ -417,7 +379,7 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
               </div>
               <div className="text-right">
                 <div className="font-medium text-accent">{donation.amount}</div>
-                <div className="text-xs text-foreground-muted">{donation.date}</div>
+                <div className="text-xs text-foreground-muted mt-1">{donation.date}</div>
               </div>
             </div>
           ))}
@@ -429,17 +391,16 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
         title="Public Statements"
         icon={MessageSquareQuote}
         count={report.publicStatements.length}
-        defaultOpen={false}
       >
-        <div className="space-y-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {report.publicStatements.map((statement, i) => (
-            <div key={i} className="border-l-2 border-accent/30 pl-4">
-              <blockquote className="text-foreground italic">"{statement.statement}"</blockquote>
-              <div className="mt-2 text-sm">
+            <div key={i} className="border-l-2 border-accent/30 pl-4 py-1">
+              <blockquote className="text-foreground italic leading-relaxed">"{statement.statement}"</blockquote>
+              <div className="mt-3 text-sm">
                 <span className="font-medium text-foreground">{statement.speaker}</span>
                 <span className="text-foreground-muted"> • {statement.role}</span>
               </div>
-              <div className="mt-1 flex items-center gap-2 text-xs text-foreground-muted">
+              <div className="mt-2 flex items-center gap-2 text-xs text-foreground-muted">
                 <span>{statement.topic}</span>
                 <span>•</span>
                 <span>{statement.date}</span>
@@ -454,12 +415,11 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
         title="Revenue Allocation"
         icon={TrendingUp}
         count={report.revenueAllocation.length}
-        defaultOpen={false}
       >
-        <div className="space-y-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {report.revenueAllocation.map((item, i) => (
             <div key={i}>
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-foreground">{item.category}</span>
                 <span className="text-sm text-accent">{item.percentage}%</span>
               </div>
@@ -469,7 +429,7 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
                   style={{ width: `${item.percentage}%` }}
                 />
               </div>
-              <p className="mt-1 text-xs text-foreground-muted">{item.description}</p>
+              <p className="mt-2 text-xs text-foreground-muted leading-relaxed">{item.description}</p>
             </div>
           ))}
         </div>
@@ -480,18 +440,17 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
         title="Lobbying Activities"
         icon={Building2}
         count={report.lobbyingActivities.length}
-        defaultOpen={false}
       >
-        <div className="space-y-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {report.lobbyingActivities.map((activity, i) => (
-            <div key={i} className="flex items-start justify-between gap-4 rounded-lg bg-white/5 p-3">
+            <div key={i} className="flex items-start justify-between gap-4 rounded-lg bg-white/5 p-4">
               <div className="flex-1">
-                <div className="font-medium text-foreground">{activity.issue}</div>
-                <p className="mt-1 text-sm text-foreground-muted">{activity.description}</p>
+                <div className="font-medium text-foreground mb-2">{activity.issue}</div>
+                <p className="text-sm text-foreground-muted leading-relaxed">{activity.description}</p>
               </div>
               <div className="text-right shrink-0">
                 <div className="font-medium text-accent">{activity.amount}</div>
-                <div className="text-xs text-foreground-muted">{activity.year}</div>
+                <div className="text-xs text-foreground-muted mt-1">{activity.year}</div>
               </div>
             </div>
           ))}
