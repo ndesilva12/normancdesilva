@@ -13,12 +13,29 @@ interface GeminiResponse {
   }[];
 }
 
-async function callGemini(prompt: string): Promise<string> {
+async function callGemini(prompt: string, useSearch: boolean = false): Promise<string> {
   if (!GEMINI_API_KEY) {
     throw new Error("Gemini API key not configured");
   }
 
-  // Use gemini-2.0-flash with v1beta endpoint and Google Search grounding
+  // Build request body
+  const requestBody: Record<string, unknown> = {
+    contents: [
+      {
+        parts: [{ text: prompt }],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 8192,
+    },
+  };
+
+  // Add Google Search tool if requested
+  if (useSearch) {
+    requestBody.tools = [{ google_search: {} }];
+  }
+
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
@@ -26,22 +43,7 @@ async function callGemini(prompt: string): Promise<string> {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 8192,
-        },
-        tools: [
-          {
-            google_search: {},
-          },
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     }
   );
 
@@ -92,6 +94,103 @@ async function geocodeLocation(location: string): Promise<{ lat: number; lng: nu
   }
 
   return null;
+}
+
+interface BasicPlayer {
+  number: string;
+  name: string;
+  position: string;
+  height: string;
+  weight: string;
+  age: string;
+  hometown: string;
+  highSchool: string;
+  previousSchools: string[];
+  seasons: { year: string; team: string | null }[];
+}
+
+async function enrichPlayerData(
+  players: BasicPlayer[],
+  teamName: string,
+  league: League,
+  currentSeason: number
+): Promise<BasicPlayer[]> {
+  // Get player names that might need enrichment (transfers, missing data)
+  const playerNames = players.map(p => p.name).join(", ");
+
+  const seasonYears = [
+    currentSeason,
+    currentSeason - 1,
+    currentSeason - 2,
+    currentSeason - 3,
+    currentSeason - 4,
+  ];
+
+  const enrichPrompt = `I need transfer history and previous school information for these ${teamName} ${getLeagueConfig(league)?.name} players in the ${currentSeason} season:
+
+Players: ${playerNames}
+
+For EACH player, search for their college basketball history and provide:
+1. Previous schools they played for (if they transferred)
+2. Which years they played at each school
+3. High school if not already known
+
+IMPORTANT: Many college players are transfers. Search for each player's history.
+
+Return ONLY valid JSON (no markdown, no backticks):
+{
+  "players": [
+    {
+      "name": "Player Name",
+      "previousSchools": ["Previous School 1", "Previous School 2"],
+      "highSchool": "High School Name",
+      "seasons": [
+        {"year": "${seasonYears[0]}", "team": "${teamName}"},
+        {"year": "${seasonYears[1]}", "team": "previous school or ${teamName}"},
+        {"year": "${seasonYears[2]}", "team": "school or null"},
+        {"year": "${seasonYears[3]}", "team": "school or null"},
+        {"year": "${seasonYears[4]}", "team": "null"}
+      ]
+    }
+  ]
+}
+
+Return data for ALL players. Use null for years the player wasn't in college.`;
+
+  try {
+    const enrichResponse = await callGemini(enrichPrompt, true);
+
+    const jsonMatch = enrichResponse.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.log("No enrichment data found, using original data");
+      return players;
+    }
+
+    const enrichData = JSON.parse(jsonMatch[0]);
+
+    // Merge enrichment data with original players
+    return players.map(player => {
+      const enrichedPlayer = enrichData.players?.find(
+        (ep: { name: string }) => ep.name.toLowerCase() === player.name.toLowerCase()
+      );
+
+      if (enrichedPlayer) {
+        return {
+          ...player,
+          previousSchools: enrichedPlayer.previousSchools?.length > 0
+            ? enrichedPlayer.previousSchools
+            : player.previousSchools,
+          highSchool: enrichedPlayer.highSchool || player.highSchool,
+          seasons: enrichedPlayer.seasons || player.seasons,
+        };
+      }
+
+      return player;
+    });
+  } catch (error) {
+    console.error("Enrichment failed, using original data:", error);
+    return players;
+  }
 }
 
 function getLeagueConfig(league: League) {
@@ -269,6 +368,28 @@ export async function fetchTeamRoster(
   teamQuery: string
 ): Promise<TeamRoster> {
   const currentSeason = getCurrentSeason();
+  const teamSlug = getTeamSlug(league, teamQuery);
+  const url = getSportsRefUrl(league, teamSlug, currentSeason);
+
+  // Fetch the actual HTML from sports-reference.com
+  let htmlContent: string;
+  try {
+    htmlContent = await fetchSportsRefPage(url);
+  } catch (fetchError) {
+    console.error("Failed to fetch sports-reference page:", fetchError);
+    throw new Error(`Could not find team "${teamQuery}" on sports-reference.com. Try using the official team name (e.g., "duke" not "Duke Blue Devils").`);
+  }
+
+  // Extract roster table from the HTML
+  const rosterTableMatch = htmlContent.match(/<table[^>]*id="roster"[^>]*>[\s\S]*?<\/table>/i) ||
+                           htmlContent.match(/<table[^>]*class="[^"]*roster[^"]*"[^>]*>[\s\S]*?<\/table>/i);
+
+  if (!rosterTableMatch) {
+    throw new Error("Could not find roster table on the page. The team page may have a different structure.");
+  }
+
+  const tableHtml = rosterTableMatch[0];
+
   const seasonYears = [
     currentSeason,
     currentSeason - 1,
@@ -277,60 +398,62 @@ export async function fetchTeamRoster(
     currentSeason - 4,
   ];
 
-  // Use Gemini with Google Search grounding to get current roster data
-  const prompt = `Search for the current ${currentSeason} ${getLeagueConfig(league)?.name} roster for ${teamQuery}.
+  // Use Gemini to parse the HTML table
+  const prompt = `Parse this HTML roster table from sports-reference.com for the ${teamQuery} ${getLeagueConfig(league)?.name} team.
 
-I need the CURRENT roster for the ${currentSeason} season. Search sports-reference.com or official team sources for accurate, up-to-date information.
+HTML Table:
+${tableHtml}
 
-For each player on the current roster, provide:
-- Jersey number
-- Full name
-- Position
-- Height
-- Weight
-- Class/Year or Age
-- Hometown (City, State/Country)
-- High school
-- Previous college/team (for transfers)
-- What team they played for in each of these seasons: ${seasonYears.join(", ")}
+Extract ALL players from this table. For each player, extract:
+- Jersey number (from # or No. column)
+- Full name (from Player or Name column)
+- Position (from Pos column)
+- Height (from Ht or Height column, format as "6-2")
+- Weight (from Wt or Weight column, just the number)
+- Class/Year (from Class or Yr column - Fr, So, Jr, Sr)
+- Hometown/Birthplace if available
+- High school if available
+- Previous school if available (for transfers)
 
 Also provide:
-- The official team name
-- Team's primary color (hex code)
-- Team's secondary color (hex code)
+- Team name: "${teamQuery}" official name
+- Primary color hex code for ${teamQuery}
+- Secondary color hex code for ${teamQuery}
 
-Respond with ONLY a valid JSON object (no markdown, no explanation):
+For the seasons array, based on the player's class year, determine what years they played:
+- A Senior (Sr) in ${currentSeason} played: ${seasonYears.slice(0, 4).join(", ")}
+- A Junior (Jr) in ${currentSeason} played: ${seasonYears.slice(0, 3).join(", ")}
+- A Sophomore (So) in ${currentSeason} played: ${seasonYears.slice(0, 2).join(", ")}
+- A Freshman (Fr) in ${currentSeason} played: ${seasonYears[0]} only
+
+Respond with ONLY valid JSON (no markdown, no backticks, no explanation):
 {
-  "teamName": "Full Team Name",
+  "teamName": "Full Official Team Name",
   "primaryColor": "#001A57",
   "secondaryColor": "#FFFFFF",
   "players": [
     {
       "number": "1",
-      "name": "Player Name",
+      "name": "Player Full Name",
       "position": "G",
       "height": "6-2",
       "weight": "185",
       "age": "Jr.",
       "hometown": "City, State",
       "highSchool": "High School Name",
-      "previousSchools": ["Previous School"],
+      "previousSchools": [],
       "seasons": [
-        {"year": "${seasonYears[0]}", "team": "Current Team"},
-        {"year": "${seasonYears[1]}", "team": "Team or null"},
-        {"year": "${seasonYears[2]}", "team": "Team or null"},
-        {"year": "${seasonYears[3]}", "team": "Team or null"},
-        {"year": "${seasonYears[4]}", "team": "Team or null"}
+        {"year": "${seasonYears[0]}", "team": "${teamQuery}"},
+        {"year": "${seasonYears[1]}", "team": "${teamQuery} or null"},
+        {"year": "${seasonYears[2]}", "team": "null if freshman/sophomore"},
+        {"year": "${seasonYears[3]}", "team": "null if not senior"},
+        {"year": "${seasonYears[4]}", "team": "null"}
       ]
     }
   ]
 }
 
-IMPORTANT:
-- Include ALL players currently on the ${currentSeason} roster
-- Do NOT include players who have left (graduated, transferred, drafted to NBA, etc.)
-- Use null in seasons array if player wasn't playing that year
-- Return valid JSON only`;
+CRITICAL: Extract EVERY player row from the table. Do not skip any players. Return valid JSON only.`;
 
   const responseText = await callGemini(prompt);
 
@@ -347,9 +470,18 @@ IMPORTANT:
     throw new Error("Failed to parse roster data from AI response");
   }
 
+  // Enrich player data with transfer history using Google Search
+  console.log("Enriching player data with transfer history...");
+  const enrichedPlayers = await enrichPlayerData(
+    rosterData.players,
+    rosterData.teamName || teamQuery,
+    league,
+    currentSeason
+  );
+
   // Geocode player hometowns (limit concurrent requests)
   const playersWithCoords: Player[] = [];
-  for (const player of rosterData.players) {
+  for (const player of enrichedPlayers) {
     const coordinates = await geocodeLocation(player.hometown);
     playersWithCoords.push({
       ...player,
