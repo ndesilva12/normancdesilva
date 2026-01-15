@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0f;
+  --background-secondary: #12121a;
+  --foreground: #f0f0f5;
+  --foreground-muted: #8a8a95;
+  --accent: #06b6d4;
+  --accent-light: #22d3ee;
+  --accent-dark: #0891b2;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-hover: rgba(255, 255, 255, 0.06);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-secondary: var(--background-secondary);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-accent-dark: var(--accent-dark);
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  --color-glass-hover: var(--glass-hover);
+  --font-sans: var(--font-sans), system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* Glassmorphism utility classes */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-hover:hover {
+  background: var(--glass-hover);
+  border-color: rgba(6, 182, 212, 0.2);
+}
+
+/* Accent glow effect */
+.accent-glow {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+}
+
+.accent-glow-strong {
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.25), 0 0 60px rgba(6, 182, 212, 0.1);
+}
+
+/* Text gradient */
+.text-gradient {
+  background: linear-gradient(135deg, var(--foreground) 0%, var(--accent-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Subtle grid background */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* Radial gradient overlay */
+.bg-radial {
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(6, 182, 212, 0.1), transparent);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Selection color */
+::selection {
+  background: rgba(6, 182, 212, 0.3);
+  color: var(--foreground);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+.transition-default {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
