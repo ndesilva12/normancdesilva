@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Newspaper, ExternalLink, Loader2, RefreshCw, Clock, Tag } from "lucide-react";
 import Link from "next/link";
@@ -16,21 +16,26 @@ interface NewsArticle {
   thumbnail?: string;
 }
 
+type NewsSource = "zerohedge" | "reason" | "mises";
+
+const NEWS_SOURCES: { id: NewsSource; name: string; url: string }[] = [
+  { id: "zerohedge", name: "ZeroHedge", url: "https://www.zerohedge.com" },
+  { id: "reason", name: "Reason", url: "https://reason.com" },
+  { id: "mises", name: "Mises Institute", url: "https://mises.org" },
+];
+
 export default function NewsPage() {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSource, setSelectedSource] = useState<NewsSource>("zerohedge");
 
-  useEffect(() => {
-    loadNews();
-  }, []);
-
-  const loadNews = async () => {
+  const loadNews = useCallback(async (source: NewsSource) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch("/api/news");
+      const response = await fetch(`/api/news?source=${source}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -43,7 +48,17 @@ export default function NewsPage() {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    loadNews(selectedSource);
+  }, [selectedSource, loadNews]);
+
+  const handleSourceChange = (source: NewsSource) => {
+    setSelectedSource(source);
   };
+
+  const currentSource = NEWS_SOURCES.find((s) => s.id === selectedSource);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
@@ -115,7 +130,7 @@ export default function NewsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            style={{ marginBottom: "32px" }}
+            style={{ marginBottom: "24px" }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
               <div>
@@ -134,12 +149,12 @@ export default function NewsPage() {
                   News
                 </h1>
                 <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-                  Latest articles from ZeroHedge
+                  Latest articles from {currentSource?.name || "selected source"}
                 </p>
               </div>
               <div style={{ display: "flex", gap: "12px" }}>
                 <button
-                  onClick={loadNews}
+                  onClick={() => loadNews(selectedSource)}
                   disabled={isLoading}
                   style={{
                     display: "flex",
@@ -159,7 +174,7 @@ export default function NewsPage() {
                   Refresh
                 </button>
                 <a
-                  href="https://www.zerohedge.com"
+                  href={currentSource?.url || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -175,11 +190,48 @@ export default function NewsPage() {
                     textDecoration: "none",
                   }}
                 >
-                  Visit ZeroHedge
+                  Visit {currentSource?.name || "Site"}
                   <ExternalLink style={{ width: "16px", height: "16px" }} />
                 </a>
               </div>
             </div>
+          </motion.div>
+
+          {/* Source Selector */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="glass"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "8px",
+              borderRadius: "12px",
+              marginBottom: "24px",
+              width: "fit-content",
+            }}
+          >
+            {NEWS_SOURCES.map((source) => (
+              <button
+                key={source.id}
+                onClick={() => handleSourceChange(source.id)}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: selectedSource === source.id ? "var(--accent)" : "transparent",
+                  color: selectedSource === source.id ? "var(--background)" : "var(--foreground-muted)",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                {source.name}
+              </button>
+            ))}
           </motion.div>
 
           {/* Content */}
@@ -202,7 +254,7 @@ export default function NewsPage() {
                 {error}
               </p>
               <button
-                onClick={loadNews}
+                onClick={() => loadNews(selectedSource)}
                 style={{
                   padding: "10px 20px",
                   borderRadius: "8px",

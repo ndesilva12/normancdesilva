@@ -10,10 +10,26 @@ export interface NewsArticle {
   thumbnail?: string;
 }
 
-export async function GET() {
+export type NewsSource = "zerohedge" | "reason" | "mises";
+
+const RSS_FEEDS: Record<NewsSource, string> = {
+  zerohedge: "https://feeds.feedburner.com/zerohedge/feed",
+  reason: "https://reason.com/feed/",
+  mises: "https://mises.org/feed",
+};
+
+export async function GET(request: Request) {
   try {
-    // Fetch ZeroHedge RSS feed
-    const response = await fetch("https://feeds.feedburner.com/zerohedge/feed", {
+    const { searchParams } = new URL(request.url);
+    const source = (searchParams.get("source") as NewsSource) || "zerohedge";
+
+    const feedUrl = RSS_FEEDS[source];
+    if (!feedUrl) {
+      return NextResponse.json({ error: "Invalid news source" }, { status: 400 });
+    }
+
+    // Fetch RSS feed
+    const response = await fetch(feedUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; NewsReader/1.0)",
       },
@@ -26,10 +42,10 @@ export async function GET() {
 
     const xmlText = await response.text();
 
-    // Parse the XML
+    // Parse the XML - articles come in RSS feed order (usually newest first)
     const articles = parseRSS(xmlText);
 
-    return NextResponse.json({ articles });
+    return NextResponse.json({ articles, source });
   } catch (error) {
     console.error("Error fetching news:", error);
     return NextResponse.json(
