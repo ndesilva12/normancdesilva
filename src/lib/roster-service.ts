@@ -1,4 +1,5 @@
 import { League, TeamRoster, Player, LEAGUES } from "@/types/roster";
+import { getCached, setCache, generateCacheKey, CACHE_TTL, recordCacheAccess } from "./firestore-cache";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROK_API_KEY = process.env.GROK_API_KEY;
@@ -571,9 +572,25 @@ async function fetchSportsRefPage(url: string): Promise<string> {
 export async function fetchTeamRoster(
   league: League,
   teamQuery: string
-): Promise<TeamRoster> {
+): Promise<TeamRoster & { fromCache?: boolean }> {
   const currentSeason = getCurrentSeason();
   const teamSlug = getTeamSlug(league, teamQuery);
+
+  // Generate cache key for this roster
+  const cacheKey = generateCacheKey("roster", league, teamSlug, String(currentSeason));
+  const cacheCollection = `rosters_${league}`;
+
+  // Check cache first
+  console.log(`Checking cache for ${cacheCollection}/${cacheKey}`);
+  const cached = await getCached<TeamRoster>(cacheCollection, cacheKey);
+  if (cached) {
+    await recordCacheAccess(cacheCollection, cacheKey, true);
+    console.log(`Cache HIT for ${teamQuery} - returning cached data`);
+    return { ...cached.data, fromCache: true };
+  }
+  await recordCacheAccess(cacheCollection, cacheKey, false);
+  console.log(`Cache MISS for ${teamQuery} - fetching fresh data`);
+
   const url = getSportsRefUrl(league, teamSlug, currentSeason);
 
   // Fetch the actual HTML from sports-reference.com
@@ -694,7 +711,7 @@ CRITICAL: Extract EVERY player row from the table. Do not skip any players. Retu
     });
   }
 
-  return {
+  const roster: TeamRoster = {
     teamName: rosterData.teamName,
     league,
     primaryColor: rosterData.primaryColor || "#00bcd4",
@@ -702,4 +719,10 @@ CRITICAL: Extract EVERY player row from the table. Do not skip any players. Retu
     players: playersWithCoords,
     season: String(currentSeason),
   };
+
+  // Cache the roster data in Firestore
+  console.log(`Caching roster for ${teamQuery} with TTL ${CACHE_TTL.roster} hours`);
+  await setCache(cacheCollection, cacheKey, roster, CACHE_TTL.roster);
+
+  return { ...roster, fromCache: false };
 }

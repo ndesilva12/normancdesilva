@@ -1,45 +1,46 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  query,
-  where,
-  getDocs,
-  Timestamp,
-  orderBy,
-  limit,
-} from "firebase/firestore";
-import { db } from "./firebase";
+import { getAdminFirestore } from "./firebase-admin";
+import { Timestamp } from "firebase-admin/firestore";
 import { CompanyAnalysis } from "@/types/company";
+import { CACHE_TTL } from "./firestore-cache";
 
-const CACHE_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+// Use the configurable TTL from firestore-cache
+const CACHE_DURATION_MS = CACHE_TTL.company * 60 * 60 * 1000; // Convert hours to ms
 
 function normalizeCompanyName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 export async function getCachedReport(companyName: string): Promise<CompanyAnalysis | null> {
-  if (!db) return null;
+  const db = getAdminFirestore();
+  if (!db) {
+    console.log("Firebase Admin not available, skipping cache check");
+    return null;
+  }
 
   try {
     const normalizedName = normalizeCompanyName(companyName);
-    const docRef = doc(db, "companyReports", normalizedName);
-    const docSnap = await getDoc(docRef);
+    console.log(`Checking cache for company: ${normalizedName}`);
+    const docRef = db.collection("companyReports").doc(normalizedName);
+    const docSnap = await docRef.get();
 
-    if (!docSnap.exists()) {
+    if (!docSnap.exists) {
+      console.log(`Cache MISS for company: ${companyName}`);
       return null;
     }
 
     const data = docSnap.data();
+    if (!data) return null;
+
     const updatedAt = data.updatedAt?.toDate?.() || new Date(data.updatedAt);
     const now = new Date();
 
     // Check if cache is still valid
     if (now.getTime() - updatedAt.getTime() > CACHE_DURATION_MS) {
+      console.log(`Cache EXPIRED for company: ${companyName}`);
       return null; // Cache expired
     }
 
+    console.log(`Cache HIT for company: ${companyName}`);
     return {
       ...data,
       createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
@@ -52,29 +53,38 @@ export async function getCachedReport(companyName: string): Promise<CompanyAnaly
 }
 
 export async function cacheReport(report: CompanyAnalysis): Promise<void> {
-  if (!db) return;
+  const db = getAdminFirestore();
+  if (!db) {
+    console.log("Firebase Admin not available, skipping cache write");
+    return;
+  }
 
   try {
     const normalizedName = normalizeCompanyName(report.companyName);
-    const docRef = doc(db, "companyReports", normalizedName);
+    console.log(`Caching company report: ${normalizedName}`);
+    const docRef = db.collection("companyReports").doc(normalizedName);
 
-    await setDoc(docRef, {
+    await docRef.set({
       ...report,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
+    console.log(`Successfully cached company: ${report.companyName}`);
   } catch (error) {
     console.error("Error caching report:", error);
   }
 }
 
 export async function getRecentReports(limitCount: number = 10): Promise<CompanyAnalysis[]> {
+  const db = getAdminFirestore();
   if (!db) return [];
 
   try {
-    const reportsRef = collection(db, "companyReports");
-    const q = query(reportsRef, orderBy("updatedAt", "desc"), limit(limitCount));
-    const snapshot = await getDocs(q);
+    const snapshot = await db
+      .collection("companyReports")
+      .orderBy("updatedAt", "desc")
+      .limit(limitCount)
+      .get();
 
     return snapshot.docs.map((doc) => {
       const data = doc.data();
@@ -91,12 +101,15 @@ export async function getRecentReports(limitCount: number = 10): Promise<Company
 }
 
 export async function searchCachedCompanies(searchQuery: string): Promise<CompanyAnalysis[]> {
+  const db = getAdminFirestore();
   if (!db) return [];
 
   try {
-    const reportsRef = collection(db, "companyReports");
-    const q = query(reportsRef, orderBy("updatedAt", "desc"), limit(50));
-    const snapshot = await getDocs(q);
+    const snapshot = await db
+      .collection("companyReports")
+      .orderBy("updatedAt", "desc")
+      .limit(50)
+      .get();
 
     const normalizedQuery = searchQuery.toLowerCase();
 
