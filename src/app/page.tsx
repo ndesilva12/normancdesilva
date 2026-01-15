@@ -284,6 +284,7 @@ function LiveDateTime({
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+  const [hasSearchResults, setHasSearchResults] = useState(false);
 
   // Check Google Calendar auth status
   useEffect(() => {
@@ -364,77 +365,79 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.1 }}
             style={{ marginBottom: "40px" }}
           >
-            <MultiSourceSearch />
+            <MultiSourceSearch onResultsChange={(results) => setHasSearchResults(results.length > 0)} />
           </motion.section>
 
-          {/* Tools Section */}
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            style={{ width: "100%" }}
-          >
-            {/* Category Pills */}
-            <div
-              style={{
-                marginBottom: "28px",
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "10px",
-              }}
+          {/* Tools Section - Hidden when search results are shown */}
+          {!hasSearchResults && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              style={{ width: "100%" }}
             >
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={selectedCategory !== category.id ? "glass" : ""}
-                  style={{
-                    whiteSpace: "nowrap",
-                    borderRadius: "9999px",
-                    padding: "8px 18px",
-                    fontSize: "13px",
-                    fontWeight: 500,
-                    border: "none",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    backgroundColor:
-                      selectedCategory === category.id
-                        ? "var(--accent)"
-                        : "transparent",
-                    color:
-                      selectedCategory === category.id
-                        ? "var(--background)"
-                        : "var(--foreground-muted)",
-                  }}
-                >
-                  {category.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Tools Grid */}
-            {filteredTools.length > 0 ? (
+              {/* Category Pills */}
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                  gap: "16px",
+                  marginBottom: "28px",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "10px",
                 }}
               >
-                {filteredTools.map((tool, index) => (
-                  <ToolCard key={tool.id} tool={tool} index={index} />
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={selectedCategory !== category.id ? "glass" : ""}
+                    style={{
+                      whiteSpace: "nowrap",
+                      borderRadius: "9999px",
+                      padding: "8px 18px",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      backgroundColor:
+                        selectedCategory === category.id
+                          ? "var(--accent)"
+                          : "transparent",
+                      color:
+                        selectedCategory === category.id
+                          ? "var(--background)"
+                          : "var(--foreground-muted)",
+                    }}
+                  >
+                    {category.label}
+                  </button>
                 ))}
               </div>
-            ) : (
-              <div style={{ padding: "64px 0", textAlign: "center" }}>
-                <p style={{ color: "var(--foreground-muted)" }}>
-                  No tools found in this category.
-                </p>
-              </div>
-            )}
-          </motion.section>
+
+              {/* Tools Grid */}
+              {filteredTools.length > 0 ? (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                    gap: "16px",
+                  }}
+                >
+                  {filteredTools.map((tool, index) => (
+                    <ToolCard key={tool.id} tool={tool} index={index} />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: "64px 0", textAlign: "center" }}>
+                  <p style={{ color: "var(--foreground-muted)" }}>
+                    No tools found in this category.
+                  </p>
+                </div>
+              )}
+            </motion.section>
+          )}
 
           {/* Footer */}
           <motion.footer

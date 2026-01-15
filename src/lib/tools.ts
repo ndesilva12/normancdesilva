@@ -1,6 +1,7 @@
 import {
   Building2,
   Users,
+  Newspaper,
 } from "lucide-react";
 import { Tool } from "@/types/tool";
 
@@ -25,10 +26,20 @@ export const tools: Tool[] = [
     status: "available",
     aiPowered: true,
   },
+  {
+    id: "news",
+    name: "News",
+    description: "Browse the latest news articles from ZeroHedge, covering markets, politics, and current events.",
+    icon: Newspaper,
+    href: "/tools/news",
+    category: "news",
+    status: "available",
+  },
 ];
 
 export const categories = [
   { id: "all", label: "All Tools" },
   { id: "ai", label: "AI Tools" },
   { id: "sports", label: "Sports" },
+  { id: "news", label: "News" },
 ] as const;
