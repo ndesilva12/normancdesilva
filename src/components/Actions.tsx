@@ -256,6 +256,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
         position: "relative",
         width: "160px",
         flexShrink: 0,
+        zIndex: isExpanded ? 999 : 1,
       }}
     >
       {/* Active Alarm Modal */}
@@ -462,8 +463,8 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
             width: "380px",
             borderRadius: "10px",
             padding: "16px",
-            zIndex: 50,
-            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.3)",
+            zIndex: 1000,
+            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.5)",
           }}
         >
             {/* Google Calendar Connection */}
