@@ -115,9 +115,6 @@ async function enrichPlayerData(
   league: League,
   currentSeason: number
 ): Promise<BasicPlayer[]> {
-  // Get player names that might need enrichment (transfers, missing data)
-  const playerNames = players.map(p => p.name).join(", ");
-
   const seasonYears = [
     currentSeason,
     currentSeason - 1,
@@ -126,61 +123,88 @@ async function enrichPlayerData(
     currentSeason - 4,
   ];
 
-  const enrichPrompt = `I need transfer history and previous school information for these ${teamName} ${getLeagueConfig(league)?.name} players in the ${currentSeason} season:
+  // Build a detailed list of players with what we know
+  const playerList = players.map(p =>
+    `- ${p.name} (#${p.number}, ${p.position}, ${p.age || 'class unknown'})`
+  ).join("\n");
 
-Players: ${playerNames}
+  const enrichPrompt = `Search for transfer portal and recruiting information for these ${teamName} college basketball players (${currentSeason} season).
 
-For EACH player, search for their college basketball history and provide:
-1. Previous schools they played for (if they transferred)
-2. Which years they played at each school
-3. High school if not already known
+PLAYERS TO RESEARCH:
+${playerList}
 
-IMPORTANT: Many college players are transfers. Search for each player's history.
+For EACH player, search for:
+1. Their complete college basketball history - which schools did they play for BEFORE ${teamName}?
+2. Transfer portal entries - many college players are transfers from other programs
+3. Their recruiting profile (247sports, rivals, etc.) to find their high school
 
-Return ONLY valid JSON (no markdown, no backticks):
+IMPORTANT CONTEXT:
+- College basketball has a transfer portal - players frequently transfer between schools
+- Search for "[player name] transfer" or "[player name] college basketball" to find history
+- For example, if a Senior transferred from School A to ${teamName}, they played at School A for years before joining ${teamName}
+- Freshmen typically have no previous college (use null for previous years)
+- Check if any players came from junior college (JUCO) programs
+
+Return ONLY valid JSON (no markdown, no code blocks, no explanation):
 {
   "players": [
     {
-      "name": "Player Name",
-      "previousSchools": ["Previous School 1", "Previous School 2"],
+      "name": "Exact Player Name",
+      "previousSchools": ["School Before Current", "Even Earlier School"],
       "highSchool": "High School Name",
       "seasons": [
         {"year": "${seasonYears[0]}", "team": "${teamName}"},
-        {"year": "${seasonYears[1]}", "team": "previous school or ${teamName}"},
-        {"year": "${seasonYears[2]}", "team": "school or null"},
-        {"year": "${seasonYears[3]}", "team": "school or null"},
-        {"year": "${seasonYears[4]}", "team": "null"}
+        {"year": "${seasonYears[1]}", "team": "Previous school name OR ${teamName} if they were there OR null if not in college"},
+        {"year": "${seasonYears[2]}", "team": "School name or null"},
+        {"year": "${seasonYears[3]}", "team": "School name or null"},
+        {"year": "${seasonYears[4]}", "team": "School name or null"}
       ]
     }
   ]
 }
 
-Return data for ALL players. Use null for years the player wasn't in college.`;
+CRITICAL INSTRUCTIONS:
+- Return data for ALL ${players.length} players
+- Use the EXACT player names from the list above
+- If a player transferred, their previousSchools array should NOT be empty
+- For seasons, use the actual school name they played at that year, not "${teamName}" for years before they transferred
+- Use null for years the player was in high school or not playing college basketball`;
 
   try {
+    console.log("Calling Gemini with Google Search for transfer history...");
     const enrichResponse = await callGemini(enrichPrompt, true);
+    console.log("Enrichment response received, parsing...");
 
     const jsonMatch = enrichResponse.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.log("No enrichment data found, using original data");
+      console.log("No JSON found in enrichment response");
       return players;
     }
 
     const enrichData = JSON.parse(jsonMatch[0]);
+    console.log(`Enrichment found data for ${enrichData.players?.length || 0} players`);
 
     // Merge enrichment data with original players
     return players.map(player => {
       const enrichedPlayer = enrichData.players?.find(
-        (ep: { name: string }) => ep.name.toLowerCase() === player.name.toLowerCase()
+        (ep: { name: string }) =>
+          ep.name.toLowerCase().trim() === player.name.toLowerCase().trim() ||
+          ep.name.toLowerCase().includes(player.name.toLowerCase()) ||
+          player.name.toLowerCase().includes(ep.name.toLowerCase())
       );
 
       if (enrichedPlayer) {
+        const hasPreviousSchools = enrichedPlayer.previousSchools?.length > 0 &&
+          enrichedPlayer.previousSchools.some((s: string) => s && s !== "N/A" && s !== "None");
+
         return {
           ...player,
-          previousSchools: enrichedPlayer.previousSchools?.length > 0
-            ? enrichedPlayer.previousSchools
+          previousSchools: hasPreviousSchools
+            ? enrichedPlayer.previousSchools.filter((s: string) => s && s !== "N/A" && s !== "None")
             : player.previousSchools,
-          highSchool: enrichedPlayer.highSchool || player.highSchool,
+          highSchool: (enrichedPlayer.highSchool && enrichedPlayer.highSchool !== "N/A")
+            ? enrichedPlayer.highSchool
+            : player.highSchool,
           seasons: enrichedPlayer.seasons || player.seasons,
         };
       }
