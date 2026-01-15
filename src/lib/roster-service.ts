@@ -485,7 +485,7 @@ CRITICAL: Extract EVERY player row from the table. Do not skip any players. Retu
     const coordinates = await geocodeLocation(player.hometown);
     playersWithCoords.push({
       ...player,
-      coordinates,
+      coordinates: coordinates ?? undefined,
     });
   }
 
