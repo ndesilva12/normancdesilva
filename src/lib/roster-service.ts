@@ -18,8 +18,9 @@ async function callGemini(prompt: string): Promise<string> {
     throw new Error("Gemini API key not configured");
   }
 
+  // Use gemini-1.5-flash (stable, widely available)
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: {
@@ -41,11 +42,25 @@ async function callGemini(prompt: string): Promise<string> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Gemini API error:", errorText);
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    console.error("Gemini API error status:", response.status);
+    console.error("Gemini API error body:", errorText);
+
+    // Parse error for more details
+    try {
+      const errorJson = JSON.parse(errorText);
+      const errorMessage = errorJson.error?.message || errorText;
+      throw new Error(`Gemini API error: ${response.status} - ${errorMessage}`);
+    } catch {
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    }
   }
 
   const data: GeminiResponse = await response.json();
+
+  if (!data.candidates || data.candidates.length === 0) {
+    throw new Error("Gemini returned no response candidates");
+  }
+
   return data.candidates[0].content.parts[0].text;
 }
 
