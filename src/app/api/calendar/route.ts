@@ -75,7 +75,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { summary, description, date, time, reminderMinutes } = body;
+    const { summary, description, date, time, endTime, reminderMinutes } = body;
 
     if (!summary || !date || !time) {
       return NextResponse.json(
@@ -86,7 +86,16 @@ export async function POST(request: Request) {
 
     // Parse date and time
     const startDateTime = new Date(`${date}T${time}`);
-    const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
+    let endDateTime: Date;
+    if (endTime) {
+      endDateTime = new Date(`${date}T${endTime}`);
+      // If end time is before start time, assume it's the next day
+      if (endDateTime <= startDateTime) {
+        endDateTime.setDate(endDateTime.getDate() + 1);
+      }
+    } else {
+      endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
+    }
 
     const event: CalendarEvent = {
       summary,

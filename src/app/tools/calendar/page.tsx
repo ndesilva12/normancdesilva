@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Calendar, ExternalLink, Loader2, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Calendar, ExternalLink, Loader2, RefreshCw, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 
@@ -26,6 +26,15 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [isMobile, setIsMobile] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    summary: "",
+    description: "",
+    date: "",
+    time: "",
+    endTime: "",
+  });
 
   // Check for mobile viewport
   useEffect(() => {
@@ -219,6 +228,60 @@ export default function CalendarPage() {
 
   const openGoogleCalendar = () => {
     window.open("https://calendar.google.com", "_blank");
+  };
+
+  const openAddModal = (date?: Date) => {
+    const targetDate = date || currentDate;
+    const dateStr = targetDate.toISOString().split("T")[0];
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = Math.ceil(now.getMinutes() / 15) * 15;
+    const timeStr = `${hours}:${minutes.toString().padStart(2, "0")}`;
+    const endHours = (now.getHours() + 1).toString().padStart(2, "0");
+    const endTimeStr = `${endHours}:${minutes.toString().padStart(2, "0")}`;
+
+    setNewEvent({
+      summary: "",
+      description: "",
+      date: dateStr,
+      time: timeStr,
+      endTime: endTimeStr,
+    });
+    setShowAddModal(true);
+  };
+
+  const createEvent = async () => {
+    if (!newEvent.summary || !newEvent.date || !newEvent.time) {
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const response = await fetch("/api/calendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          summary: newEvent.summary,
+          description: newEvent.description,
+          date: newEvent.date,
+          time: newEvent.time,
+          endTime: newEvent.endTime,
+        }),
+      });
+
+      if (response.ok) {
+        setShowAddModal(false);
+        setNewEvent({ summary: "", description: "", date: "", time: "", endTime: "" });
+        await loadEvents();
+      } else {
+        const data = await response.json();
+        console.error("Failed to create event:", data.error);
+      }
+    } catch (error) {
+      console.error("Error creating event:", error);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const formatEventTime = (event: CalendarEvent) => {
@@ -624,25 +687,48 @@ export default function CalendarPage() {
                   View and manage your Google Calendar events
                 </p>
               </div>
-              <button
-                onClick={openGoogleCalendar}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "10px 18px",
-                  borderRadius: "8px",
-                  backgroundColor: "var(--accent)",
-                  color: "var(--background)",
-                  border: "none",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
-              >
-                Open Google Calendar
-                <ExternalLink style={{ width: "16px", height: "16px" }} />
-              </button>
+              <div style={{ display: "flex", gap: "12px" }}>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => openAddModal()}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "10px 18px",
+                      borderRadius: "8px",
+                      backgroundColor: "var(--accent)",
+                      color: "var(--background)",
+                      border: "none",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Plus style={{ width: "16px", height: "16px" }} />
+                    Add Event
+                  </button>
+                )}
+                <button
+                  onClick={openGoogleCalendar}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "10px 18px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--glass-border)",
+                    backgroundColor: "transparent",
+                    color: "var(--foreground-muted)",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                  }}
+                >
+                  Google Calendar
+                  <ExternalLink style={{ width: "16px", height: "16px" }} />
+                </button>
+              </div>
             </div>
           </motion.div>
 
@@ -828,6 +914,271 @@ export default function CalendarPage() {
             </motion.div>
           )}
         </div>
+
+        {/* Add Event Modal */}
+        {showAddModal && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.7)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              padding: "20px",
+            }}
+            onClick={() => setShowAddModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="glass"
+              style={{
+                width: "100%",
+                maxWidth: "480px",
+                borderRadius: "16px",
+                overflow: "hidden",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "20px 24px",
+                  borderBottom: "1px solid var(--glass-border)",
+                }}
+              >
+                <h3 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)" }}>
+                  New Event
+                </h3>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    border: "none",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    color: "var(--foreground-muted)",
+                    cursor: "pointer",
+                  }}
+                >
+                  <X style={{ width: "18px", height: "18px" }} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
+                {/* Title */}
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      color: "var(--foreground-muted)",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Event title"
+                    value={newEvent.summary}
+                    onChange={(e) => setNewEvent({ ...newEvent, summary: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--glass-border)",
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      color: "var(--foreground)",
+                      fontSize: "15px",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                {/* Date */}
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      color: "var(--foreground-muted)",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={newEvent.date}
+                    onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--glass-border)",
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      color: "var(--foreground)",
+                      fontSize: "15px",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                {/* Time */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        color: "var(--foreground-muted)",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Start Time *
+                    </label>
+                    <input
+                      type="time"
+                      value={newEvent.time}
+                      onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "12px 14px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--glass-border)",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        color: "var(--foreground)",
+                        fontSize: "15px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        color: "var(--foreground-muted)",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      End Time
+                    </label>
+                    <input
+                      type="time"
+                      value={newEvent.endTime}
+                      onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "12px 14px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--glass-border)",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        color: "var(--foreground)",
+                        fontSize: "15px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      color: "var(--foreground-muted)",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Description
+                  </label>
+                  <textarea
+                    placeholder="Add a description (optional)"
+                    value={newEvent.description}
+                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                    rows={3}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--glass-border)",
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      color: "var(--foreground)",
+                      fontSize: "15px",
+                      outline: "none",
+                      resize: "none",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "12px",
+                  padding: "16px 24px",
+                  borderTop: "1px solid var(--glass-border)",
+                }}
+              >
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--glass-border)",
+                    backgroundColor: "transparent",
+                    color: "var(--foreground-muted)",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createEvent}
+                  disabled={isCreating || !newEvent.summary || !newEvent.date || !newEvent.time}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    border: "none",
+                    backgroundColor: "var(--accent)",
+                    color: "var(--background)",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    cursor: isCreating ? "not-allowed" : "pointer",
+                    opacity: isCreating || !newEvent.summary || !newEvent.date || !newEvent.time ? 0.5 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  {isCreating && <Loader2 style={{ width: "16px", height: "16px", animation: "spin 1s linear infinite" }} />}
+                  {isCreating ? "Creating..." : "Create Event"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </main>
 
       <style jsx global>{`
