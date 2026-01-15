@@ -15,7 +15,7 @@ async function callGrok(prompt: string): Promise<AIResponse> {
       "Authorization": `Bearer ${GROK_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "grok-beta",
+      model: "grok-2-latest",
       messages: [
         {
           role: "system",
@@ -31,7 +31,9 @@ async function callGrok(prompt: string): Promise<AIResponse> {
   });
 
   if (!response.ok) {
-    throw new Error(`Grok API error: ${response.status}`);
+    const errorText = await response.text();
+    console.error("Grok API error response:", errorText);
+    throw new Error(`Grok API error: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
