@@ -18,7 +18,7 @@ async function callGemini(prompt: string): Promise<string> {
     throw new Error("Gemini API key not configured");
   }
 
-  // Use gemini-2.0-flash with v1beta endpoint
+  // Use gemini-2.0-flash with v1beta endpoint and Google Search grounding
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
@@ -36,6 +36,16 @@ async function callGemini(prompt: string): Promise<string> {
           temperature: 0.1,
           maxOutputTokens: 8192,
         },
+        tools: [
+          {
+            google_search_retrieval: {
+              dynamic_retrieval_config: {
+                mode: "MODE_DYNAMIC",
+                dynamic_threshold: 0.3,
+              },
+            },
+          },
+        ],
       }),
     }
   );
@@ -264,25 +274,6 @@ export async function fetchTeamRoster(
   teamQuery: string
 ): Promise<TeamRoster> {
   const currentSeason = getCurrentSeason();
-  const teamSlug = getTeamSlug(league, teamQuery);
-  const url = getSportsRefUrl(league, teamSlug, currentSeason);
-
-  // Fetch the actual page from sports-reference
-  let htmlContent: string;
-  try {
-    htmlContent = await fetchSportsRefPage(url);
-  } catch (fetchError) {
-    console.error("Failed to fetch sports-reference page:", fetchError);
-    throw new Error(`Could not find team "${teamQuery}" on sports-reference.com. Try using the official team name.`);
-  }
-
-  // Limit HTML size to avoid token limits (extract just roster-related portions)
-  const rosterTableMatch = htmlContent.match(/<table[^>]*id="roster"[^>]*>[\s\S]*?<\/table>/i) ||
-                           htmlContent.match(/<table[^>]*class="[^"]*roster[^"]*"[^>]*>[\s\S]*?<\/table>/i) ||
-                           htmlContent.match(/<table[^>]*>[\s\S]*?<\/table>/i);
-
-  const tableHtml = rosterTableMatch ? rosterTableMatch[0] : htmlContent.substring(0, 50000);
-
   const seasonYears = [
     currentSeason,
     currentSeason - 1,
@@ -291,31 +282,27 @@ export async function fetchTeamRoster(
     currentSeason - 4,
   ];
 
-  // Use Gemini to parse the HTML
-  const prompt = `You are a sports data parser. I have fetched the HTML from sports-reference.com for a ${getLeagueConfig(league)?.name} team roster.
+  // Use Gemini with Google Search grounding to get current roster data
+  const prompt = `Search for the current ${currentSeason} ${getLeagueConfig(league)?.name} roster for ${teamQuery}.
 
-Parse this HTML table and extract the roster information.
+I need the CURRENT roster for the ${currentSeason} season. Search sports-reference.com or official team sources for accurate, up-to-date information.
 
-HTML Content:
-${tableHtml}
-
-For each player found in the roster table, extract:
+For each player on the current roster, provide:
 - Jersey number
 - Full name
 - Position
 - Height
 - Weight
 - Class/Year or Age
-- Hometown (City, State/Country) - look for birthplace or hometown columns
-- High school (if available)
-- Previous school (if available, for transfers)
+- Hometown (City, State/Country)
+- High school
+- Previous college/team (for transfers)
+- What team they played for in each of these seasons: ${seasonYears.join(", ")}
 
-Also determine:
-- The official team name (from page title or header)
-- Team's primary color (hex code) - use your knowledge of ${teamQuery}'s colors
+Also provide:
+- The official team name
+- Team's primary color (hex code)
 - Team's secondary color (hex code)
-
-For the seasons array, use your knowledge to fill in what team each player was on for these years: ${seasonYears.join(", ")}. Use null if they weren't playing college/pro ball that year.
 
 Respond with ONLY a valid JSON object (no markdown, no explanation):
 {
@@ -344,7 +331,11 @@ Respond with ONLY a valid JSON object (no markdown, no explanation):
   ]
 }
 
-IMPORTANT: Extract ALL players from the roster table. Return valid JSON only.`;
+IMPORTANT:
+- Include ALL players currently on the ${currentSeason} roster
+- Do NOT include players who have left (graduated, transferred, drafted to NBA, etc.)
+- Use null in seasons array if player wasn't playing that year
+- Return valid JSON only`;
 
   const responseText = await callGemini(prompt);
 
