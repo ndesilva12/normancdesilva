@@ -13,7 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-interface Action {
+export interface ActionItem {
   id: string;
   label: string;
   date?: string; // YYYY-MM-DD
@@ -24,7 +24,10 @@ interface Action {
   alarmTriggered: boolean;
 }
 
-const ACTIONS_KEY = "dashboard-actions";
+export const ACTIONS_STORAGE_KEY = "dashboard-actions";
+
+// For internal use
+type Action = ActionItem;
 
 // Generate alarm sound using Web Audio API
 function playAlarmSound(audioContext: AudioContext, duration: number = 3000) {
@@ -58,11 +61,17 @@ interface ActionsProps {
   isGoogleConnected: boolean;
   onConnectGoogle: () => void;
   defaultCollapsed?: boolean;
+  onExpandChange?: (expanded: boolean) => void;
 }
 
-export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed = false }: ActionsProps) {
+export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed = false, onExpandChange }: ActionsProps) {
   const [actions, setActions] = useState<Action[]>([]);
   const [isExpanded, setIsExpanded] = useState(!defaultCollapsed);
+
+  // Notify parent of expand state changes
+  useEffect(() => {
+    onExpandChange?.(isExpanded);
+  }, [isExpanded, onExpandChange]);
   const [newLabel, setNewLabel] = useState("");
   const [newDate, setNewDate] = useState("");
   const [newTime, setNewTime] = useState("");
@@ -77,7 +86,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
 
   // Load actions from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem(ACTIONS_KEY);
+    const stored = localStorage.getItem(ACTIONS_STORAGE_KEY);
     if (stored) {
       try {
         setActions(JSON.parse(stored));
@@ -89,7 +98,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
 
   const saveActions = useCallback((updated: Action[]) => {
     setActions(updated);
-    localStorage.setItem(ACTIONS_KEY, JSON.stringify(updated));
+    localStorage.setItem(ACTIONS_STORAGE_KEY, JSON.stringify(updated));
   }, []);
 
   // Check for web alarms

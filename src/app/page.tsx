@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { ToolCard } from "@/components/ToolCard";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
-import { Actions } from "@/components/Actions";
+import { Actions, ACTIONS_STORAGE_KEY, type ActionItem } from "@/components/Actions";
 import { tools, categories } from "@/lib/tools";
 
 // Collapsed Calendar Widget
@@ -106,6 +106,82 @@ function CalendarWidget() {
   );
 }
 
+// Actions Row - displays action items as plain text (only when tool is collapsed)
+function ActionsRow({ isToolExpanded }: { isToolExpanded: boolean }) {
+  const [actions, setActions] = useState<ActionItem[]>([]);
+
+  useEffect(() => {
+    // Load from localStorage
+    const loadActions = () => {
+      const stored = localStorage.getItem(ACTIONS_STORAGE_KEY);
+      if (stored) {
+        try {
+          setActions(JSON.parse(stored));
+        } catch {
+          setActions([]);
+        }
+      }
+    };
+
+    loadActions();
+
+    // Listen for storage changes (when Actions component updates)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === ACTIONS_STORAGE_KEY) {
+        loadActions();
+      }
+    };
+
+    // Also poll for changes since storage events don't fire in same tab
+    const interval = setInterval(loadActions, 1000);
+
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Only show incomplete actions, and only when tool is collapsed
+  const visibleActions = actions.filter((a) => !a.completed);
+
+  if (visibleActions.length === 0 || isToolExpanded) return null;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        gap: "6px 16px",
+        maxWidth: "800px",
+        margin: "0 auto",
+        padding: "4px 16px",
+      }}
+    >
+      {visibleActions.map((action, index) => (
+        <span
+          key={action.id}
+          style={{
+            fontSize: "13px",
+            color: "var(--foreground-muted)",
+          }}
+        >
+          {action.label}
+          {action.time && (
+            <span style={{ color: "var(--foreground-muted)", opacity: 0.6, marginLeft: "4px" }}>
+              ({action.time})
+            </span>
+          )}
+          {index < visibleActions.length - 1 && (
+            <span style={{ color: "var(--foreground-muted)", opacity: 0.3, marginLeft: "8px" }}>•</span>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function LiveDateTime({
   isGoogleConnected,
   onConnectGoogle,
@@ -114,6 +190,7 @@ function LiveDateTime({
   onConnectGoogle: () => void;
 }) {
   const [dateTime, setDateTime] = useState<Date | null>(null);
+  const [isActionsExpanded, setIsActionsExpanded] = useState(false);
 
   useEffect(() => {
     setDateTime(new Date());
@@ -141,7 +218,7 @@ function LiveDateTime({
   });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", width: "100%" }}>
       {/* Date Row with Calendar */}
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
         <h1
@@ -174,8 +251,12 @@ function LiveDateTime({
           isGoogleConnected={isGoogleConnected}
           onConnectGoogle={onConnectGoogle}
           defaultCollapsed={true}
+          onExpandChange={setIsActionsExpanded}
         />
       </div>
+
+      {/* Actions Row - visible items (only when tool is collapsed) */}
+      <ActionsRow isToolExpanded={isActionsExpanded} />
     </div>
   );
 }
