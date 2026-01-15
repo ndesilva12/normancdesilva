@@ -150,6 +150,7 @@ interface BasicPlayer {
   highSchool: string;
   previousSchools: string[];
   seasons: { year: string; team: string | null }[];
+  playerUrl?: string;
 }
 
 // Extract player page URLs from roster HTML
@@ -320,6 +321,7 @@ async function enrichPlayersFromSportsRef(
       if (history) {
         enrichedPlayers.push({
           ...player,
+          playerUrl, // Include the player's page URL
           previousSchools: history.previousSchools?.length > 0
             ? history.previousSchools
             : player.previousSchools,
@@ -327,9 +329,16 @@ async function enrichPlayersFromSportsRef(
         });
         continue;
       }
+
+      // History fetch failed but we still have the URL
+      enrichedPlayers.push({
+        ...player,
+        playerUrl,
+      });
+      continue;
     }
 
-    // No URL found or fetch failed - keep original data
+    // No URL found - keep original data
     enrichedPlayers.push(player);
   }
 

@@ -98,7 +98,26 @@ function RosterTable({
                 }}
               >
                 <td style={tdStyle}>{player.number}</td>
-                <td style={{ ...tdStyle, fontWeight: 500, textAlign: "left" }}>{player.name}</td>
+                <td style={{ ...tdStyle, fontWeight: 500, textAlign: "left" }}>
+                  {player.playerUrl ? (
+                    <a
+                      href={player.playerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: "var(--foreground)",
+                        textDecoration: "none",
+                        borderBottom: "1px dashed var(--foreground-muted)",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = roster.primaryColor)}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground)")}
+                    >
+                      {player.name}
+                    </a>
+                  ) : (
+                    player.name
+                  )}
+                </td>
                 <td style={tdStyle}>{player.position}</td>
                 <td style={tdStyle}>{player.height}</td>
                 <td style={tdStyle}>{player.weight}</td>
@@ -206,6 +225,7 @@ function PlayerMap({
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const hasInitializedRef = useRef(false);
+  const lastRosterSignatureRef = useRef<string>("");
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
@@ -327,8 +347,17 @@ function PlayerMap({
       markersRef.current.push(marker);
     });
 
-    // Only fit bounds on initial load or when rosters change
-    if (!hasInitializedRef.current || rosters.length > 0) {
+    // Create a signature of current rosters to detect when teams change
+    const rosterSignature = rosters.map(r => r.teamName).join("|");
+
+    // Reset initialization if rosters changed (new team loaded)
+    if (lastRosterSignatureRef.current !== rosterSignature) {
+      hasInitializedRef.current = false;
+      lastRosterSignatureRef.current = rosterSignature;
+    }
+
+    // Only fit bounds on initial load or when new team is loaded (not on hover)
+    if (!hasInitializedRef.current) {
       mapInstanceRef.current.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
       hasInitializedRef.current = true;
     }

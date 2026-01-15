@@ -46,6 +46,8 @@ export interface Player {
     lat: number;
     lng: number;
   };
+  // Link to player's sports-reference page
+  playerUrl?: string;
 }
 
 export interface TeamRoster {
