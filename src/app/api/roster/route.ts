@@ -69,7 +69,19 @@ export async function GET(request: NextRequest) {
 
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    if (errorMessage.includes("401") || errorMessage.includes("403")) {
+    // Check if it's a sports-reference site blocking us
+    if (errorMessage.includes("Failed to fetch") && (errorMessage.includes("403") || errorMessage.includes("Forbidden"))) {
+      return NextResponse.json(
+        {
+          error: "Website blocked request",
+          details: `The sports data website is blocking our request. This is a known issue with some sports-reference sites. Try again later or try a different team. URL attempted: ${errorMessage}`
+        },
+        { status: 503 }
+      );
+    }
+
+    // Check if it's a Gemini API auth issue
+    if (errorMessage.includes("Gemini") && (errorMessage.includes("401") || errorMessage.includes("403"))) {
       return NextResponse.json(
         { error: "API authentication failed", details: "Check your Gemini API key" },
         { status: 401 }
@@ -78,8 +90,19 @@ export async function GET(request: NextRequest) {
 
     if (errorMessage.includes("429")) {
       return NextResponse.json(
-        { error: "Rate limit exceeded", details: "Gemini API rate limit hit. Please wait 30-60 seconds and try again." },
+        { error: "Rate limit exceeded", details: "API rate limit hit. Please wait 30-60 seconds and try again." },
         { status: 429 }
+      );
+    }
+
+    // Check if roster table wasn't found
+    if (errorMessage.includes("Could not find roster table")) {
+      return NextResponse.json(
+        {
+          error: "Roster not found",
+          details: `The roster page exists but we couldn't find the roster data. The page structure may have changed. ${errorMessage}`
+        },
+        { status: 404 }
       );
     }
 
