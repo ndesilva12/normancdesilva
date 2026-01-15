@@ -393,7 +393,8 @@ function getSportsRefUrl(league: League, teamSlug: string, year: number): string
     case "ncaa-basketball":
       return `https://www.sports-reference.com/cbb/schools/${teamSlug}/men/${year}.html`;
     case "nfl":
-      return `https://www.pro-football-reference.com/teams/${teamSlug}/${year}_roster.htm`;
+      // NFL team pages include roster data - format: /teams/nwe/2025.htm
+      return `https://www.pro-football-reference.com/teams/${teamSlug}/${year}.htm`;
     case "ncaa-football":
       return `https://www.sports-reference.com/cfb/schools/${teamSlug}/${year}-roster.html`;
     case "mlb":
