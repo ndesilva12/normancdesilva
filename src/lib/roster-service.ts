@@ -223,16 +223,50 @@ function extractStatsTables(html: string): string {
   return html.substring(0, 20000);
 }
 
-// Fetch and parse a single player's page for their history
+// Extract birthplace from player page HTML
+function extractBirthplace(html: string): string | null {
+  // Pattern: "Born: Month Day, Year in City, State" or similar
+  const birthPatterns = [
+    /Born:\s*[A-Z][a-z]+\s+\d{1,2},\s+\d{4}\s+in\s+([^<\n]+)/i,
+    /born\s+[^,]+,\s+\d{4}\s+in\s+([^<\n]+)/i,
+    /Birthplace:\s*([^<\n]+)/i,
+    /birth_place['":\s]+([^'"<\n,]+(?:,\s*[A-Z]{2})?)/i,
+  ];
+
+  for (const pattern of birthPatterns) {
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      // Clean up the result
+      let birthplace = match[1].trim();
+      // Remove trailing punctuation and HTML
+      birthplace = birthplace.replace(/<[^>]+>/g, "").replace(/[<>]/g, "").trim();
+      // Remove "us" or "USA" at the end if present
+      birthplace = birthplace.replace(/,?\s*(us|usa|united states)$/i, "").trim();
+      if (birthplace && birthplace.length > 2 && birthplace.length < 100) {
+        console.log(`Found birthplace for player: ${birthplace}`);
+        return birthplace;
+      }
+    }
+  }
+  return null;
+}
+
+// Fetch and parse a single player's page for their history and birthplace
 async function fetchPlayerHistory(
   playerName: string,
   playerUrl: string,
   currentSeason: number,
   league: League
-): Promise<{ previousSchools: string[]; seasons: { year: string; team: string | null }[] } | null> {
+): Promise<{ previousSchools: string[]; seasons: { year: string; team: string | null }[]; hometown?: string } | null> {
   try {
     console.log(`Fetching player page for ${playerName}: ${playerUrl}`);
     const html = await fetchSportsRefPage(playerUrl);
+
+    // Extract birthplace directly from HTML (more reliable than AI parsing)
+    const hometown = extractBirthplace(html);
+    if (hometown) {
+      console.log(`Extracted hometown for ${playerName}: ${hometown}`);
+    }
 
     // Extract the relevant stats tables
     const statsTables = extractStatsTables(html);
@@ -292,7 +326,20 @@ Rules:
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
       console.log(`Parsed history for ${playerName}:`, JSON.stringify(parsed));
-      return parsed;
+      // Include hometown from birthplace extraction
+      return {
+        ...parsed,
+        hometown,
+      };
+    }
+
+    // Even if parsing failed, return hometown if we found it
+    if (hometown) {
+      return {
+        previousSchools: [],
+        seasons: [],
+        hometown,
+      };
     }
   } catch (error) {
     console.error(`Failed to fetch history for ${playerName}:`, error);
@@ -323,6 +370,8 @@ async function enrichPlayersFromSportsRef(
         enrichedPlayers.push({
           ...player,
           playerUrl, // Include the player's page URL
+          // Use hometown from player page if available, otherwise keep original
+          hometown: history.hometown || player.hometown,
           previousSchools: history.previousSchools?.length > 0
             ? history.previousSchools
             : player.previousSchools,
@@ -393,8 +442,8 @@ function getSportsRefUrl(league: League, teamSlug: string, year: number): string
     case "ncaa-basketball":
       return `https://www.sports-reference.com/cbb/schools/${teamSlug}/men/${year}.html`;
     case "nfl":
-      // NFL team pages include roster data - format: /teams/nwe/2025.htm
-      return `https://www.pro-football-reference.com/teams/${teamSlug}/${year}.htm`;
+      // NFL roster pages: /teams/nwe/2025_roster.htm
+      return `https://www.pro-football-reference.com/teams/${teamSlug}/${year}_roster.htm`;
     case "ncaa-football":
       return `https://www.sports-reference.com/cfb/schools/${teamSlug}/${year}-roster.html`;
     case "mlb":
@@ -1060,6 +1109,179 @@ async function fetchSportsRefPage(url: string, retries = 2): Promise<string> {
   throw lastError || new Error(`Failed to fetch ${url} after ${retries + 1} attempts`);
 }
 
+// Get league-specific prompt for parsing roster tables
+function getLeagueRosterPrompt(
+  league: League,
+  teamQuery: string,
+  tableHtml: string,
+  currentSeason: number,
+  seasonYears: number[]
+): string {
+  const leagueConfig = getLeagueConfig(league);
+  const leagueName = leagueConfig?.name || league;
+
+  // NFL/Pro leagues have different table structure
+  if (league === "nfl") {
+    return `Parse this HTML roster table from pro-football-reference.com for the ${teamQuery} NFL team.
+
+HTML Table:
+${tableHtml}
+
+Extract ALL players from this table. The table has columns: No., Player, Age, Pos, G, GS, Wt, Ht, College/Univ, BirthDate, Yrs, AV, Drafted
+
+For each player, extract:
+- Jersey number (from No. column)
+- Full name (from Player column)
+- Position (from Pos column)
+- Height (from Ht column, format as "6-2")
+- Weight (from Wt column, just the number)
+- Age (actual age number)
+- College/University (from College/Univ column - this is where they played college)
+- Years in league (from Yrs column)
+- Drafted info (from Drafted column, extract the team they were drafted by)
+
+For previousSchools: List all colleges from the College/Univ column (they may have multiple separated by comma).
+For hometown: Use the college location as a proxy (e.g., "Alabama" -> "Tuscaloosa, AL").
+
+Also provide:
+- Team name: "${teamQuery}" official name (e.g., "New England Patriots")
+- Primary color hex code for ${teamQuery}
+- Secondary color hex code for ${teamQuery}
+
+For the seasons array, use the Yrs column to determine how many seasons they've played:
+
+Respond with ONLY valid JSON (no markdown, no backticks, no explanation):
+{
+  "teamName": "New England Patriots",
+  "primaryColor": "#002244",
+  "secondaryColor": "#C60C30",
+  "players": [
+    {
+      "number": "10",
+      "name": "Drake Maye",
+      "position": "QB",
+      "height": "6-4",
+      "weight": "225",
+      "age": "23",
+      "hometown": "Chapel Hill, NC",
+      "highSchool": "",
+      "previousSchools": ["North Carolina"],
+      "seasons": [
+        {"year": "${seasonYears[0]}", "team": "${teamQuery}"},
+        {"year": "${seasonYears[1]}", "team": "${teamQuery}"}
+      ]
+    }
+  ]
+}
+
+CRITICAL: Extract EVERY player row from the table. Do not skip any players. Return valid JSON only.`;
+  }
+
+  if (league === "nba") {
+    return `Parse this HTML roster table from basketball-reference.com for the ${teamQuery} NBA team.
+
+HTML Table:
+${tableHtml}
+
+Extract ALL players from this table. For each player, extract:
+- Jersey number (from No. column)
+- Full name (from Player column)
+- Position (from Pos column)
+- Height (from Ht column, format as "6-2")
+- Weight (from Wt column)
+- Birth Date
+- College (where they played college basketball)
+
+For hometown: Use birthplace if available, otherwise use college location.
+For previousSchools: List colleges they attended.
+
+Also provide:
+- Team name: "${teamQuery}" official name
+- Primary color hex code
+- Secondary color hex code
+
+Respond with ONLY valid JSON (no markdown, no backticks, no explanation):
+{
+  "teamName": "Full Official Team Name",
+  "primaryColor": "#001A57",
+  "secondaryColor": "#FFFFFF",
+  "players": [
+    {
+      "number": "1",
+      "name": "Player Full Name",
+      "position": "G",
+      "height": "6-2",
+      "weight": "185",
+      "age": "25",
+      "hometown": "City, State",
+      "highSchool": "",
+      "previousSchools": ["College Name"],
+      "seasons": []
+    }
+  ]
+}
+
+CRITICAL: Extract EVERY player row from the table. Return valid JSON only.`;
+  }
+
+  // Default prompt for college sports (basketball, football)
+  return `Parse this HTML roster table from sports-reference.com for the ${teamQuery} ${leagueName} team.
+
+HTML Table:
+${tableHtml}
+
+Extract ALL players from this table. For each player, extract:
+- Jersey number (from # or No. column)
+- Full name (from Player or Name column)
+- Position (from Pos column)
+- Height (from Ht or Height column, format as "6-2")
+- Weight (from Wt or Weight column, just the number)
+- Class/Year (from Class or Yr column - Fr, So, Jr, Sr)
+- Hometown/Birthplace if available
+- High school if available
+- Previous school if available (for transfers)
+
+Also provide:
+- Team name: "${teamQuery}" official name
+- Primary color hex code for ${teamQuery}
+- Secondary color hex code for ${teamQuery}
+
+For the seasons array, based on the player's class year, determine what years they played:
+- A Senior (Sr) in ${currentSeason} played: ${seasonYears.slice(0, 4).join(", ")}
+- A Junior (Jr) in ${currentSeason} played: ${seasonYears.slice(0, 3).join(", ")}
+- A Sophomore (So) in ${currentSeason} played: ${seasonYears.slice(0, 2).join(", ")}
+- A Freshman (Fr) in ${currentSeason} played: ${seasonYears[0]} only
+
+Respond with ONLY valid JSON (no markdown, no backticks, no explanation):
+{
+  "teamName": "Full Official Team Name",
+  "primaryColor": "#001A57",
+  "secondaryColor": "#FFFFFF",
+  "players": [
+    {
+      "number": "1",
+      "name": "Player Full Name",
+      "position": "G",
+      "height": "6-2",
+      "weight": "185",
+      "age": "Jr.",
+      "hometown": "City, State",
+      "highSchool": "High School Name",
+      "previousSchools": [],
+      "seasons": [
+        {"year": "${seasonYears[0]}", "team": "${teamQuery}"},
+        {"year": "${seasonYears[1]}", "team": "${teamQuery} or null"},
+        {"year": "${seasonYears[2]}", "team": "null if freshman/sophomore"},
+        {"year": "${seasonYears[3]}", "team": "null if not senior"},
+        {"year": "${seasonYears[4]}", "team": "null"}
+      ]
+    }
+  ]
+}
+
+CRITICAL: Extract EVERY player row from the table. Do not skip any players. Return valid JSON only.`;
+}
+
 // Get roster table patterns for different leagues
 function getRosterTablePatterns(league: League): RegExp[] {
   switch (league) {
@@ -1152,62 +1374,8 @@ export async function fetchTeamRoster(
     currentSeason - 4,
   ];
 
-  // Use Gemini to parse the HTML table
-  const prompt = `Parse this HTML roster table from sports-reference.com for the ${teamQuery} ${getLeagueConfig(league)?.name} team.
-
-HTML Table:
-${tableHtml}
-
-Extract ALL players from this table. For each player, extract:
-- Jersey number (from # or No. column)
-- Full name (from Player or Name column)
-- Position (from Pos column)
-- Height (from Ht or Height column, format as "6-2")
-- Weight (from Wt or Weight column, just the number)
-- Class/Year (from Class or Yr column - Fr, So, Jr, Sr)
-- Hometown/Birthplace if available
-- High school if available
-- Previous school if available (for transfers)
-
-Also provide:
-- Team name: "${teamQuery}" official name
-- Primary color hex code for ${teamQuery}
-- Secondary color hex code for ${teamQuery}
-
-For the seasons array, based on the player's class year, determine what years they played:
-- A Senior (Sr) in ${currentSeason} played: ${seasonYears.slice(0, 4).join(", ")}
-- A Junior (Jr) in ${currentSeason} played: ${seasonYears.slice(0, 3).join(", ")}
-- A Sophomore (So) in ${currentSeason} played: ${seasonYears.slice(0, 2).join(", ")}
-- A Freshman (Fr) in ${currentSeason} played: ${seasonYears[0]} only
-
-Respond with ONLY valid JSON (no markdown, no backticks, no explanation):
-{
-  "teamName": "Full Official Team Name",
-  "primaryColor": "#001A57",
-  "secondaryColor": "#FFFFFF",
-  "players": [
-    {
-      "number": "1",
-      "name": "Player Full Name",
-      "position": "G",
-      "height": "6-2",
-      "weight": "185",
-      "age": "Jr.",
-      "hometown": "City, State",
-      "highSchool": "High School Name",
-      "previousSchools": [],
-      "seasons": [
-        {"year": "${seasonYears[0]}", "team": "${teamQuery}"},
-        {"year": "${seasonYears[1]}", "team": "${teamQuery} or null"},
-        {"year": "${seasonYears[2]}", "team": "null if freshman/sophomore"},
-        {"year": "${seasonYears[3]}", "team": "null if not senior"},
-        {"year": "${seasonYears[4]}", "team": "null"}
-      ]
-    }
-  ]
-}
-
-CRITICAL: Extract EVERY player row from the table. Do not skip any players. Return valid JSON only.`;
+  // Use league-specific prompts for parsing roster tables
+  const prompt = getLeagueRosterPrompt(league, teamQuery, tableHtml, currentSeason, seasonYears);
 
   const responseText = await callGemini(prompt);
 
