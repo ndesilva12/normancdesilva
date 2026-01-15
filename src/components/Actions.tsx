@@ -256,7 +256,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
         position: "relative",
         width: "160px",
         flexShrink: 0,
-        zIndex: isExpanded ? 999 : 1,
+        zIndex: isExpanded ? 9999 : 1,
       }}
     >
       {/* Active Alarm Modal */}
@@ -455,7 +455,6 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
       {/* Dropdown content - absolutely positioned */}
       {isExpanded && (
         <div
-          className="glass"
           style={{
             position: "absolute",
             top: "calc(100% + 8px)",
@@ -463,8 +462,10 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
             width: "380px",
             borderRadius: "10px",
             padding: "16px",
-            zIndex: 1000,
-            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.7)",
+            backgroundColor: "#1a1a2e",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
           }}
         >
             {/* Google Calendar Connection */}
