@@ -8,10 +8,9 @@ import {
   Calendar,
   Clock,
   Bell,
-  BellOff,
   Loader2,
-  ExternalLink,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
 } from "lucide-react";
 
 interface Action {
@@ -58,11 +57,12 @@ function playAlarmSound(audioContext: AudioContext, duration: number = 3000) {
 interface ActionsProps {
   isGoogleConnected: boolean;
   onConnectGoogle: () => void;
+  defaultCollapsed?: boolean;
 }
 
-export function Actions({ isGoogleConnected, onConnectGoogle }: ActionsProps) {
+export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed = false }: ActionsProps) {
   const [actions, setActions] = useState<Action[]>([]);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(!defaultCollapsed);
   const [newLabel, setNewLabel] = useState("");
   const [newDate, setNewDate] = useState("");
   const [newTime, setNewTime] = useState("");
@@ -242,7 +242,13 @@ export function Actions({ isGoogleConnected, onConnectGoogle }: ActionsProps) {
   const incompleteCount = actions.filter((a) => !a.completed).length;
 
   return (
-    <div style={{ width: "100%", maxWidth: "380px" }}>
+    <div
+      style={{
+        width: isExpanded ? "380px" : "160px",
+        transition: "width 0.3s ease",
+        flexShrink: 0,
+      }}
+    >
       {/* Active Alarm Modal */}
       {activeAlarm && (
         <div
@@ -387,7 +393,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle }: ActionsProps) {
       <div
         className="glass"
         style={{
-          borderRadius: "12px",
+          borderRadius: "10px",
           overflow: "hidden",
         }}
       >
@@ -399,16 +405,16 @@ export function Actions({ isGoogleConnected, onConnectGoogle }: ActionsProps) {
             alignItems: "center",
             justifyContent: "space-between",
             width: "100%",
-            padding: "14px 18px",
+            padding: "10px 14px",
             background: "none",
             border: "none",
             cursor: "pointer",
             borderBottom: isExpanded ? "1px solid var(--glass-border)" : "none",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <CheckSquare style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
-            <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <CheckSquare style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
+            <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)" }}>
               Actions
             </span>
             {incompleteCount > 0 && (
@@ -426,16 +432,15 @@ export function Actions({ isGoogleConnected, onConnectGoogle }: ActionsProps) {
               </span>
             )}
           </div>
-          <span
+          <ChevronDown
             style={{
+              width: "14px",
+              height: "14px",
+              color: "var(--foreground-muted)",
               transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
               transition: "transform 0.2s",
-              color: "var(--foreground-muted)",
-              fontSize: "12px",
             }}
-          >
-            ▼
-          </span>
+          />
         </button>
 
         {/* Content */}

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Calendar } from "lucide-react";
+import { Calendar, ChevronDown, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { ToolCard } from "@/components/ToolCard";
@@ -10,11 +10,109 @@ import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { Actions } from "@/components/Actions";
 import { tools, categories } from "@/lib/tools";
 
-interface LiveDateTimeProps {
-  onOpenCalendar?: () => void;
+// Collapsed Calendar Widget
+function CalendarWidget() {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div
+      className="glass"
+      style={{
+        borderRadius: "10px",
+        overflow: "hidden",
+        width: isExpanded ? "320px" : "160px",
+        transition: "width 0.3s ease",
+        flexShrink: 0,
+      }}
+    >
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          width: "100%",
+          padding: "10px 14px",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Calendar style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
+          <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)" }}>
+            Calendar
+          </span>
+        </div>
+        <ChevronDown
+          style={{
+            width: "14px",
+            height: "14px",
+            color: "var(--foreground-muted)",
+            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.2s",
+          }}
+        />
+      </button>
+
+      {isExpanded && (
+        <div style={{ padding: "12px 14px", borderTop: "1px solid var(--glass-border)" }}>
+          <Link
+            href="/tools/calendar"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              width: "100%",
+              padding: "10px 16px",
+              borderRadius: "8px",
+              backgroundColor: "var(--accent)",
+              color: "var(--background)",
+              fontSize: "13px",
+              fontWeight: 500,
+              textDecoration: "none",
+              marginBottom: "10px",
+            }}
+          >
+            Open Calendar
+            <ExternalLink style={{ width: "14px", height: "14px" }} />
+          </Link>
+          <a
+            href="https://calendar.google.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              width: "100%",
+              padding: "10px 16px",
+              borderRadius: "8px",
+              border: "1px solid var(--glass-border)",
+              backgroundColor: "transparent",
+              color: "var(--foreground-muted)",
+              fontSize: "13px",
+              textDecoration: "none",
+            }}
+          >
+            Google Calendar
+            <ExternalLink style={{ width: "14px", height: "14px" }} />
+          </a>
+        </div>
+      )}
+    </div>
+  );
 }
 
-function LiveDateTime({ onOpenCalendar }: LiveDateTimeProps) {
+function LiveDateTime({
+  isGoogleConnected,
+  onConnectGoogle,
+}: {
+  isGoogleConnected: boolean;
+  onConnectGoogle: () => void;
+}) {
   const [dateTime, setDateTime] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -26,7 +124,7 @@ function LiveDateTime({ onOpenCalendar }: LiveDateTimeProps) {
   }, []);
 
   if (!dateTime) {
-    return <div style={{ height: "80px" }} />;
+    return <div style={{ height: "100px" }} />;
   }
 
   const formattedDate = dateTime.toLocaleDateString("en-US", {
@@ -43,48 +141,41 @@ function LiveDateTime({ onOpenCalendar }: LiveDateTimeProps) {
   });
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+      {/* Date Row with Calendar */}
+      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
         <h1
           style={{
-            fontSize: "clamp(24px, 4vw, 40px)",
+            fontSize: "clamp(22px, 3.5vw, 36px)",
             fontWeight: 700,
             color: "var(--foreground)",
             letterSpacing: "-0.02em",
+            whiteSpace: "nowrap",
           }}
         >
           {formattedDate}
         </h1>
-        <Link
-          href="/tools/calendar"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "36px",
-            height: "36px",
-            borderRadius: "8px",
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            border: "1px solid var(--glass-border)",
-            color: "var(--accent)",
-            cursor: "pointer",
-            transition: "all 0.2s",
-            textDecoration: "none",
-          }}
-          title="Open Calendar"
-        >
-          <Calendar style={{ width: "18px", height: "18px" }} />
-        </Link>
+        <CalendarWidget />
       </div>
-      <p
-        style={{
-          fontSize: "clamp(20px, 3vw, 32px)",
-          fontWeight: 300,
-          color: "var(--accent)",
-        }}
-      >
-        {formattedTime}
-      </p>
+
+      {/* Time Row with Actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <p
+          style={{
+            fontSize: "clamp(18px, 2.5vw, 28px)",
+            fontWeight: 300,
+            color: "var(--accent)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {formattedTime}
+        </p>
+        <Actions
+          isGoogleConnected={isGoogleConnected}
+          onConnectGoogle={onConnectGoogle}
+          defaultCollapsed={true}
+        />
+      </div>
     </div>
   );
 }
@@ -149,7 +240,7 @@ export default function Home() {
             padding: "40px 24px 100px 24px",
           }}
         >
-          {/* Date/Time & Actions Section - Side by Side */}
+          {/* Date/Time with Calendar & Actions inline */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -157,14 +248,10 @@ export default function Home() {
             style={{
               marginBottom: "32px",
               display: "flex",
-              flexWrap: "wrap",
-              alignItems: "flex-start",
               justifyContent: "center",
-              gap: "32px",
             }}
           >
-            <LiveDateTime />
-            <Actions
+            <LiveDateTime
               isGoogleConnected={isGoogleConnected}
               onConnectGoogle={handleConnectGoogle}
             />
