@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent, useCallback } from "react";
-import { Search, ExternalLink, X, Loader2, TrendingUp } from "lucide-react";
+import { Search, ExternalLink, X, Loader2, TrendingUp, ChevronDown } from "lucide-react";
 import {
   SearchSource,
   SEARCH_SOURCES,
@@ -25,6 +25,16 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [trends, setTrends] = useState<TrendingSearch[]>([]);
   const [trendsLoading, setTrendsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Fetch Google Trends on mount
   const fetchTrends = useCallback(async () => {
@@ -284,48 +294,129 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
           </button>
         </div>
 
-        {/* Source Selector Buttons - Below Search Bar */}
-        <div
-          style={{
-            marginTop: "16px",
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "10px",
-          }}
-        >
-          {SEARCH_SOURCES.map((source) => (
+        {/* Source Selector - Below Search Bar */}
+        {isMobile ? (
+          /* Mobile Dropdown */
+          <div style={{ marginTop: "12px", position: "relative" }}>
             <button
-              key={source.id}
               type="button"
-              onClick={() => toggleSource(source.id)}
-              className={!selectedSources.includes(source.id) ? "glass" : ""}
+              onClick={() => setDropdownOpen(!dropdownOpen)}
               style={{
-                whiteSpace: "nowrap",
-                borderRadius: "9999px",
-                padding: "8px 18px",
-                fontSize: "13px",
-                fontWeight: 500,
-                border: "none",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                backgroundColor: selectedSources.includes(source.id)
-                  ? "var(--accent)"
-                  : "transparent",
-                color: selectedSources.includes(source.id)
-                  ? "var(--background)"
-                  : "var(--foreground-muted)",
+                width: "100%",
                 display: "flex",
                 alignItems: "center",
-                gap: "6px",
+                justifyContent: "space-between",
+                padding: "10px 14px",
+                borderRadius: "8px",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                background: "transparent",
+                color: "var(--foreground)",
+                fontSize: "13px",
+                cursor: "pointer",
               }}
             >
-              <span style={{ fontSize: "14px" }}>{source.icon}</span>
-              {source.name}
+              <span>
+                {selectedSources.length === 1
+                  ? SEARCH_SOURCES.find((s) => s.id === selectedSources[0])?.name
+                  : `${selectedSources.length} sources selected`}
+              </span>
+              <ChevronDown
+                style={{
+                  width: "16px",
+                  height: "16px",
+                  transition: "transform 0.2s",
+                  transform: dropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                }}
+              />
             </button>
-          ))}
-        </div>
+            {dropdownOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  marginTop: "4px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  backgroundColor: "#1c1c1c",
+                  zIndex: 50,
+                  overflow: "hidden",
+                }}
+              >
+                {SEARCH_SOURCES.map((source) => (
+                  <button
+                    key={source.id}
+                    type="button"
+                    onClick={() => {
+                      toggleSource(source.id);
+                    }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 14px",
+                      border: "none",
+                      borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                      background: "transparent",
+                      color: selectedSources.includes(source.id)
+                        ? "var(--accent)"
+                        : "var(--foreground-muted)",
+                      fontSize: "13px",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    {source.name}
+                    {selectedSources.includes(source.id) && (
+                      <span style={{ fontSize: "12px" }}>✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Desktop Pill Buttons */
+          <div
+            style={{
+              marginTop: "12px",
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+            }}
+          >
+            {SEARCH_SOURCES.map((source) => (
+              <button
+                key={source.id}
+                type="button"
+                onClick={() => toggleSource(source.id)}
+                className={!selectedSources.includes(source.id) ? "glass" : ""}
+                style={{
+                  whiteSpace: "nowrap",
+                  borderRadius: "9999px",
+                  padding: "5px 12px",
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  backgroundColor: selectedSources.includes(source.id)
+                    ? "var(--accent)"
+                    : "transparent",
+                  color: selectedSources.includes(source.id)
+                    ? "var(--background)"
+                    : "var(--foreground-muted)",
+                }}
+              >
+                {source.name}
+              </button>
+            ))}
+          </div>
+        )}
       </form>
 
       {/* Results display */}
