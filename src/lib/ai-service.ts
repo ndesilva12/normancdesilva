@@ -15,7 +15,7 @@ async function callGrok(prompt: string): Promise<AIResponse> {
       "Authorization": `Bearer ${GROK_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "grok-2-latest",
+      model: "grok-beta",
       messages: [
         {
           role: "system",
