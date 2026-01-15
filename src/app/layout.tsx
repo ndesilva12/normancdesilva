@@ -35,11 +35,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased">
+    <html lang="en" className="bg-background">
+      <body className="min-h-screen w-full bg-background font-sans antialiased">
         <Providers>
-          <div className="min-h-screen bg-background bg-grid">
-            <div className="bg-radial min-h-screen">
+          <div className="relative min-h-screen w-full bg-grid">
+            <div className="absolute inset-0 bg-radial pointer-events-none" />
+            <div className="relative z-10 min-h-screen w-full">
               {children}
             </div>
           </div>

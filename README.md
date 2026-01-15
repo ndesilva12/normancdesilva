@@ -7,9 +7,10 @@ A curated collection of AI-powered tools for everyday productivity by Norman C. 
 - Minimalist, professional design with glassmorphism effects
 - Single cyan accent color theme
 - Live date and time display
-- Google authentication with user profiles
+- DuckDuckGo web search
+- Google authentication with Firebase
+- Firestore database for caching AI responses
 - PWA-ready for mobile installation
-- Search and filter tools by category
 - Responsive grid layout
 
 ## Tech Stack
@@ -18,41 +19,48 @@ A curated collection of AI-powered tools for everyday productivity by Norman C. 
 - **Styling**: Tailwind CSS 4
 - **Animations**: Framer Motion
 - **Icons**: Lucide React
-- **Authentication**: NextAuth.js with Google provider
+- **Auth & Database**: Firebase (Auth + Firestore)
+- **AI APIs**: Grok, Claude, Gemini
 - **Deployment**: Vercel
 
 ## Getting Started
 
-1. Copy `.env.example` to `.env.local`:
-   ```bash
-   cp .env.example .env.local
-   ```
-
-2. Set up Google OAuth credentials:
-   - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-   - Create a new OAuth 2.0 Client ID
-   - Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
-   - Copy the Client ID and Secret to your `.env.local`
-
-3. Generate an auth secret:
-   ```bash
-   openssl rand -base64 32
-   ```
-
-4. Install dependencies and run:
+1. Install dependencies:
    ```bash
    npm install
+   ```
+
+2. Set up Firebase:
+   - Go to [Firebase Console](https://console.firebase.google.com)
+   - Create a new project
+   - Enable Authentication → Sign-in method → Google
+   - Create a Firestore database
+   - Go to Project Settings → General → Your apps → Add web app
+   - Copy the config values to Vercel environment variables
+
+3. Run development server:
+   ```bash
    npm run dev
    ```
 
-## Deployment on Vercel
+## Environment Variables (Vercel)
 
-1. Connect your repository to Vercel
-2. Add environment variables in Vercel dashboard:
-   - `AUTH_SECRET`
-   - `GOOGLE_CLIENT_ID`
-   - `GOOGLE_CLIENT_SECRET`
-3. Update Google OAuth redirect URI to your production URL
+Add these in your Vercel dashboard:
+
+```
+# Firebase
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+
+# AI APIs
+GROK_API_KEY=
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+```
 
 ## License
 

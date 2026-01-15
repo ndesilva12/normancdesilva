@@ -59,7 +59,7 @@ function WebSearch() {
   };
 
   return (
-    <form onSubmit={handleSearch} className="mx-auto w-full max-w-2xl">
+    <form onSubmit={handleSearch} className="w-full max-w-2xl" style={{ margin: "0 auto" }}>
       <div className="relative flex items-center">
         <Search className="absolute left-5 h-6 w-6 text-foreground-muted" />
         <input
@@ -82,33 +82,28 @@ function WebSearch() {
 }
 
 export default function Home() {
-  const [toolFilter, setToolFilter] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const filteredTools = useMemo(() => {
     return tools.filter((tool) => {
-      const matchesSearch =
-        toolFilter === "" ||
-        tool.name.toLowerCase().includes(toolFilter.toLowerCase()) ||
-        tool.description.toLowerCase().includes(toolFilter.toLowerCase());
       const matchesCategory =
         selectedCategory === "all" || tool.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+      return matchesCategory;
     });
-  }, [toolFilter, selectedCategory]);
+  }, [selectedCategory]);
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen w-full flex-col">
       <Header />
 
-      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl">
+      <main className="flex-1 w-full">
+        <div className="w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8" style={{ margin: "0 auto" }}>
           {/* Date/Time Section */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-8 flex justify-center"
+            className="mb-8 flex w-full justify-center"
           >
             <LiveDateTime />
           </motion.section>
@@ -118,7 +113,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="mb-16"
+            className="mb-16 flex w-full justify-center"
           >
             <WebSearch />
           </motion.section>
@@ -128,6 +123,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
+            className="w-full"
           >
             {/* Category Pills */}
             <div className="mb-8 flex flex-wrap items-center justify-center gap-3">
