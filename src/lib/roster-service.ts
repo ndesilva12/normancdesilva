@@ -1366,6 +1366,13 @@ export async function fetchTeamRoster(
 
   const tableHtml = rosterTableMatch[0];
 
+  // Limit table size to avoid overwhelming the AI (NFL tables can be huge)
+  const maxTableSize = 50000;
+  const truncatedTableHtml = tableHtml.length > maxTableSize
+    ? tableHtml.substring(0, maxTableSize) + "<!-- truncated -->"
+    : tableHtml;
+  console.log(`Table HTML size: ${tableHtml.length} chars (${truncatedTableHtml.length} after truncation)`);
+
   const seasonYears = [
     currentSeason,
     currentSeason - 1,
@@ -1375,21 +1382,27 @@ export async function fetchTeamRoster(
   ];
 
   // Use league-specific prompts for parsing roster tables
-  const prompt = getLeagueRosterPrompt(league, teamQuery, tableHtml, currentSeason, seasonYears);
+  const prompt = getLeagueRosterPrompt(league, teamQuery, truncatedTableHtml, currentSeason, seasonYears);
 
+  console.log(`Sending prompt to Gemini (${prompt.length} chars)...`);
   const responseText = await callGemini(prompt);
+  console.log(`Gemini response length: ${responseText.length} chars`);
+  console.log(`Gemini response preview: ${responseText.substring(0, 500)}...`);
 
   // Parse the JSON response
   let rosterData;
   try {
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
+      console.error("No JSON found in Gemini response. Full response:", responseText);
       throw new Error("No JSON found in response");
     }
     rosterData = JSON.parse(jsonMatch[0]);
+    console.log(`Parsed ${rosterData.players?.length || 0} players from Gemini response`);
   } catch (parseError) {
-    console.error("Failed to parse roster response:", responseText);
-    throw new Error("Failed to parse roster data from AI response");
+    console.error("Failed to parse roster response. Error:", parseError);
+    console.error("Response text:", responseText.substring(0, 2000));
+    throw new Error(`Failed to parse roster data from AI response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
   }
 
   // Enrich player data by fetching individual player pages from sports-reference
