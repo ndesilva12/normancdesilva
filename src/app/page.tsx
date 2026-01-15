@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Header } from "@/components/Header";
 import { ToolCard } from "@/components/ToolCard";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
+import { Reminders } from "@/components/Reminders";
 import { tools, categories } from "@/lib/tools";
 
 function LiveDateTime() {
@@ -86,7 +87,7 @@ export default function Home() {
             padding: "40px 24px 100px 24px",
           }}
         >
-          {/* Date/Time Section */}
+          {/* Date/Time & Reminders Section */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -94,10 +95,13 @@ export default function Home() {
             style={{
               marginBottom: "28px",
               display: "flex",
-              justifyContent: "center",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "20px",
             }}
           >
             <LiveDateTime />
+            <Reminders />
           </motion.section>
 
           {/* Multi-Source Search */}

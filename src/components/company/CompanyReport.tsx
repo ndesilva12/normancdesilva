@@ -376,7 +376,7 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
         <Section title="Subsidiaries & Owned Companies" icon={Layers} count={report.subsidiaries.length}>
           <ExpandableGrid
             items={report.subsidiaries}
-            initialCount={10}
+            initialCount={9}
             renderItem={(subsidiary, i) => (
               <div
                 key={i}
@@ -402,7 +402,7 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
       <Section title="Partners, Affiliates & Associates" icon={Users} count={report.affiliates.length}>
         <ExpandableGrid
           items={report.affiliates}
-          initialCount={10}
+          initialCount={9}
           renderItem={(affiliate, i) => (
             <div
               key={i}
