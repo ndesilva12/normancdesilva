@@ -11,10 +11,21 @@ import {
   Coins,
   QrCode,
   Hash,
+  Building2,
 } from "lucide-react";
 import { Tool } from "@/types/tool";
 
 export const tools: Tool[] = [
+  {
+    id: "company-politics",
+    name: "Company Politics Search",
+    description: "Analyze corporate political leanings, donations, lobbying activities, and public statements.",
+    icon: Building2,
+    href: "/tools/company-politics",
+    category: "ai",
+    status: "available",
+    aiPowered: true,
+  },
   {
     id: "ai-writer",
     name: "AI Writer",
