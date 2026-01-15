@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo, useEffect, FormEvent } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, ExternalLink } from "lucide-react";
 import { Header } from "@/components/Header";
 import { ToolCard } from "@/components/ToolCard";
+import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { tools, categories } from "@/lib/tools";
 
 function LiveDateTime() {
@@ -61,85 +61,6 @@ function LiveDateTime() {
   );
 }
 
-function WebSearch() {
-  const [query, setQuery] = useState("");
-
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    if (query.trim()) {
-      const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query.trim())}`;
-      window.open(searchUrl, "_blank", "noopener,noreferrer");
-    }
-  };
-
-  return (
-    <form
-      onSubmit={handleSearch}
-      style={{
-        width: "100%",
-        maxWidth: "700px",
-        margin: "0 auto",
-      }}
-    >
-      <div
-        className="glass"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          borderRadius: "12px",
-          padding: "10px",
-          paddingLeft: "16px",
-        }}
-      >
-        <Search
-          style={{
-            width: "20px",
-            height: "20px",
-            flexShrink: 0,
-            color: "var(--foreground-muted)",
-          }}
-        />
-        <input
-          type="text"
-          placeholder="Search the web..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            fontSize: "15px",
-            color: "var(--foreground)",
-            padding: "8px 0",
-          }}
-        />
-        <button
-          type="submit"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            flexShrink: 0,
-            borderRadius: "8px",
-            backgroundColor: "var(--accent)",
-            padding: "10px 18px",
-            fontSize: "14px",
-            fontWeight: 500,
-            color: "var(--background)",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          <span>Search</span>
-          <ExternalLink style={{ width: "16px", height: "16px" }} />
-        </button>
-      </div>
-    </form>
-  );
-}
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -179,18 +100,14 @@ export default function Home() {
             <LiveDateTime />
           </motion.section>
 
-          {/* Main Web Search */}
+          {/* Multi-Source Search */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            style={{
-              marginBottom: "40px",
-              display: "flex",
-              justifyContent: "center",
-            }}
+            style={{ marginBottom: "40px" }}
           >
-            <WebSearch />
+            <MultiSourceSearch />
           </motion.section>
 
           {/* Tools Section */}

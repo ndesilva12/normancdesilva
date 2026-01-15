@@ -1,24 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Sparkles, AlertCircle } from "lucide-react";
+import { ArrowLeft, Sparkles, AlertCircle, Clock, TrendingUp, History, X as XIcon } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { CompanySearchBar } from "@/components/company/CompanySearchBar";
 import { CompanyReport } from "@/components/company/CompanyReport";
 import { CompanyAnalysis } from "@/types/company";
 
+const RECENT_SEARCHES_KEY = "company-politics-recent-searches";
+const MAX_RECENT_SEARCHES = 10;
+
+interface TrendingCompanies {
+  google: string[];
+  x: string[];
+}
+
 export default function CompanyPoliticsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [report, setReport] = useState<CompanyAnalysis | null>(null);
   const [cached, setCached] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [trending, setTrending] = useState<TrendingCompanies>({ google: [], x: [] });
+  const [trendingLoading, setTrendingLoading] = useState(true);
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
+    if (stored) {
+      try {
+        setRecentSearches(JSON.parse(stored));
+      } catch {
+        setRecentSearches([]);
+      }
+    }
+  }, []);
+
+  // Fetch trending companies
+  useEffect(() => {
+    async function fetchTrending() {
+      try {
+        const response = await fetch("/api/trending");
+        if (response.ok) {
+          const data = await response.json();
+          setTrending(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch trending companies:", error);
+      } finally {
+        setTrendingLoading(false);
+      }
+    }
+    fetchTrending();
+  }, []);
+
+  const addToRecentSearches = (query: string) => {
+    const normalized = query.trim();
+    const updated = [normalized, ...recentSearches.filter(s => s.toLowerCase() !== normalized.toLowerCase())].slice(0, MAX_RECENT_SEARCHES);
+    setRecentSearches(updated);
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+  };
+
+  const removeFromRecentSearches = (query: string) => {
+    const updated = recentSearches.filter(s => s !== query);
+    setRecentSearches(updated);
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+  };
 
   const handleSearch = async (query: string) => {
     setIsLoading(true);
     setError(null);
     setReport(null);
+    addToRecentSearches(query);
 
     try {
       const response = await fetch(
@@ -118,7 +173,7 @@ export default function CompanyPoliticsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            style={{ marginBottom: "32px" }}
+            style={{ marginBottom: "24px" }}
           >
             <CompanySearchBar
               onSearch={handleSearch}
@@ -126,6 +181,158 @@ export default function CompanyPoliticsPage() {
               placeholder="Enter a company name (e.g., Apple, Tesla, Amazon)..."
             />
           </motion.div>
+
+          {/* Recent Searches & Trending - shown when no report is displayed */}
+          {!report && !isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              style={{ marginBottom: "32px" }}
+            >
+              <div style={{ display: "grid", gap: "20px", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+                {/* Recent Searches */}
+                {recentSearches.length > 0 && (
+                  <div
+                    className="glass"
+                    style={{
+                      borderRadius: "12px",
+                      padding: "20px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+                      <History style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
+                      <h3 style={{ fontSize: "15px", fontWeight: 600, color: "var(--foreground)" }}>Recent Searches</h3>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      {recentSearches.map((company) => (
+                        <div
+                          key={company}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            backgroundColor: "rgba(255, 255, 255, 0.05)",
+                            borderRadius: "6px",
+                            padding: "6px 10px",
+                          }}
+                        >
+                          <button
+                            onClick={() => handleSearch(company)}
+                            disabled={isLoading}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              fontSize: "13px",
+                              color: "var(--foreground)",
+                              cursor: isLoading ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            {company}
+                          </button>
+                          <button
+                            onClick={() => removeFromRecentSearches(company)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: "2px",
+                              cursor: "pointer",
+                              color: "var(--foreground-muted)",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            <XIcon style={{ width: "12px", height: "12px" }} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Trending on Google */}
+                <div
+                  className="glass"
+                  style={{
+                    borderRadius: "12px",
+                    padding: "20px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+                    <TrendingUp style={{ width: "18px", height: "18px", color: "#4285f4" }} />
+                    <h3 style={{ fontSize: "15px", fontWeight: 600, color: "var(--foreground)" }}>Trending on Google</h3>
+                  </div>
+                  {trendingLoading ? (
+                    <div style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>Loading...</div>
+                  ) : trending.google.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      {trending.google.map((company) => (
+                        <button
+                          key={company}
+                          onClick={() => handleSearch(company)}
+                          disabled={isLoading}
+                          style={{
+                            background: "rgba(66, 133, 244, 0.1)",
+                            border: "1px solid rgba(66, 133, 244, 0.2)",
+                            borderRadius: "6px",
+                            padding: "6px 12px",
+                            fontSize: "13px",
+                            color: "var(--foreground)",
+                            cursor: isLoading ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          {company}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>No trending data available</div>
+                  )}
+                </div>
+
+                {/* Trending on X */}
+                <div
+                  className="glass"
+                  style={{
+                    borderRadius: "12px",
+                    padding: "20px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+                    <span style={{ fontSize: "16px", fontWeight: 700 }}>𝕏</span>
+                    <h3 style={{ fontSize: "15px", fontWeight: 600, color: "var(--foreground)" }}>Trending on X</h3>
+                  </div>
+                  {trendingLoading ? (
+                    <div style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>Loading...</div>
+                  ) : trending.x.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      {trending.x.map((company) => (
+                        <button
+                          key={company}
+                          onClick={() => handleSearch(company)}
+                          disabled={isLoading}
+                          style={{
+                            background: "rgba(255, 255, 255, 0.05)",
+                            border: "1px solid var(--glass-border)",
+                            borderRadius: "6px",
+                            padding: "6px 12px",
+                            fontSize: "13px",
+                            color: "var(--foreground)",
+                            cursor: isLoading ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          {company}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>No trending data available</div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Error Message */}
           {error && (
