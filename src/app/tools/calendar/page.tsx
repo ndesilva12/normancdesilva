@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Calendar, ExternalLink, Loader2, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
@@ -16,22 +16,51 @@ interface CalendarEvent {
 
 type ViewMode = "day" | "week" | "month";
 
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_NAMES_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 export default function CalendarPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check for mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     checkAuthAndLoadEvents();
   }, []);
 
+  const loadEvents = useCallback(async () => {
+    try {
+      const { start, end } = getDateRange();
+
+      const response = await fetch(
+        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setEvents(data.events || []);
+      }
+    } catch (error) {
+      console.error("Failed to load events:", error);
+    }
+  }, [currentDate, viewMode]);
+
   useEffect(() => {
     if (isAuthenticated) {
       loadEvents();
     }
-  }, [currentDate, viewMode, isAuthenticated]);
+  }, [currentDate, viewMode, isAuthenticated, loadEvents]);
 
   const checkAuthAndLoadEvents = async () => {
     try {
@@ -58,7 +87,6 @@ export default function CalendarPage() {
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
     } else if (viewMode === "week") {
-      // Start from Sunday of current week
       const day = start.getDay();
       start.setDate(start.getDate() - day);
       start.setHours(0, 0, 0, 0);
@@ -68,28 +96,61 @@ export default function CalendarPage() {
       start.setDate(1);
       start.setHours(0, 0, 0, 0);
       end.setMonth(end.getMonth() + 1);
-      end.setDate(0); // Last day of current month
+      end.setDate(0);
       end.setHours(23, 59, 59, 999);
     }
 
     return { start, end };
   };
 
-  const loadEvents = async () => {
-    try {
-      const { start, end } = getDateRange();
-
-      const response = await fetch(
-        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setEvents(data.events || []);
-      }
-    } catch (error) {
-      console.error("Failed to load events:", error);
+  const getWeekDays = () => {
+    const { start } = getDateRange();
+    const days: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(start);
+      day.setDate(start.getDate() + i);
+      days.push(day);
     }
+    return days;
+  };
+
+  const getMonthDays = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const days: (Date | null)[] = [];
+
+    // Add empty cells for days before the first day of month
+    for (let i = 0; i < firstDay.getDay(); i++) {
+      days.push(null);
+    }
+
+    // Add all days of the month
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      days.push(new Date(year, month, i));
+    }
+
+    return days;
+  };
+
+  const getEventsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split("T")[0];
+    return events.filter((event) => {
+      const eventDate = (event.start.dateTime || event.start.date || "").split("T")[0];
+      return eventDate === dateStr;
+    });
+  };
+
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
   };
 
   const navigatePrev = () => {
@@ -118,6 +179,11 @@ export default function CalendarPage() {
 
   const goToToday = () => {
     setCurrentDate(new Date());
+  };
+
+  const goToDate = (date: Date) => {
+    setCurrentDate(date);
+    setViewMode("day");
   };
 
   const getHeaderTitle = () => {
@@ -158,6 +224,14 @@ export default function CalendarPage() {
   const formatEventTime = (event: CalendarEvent) => {
     if (event.start.dateTime) {
       const start = new Date(event.start.dateTime);
+      return start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }
+    return "All day";
+  };
+
+  const formatEventTimeFull = (event: CalendarEvent) => {
+    if (event.start.dateTime) {
+      const start = new Date(event.start.dateTime);
       const end = event.end.dateTime ? new Date(event.end.dateTime) : null;
       const timeStr = start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       if (end) {
@@ -169,14 +243,321 @@ export default function CalendarPage() {
     return "All day";
   };
 
-  // Group events by date
-  const groupedEvents = events.reduce((acc, event) => {
-    const dateStr = event.start.dateTime || event.start.date || "";
-    const dateKey = dateStr.split("T")[0];
-    if (!acc[dateKey]) acc[dateKey] = [];
-    acc[dateKey].push(event);
-    return acc;
-  }, {} as Record<string, CalendarEvent[]>);
+  // Render Day View
+  const renderDayView = () => {
+    const dayEvents = getEventsForDate(currentDate);
+
+    return (
+      <div className="glass" style={{ borderRadius: "12px", overflow: "hidden" }}>
+        <div
+          style={{
+            padding: "14px 20px",
+            borderBottom: "1px solid var(--glass-border)",
+            backgroundColor: "rgba(255, 255, 255, 0.02)",
+          }}
+        >
+          <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)" }}>
+            {currentDate.toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </h3>
+        </div>
+        <div style={{ padding: "12px 20px" }}>
+          {dayEvents.length > 0 ? (
+            dayEvents.map((event, idx) => (
+              <div
+                key={event.id}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "16px",
+                  padding: "12px 0",
+                  borderBottom: idx < dayEvents.length - 1 ? "1px solid var(--glass-border)" : "none",
+                }}
+              >
+                <div
+                  style={{
+                    width: "4px",
+                    height: "40px",
+                    borderRadius: "2px",
+                    backgroundColor: "var(--accent)",
+                    flexShrink: 0,
+                  }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)", marginBottom: "4px" }}>
+                    {event.summary}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                    {formatEventTimeFull(event)}
+                  </div>
+                </div>
+                {event.htmlLink && (
+                  <a
+                    href={event.htmlLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--glass-border)",
+                      color: "var(--foreground-muted)",
+                      fontSize: "12px",
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <ExternalLink style={{ width: "12px", height: "12px" }} />
+                    View
+                  </a>
+                )}
+              </div>
+            ))
+          ) : (
+            <div style={{ padding: "20px", textAlign: "center", color: "var(--foreground-muted)" }}>
+              No events scheduled
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Render Week View
+  const renderWeekView = () => {
+    const weekDays = getWeekDays();
+
+    return (
+      <div className="glass" style={{ borderRadius: "12px", overflow: "hidden" }}>
+        {/* Day headers */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(7, 1fr)",
+            borderBottom: "1px solid var(--glass-border)",
+          }}
+        >
+          {weekDays.map((day, idx) => (
+            <div
+              key={idx}
+              style={{
+                padding: "12px 8px",
+                textAlign: "center",
+                borderRight: idx < 6 ? "1px solid var(--glass-border)" : "none",
+                backgroundColor: isToday(day) ? "rgba(var(--accent-rgb), 0.1)" : "transparent",
+              }}
+            >
+              <div style={{ fontSize: "11px", color: "var(--foreground-muted)", marginBottom: "4px" }}>
+                {isMobile ? DAY_NAMES[idx] : DAY_NAMES_FULL[idx]}
+              </div>
+              <div
+                style={{
+                  fontSize: "18px",
+                  fontWeight: 600,
+                  color: isToday(day) ? "var(--accent)" : "var(--foreground)",
+                }}
+              >
+                {day.getDate()}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Day content */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(7, 1fr)",
+            minHeight: "300px",
+          }}
+        >
+          {weekDays.map((day, idx) => {
+            const dayEvents = getEventsForDate(day);
+            return (
+              <div
+                key={idx}
+                onClick={() => goToDate(day)}
+                style={{
+                  padding: "8px",
+                  borderRight: idx < 6 ? "1px solid var(--glass-border)" : "none",
+                  backgroundColor: isToday(day) ? "rgba(var(--accent-rgb), 0.05)" : "transparent",
+                  cursor: "pointer",
+                  minHeight: "200px",
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  {dayEvents.slice(0, isMobile ? 2 : 4).map((event) => (
+                    <div
+                      key={event.id}
+                      style={{
+                        padding: "4px 6px",
+                        borderRadius: "4px",
+                        backgroundColor: "var(--accent)",
+                        fontSize: "11px",
+                        color: "var(--background)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {!isMobile && (
+                        <span style={{ opacity: 0.8 }}>{formatEventTime(event)} </span>
+                      )}
+                      {event.summary}
+                    </div>
+                  ))}
+                  {dayEvents.length > (isMobile ? 2 : 4) && (
+                    <div style={{ fontSize: "10px", color: "var(--foreground-muted)", paddingLeft: "4px" }}>
+                      +{dayEvents.length - (isMobile ? 2 : 4)} more
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // Render Month View
+  const renderMonthView = () => {
+    const monthDays = getMonthDays();
+
+    return (
+      <div className="glass" style={{ borderRadius: "12px", overflow: "hidden" }}>
+        {/* Day name headers */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(7, 1fr)",
+            borderBottom: "1px solid var(--glass-border)",
+            backgroundColor: "rgba(255, 255, 255, 0.02)",
+          }}
+        >
+          {DAY_NAMES.map((name, idx) => (
+            <div
+              key={idx}
+              style={{
+                padding: isMobile ? "8px 4px" : "12px 8px",
+                textAlign: "center",
+                fontSize: isMobile ? "11px" : "12px",
+                fontWeight: 600,
+                color: "var(--foreground-muted)",
+                borderRight: idx < 6 ? "1px solid var(--glass-border)" : "none",
+              }}
+            >
+              {isMobile ? name.charAt(0) : name}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(7, 1fr)",
+          }}
+        >
+          {monthDays.map((day, idx) => {
+            const dayEvents = day ? getEventsForDate(day) : [];
+            const todayClass = day && isToday(day);
+
+            return (
+              <div
+                key={idx}
+                onClick={() => day && goToDate(day)}
+                style={{
+                  minHeight: isMobile ? "50px" : "100px",
+                  padding: isMobile ? "4px" : "8px",
+                  borderRight: (idx + 1) % 7 !== 0 ? "1px solid var(--glass-border)" : "none",
+                  borderBottom: idx < monthDays.length - 7 ? "1px solid var(--glass-border)" : "none",
+                  backgroundColor: todayClass ? "rgba(var(--accent-rgb), 0.1)" : "transparent",
+                  cursor: day ? "pointer" : "default",
+                  transition: "background-color 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  if (day && !todayClass) {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.03)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (day && !todayClass) {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }
+                }}
+              >
+                {day && (
+                  <>
+                    {/* Day number */}
+                    <div
+                      style={{
+                        fontSize: isMobile ? "12px" : "14px",
+                        fontWeight: todayClass ? 700 : 500,
+                        color: todayClass ? "var(--accent)" : "var(--foreground)",
+                        marginBottom: isMobile ? "2px" : "6px",
+                        textAlign: isMobile ? "center" : "left",
+                      }}
+                    >
+                      {day.getDate()}
+                    </div>
+
+                    {/* Events (desktop only or dot indicators for mobile) */}
+                    {isMobile ? (
+                      dayEvents.length > 0 && (
+                        <div style={{ display: "flex", justifyContent: "center", gap: "2px", flexWrap: "wrap" }}>
+                          {dayEvents.slice(0, 3).map((_, i) => (
+                            <div
+                              key={i}
+                              style={{
+                                width: "4px",
+                                height: "4px",
+                                borderRadius: "50%",
+                                backgroundColor: "var(--accent)",
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                        {dayEvents.slice(0, 3).map((event) => (
+                          <div
+                            key={event.id}
+                            style={{
+                              padding: "2px 4px",
+                              borderRadius: "3px",
+                              backgroundColor: "var(--accent)",
+                              fontSize: "10px",
+                              color: "var(--background)",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {event.summary}
+                          </div>
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <div style={{ fontSize: "9px", color: "var(--foreground-muted)" }}>
+                            +{dayEvents.length - 3} more
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
@@ -186,7 +567,7 @@ export default function CalendarPage() {
         <div
           style={{
             width: "100%",
-            maxWidth: "900px",
+            maxWidth: "1100px",
             margin: "0 auto",
             padding: "32px 24px 100px 24px",
           }}
@@ -407,7 +788,7 @@ export default function CalendarPage() {
                     </button>
                   </div>
                   <button
-                    onClick={loadEvents}
+                    onClick={() => loadEvents()}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -440,99 +821,10 @@ export default function CalendarPage() {
                 {getHeaderTitle()}
               </h2>
 
-              {/* Events list */}
-              {Object.keys(groupedEvents).length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                  {Object.entries(groupedEvents)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([dateKey, dayEvents]) => (
-                      <div key={dateKey} className="glass" style={{ borderRadius: "12px", overflow: "hidden" }}>
-                        <div
-                          style={{
-                            padding: "14px 20px",
-                            borderBottom: "1px solid var(--glass-border)",
-                            backgroundColor: "rgba(255, 255, 255, 0.02)",
-                          }}
-                        >
-                          <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)" }}>
-                            {new Date(dateKey).toLocaleDateString("en-US", {
-                              weekday: "long",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </h3>
-                        </div>
-                        <div style={{ padding: "12px 20px" }}>
-                          {dayEvents.map((event, idx) => (
-                            <div
-                              key={event.id}
-                              style={{
-                                display: "flex",
-                                alignItems: "flex-start",
-                                gap: "16px",
-                                padding: "12px 0",
-                                borderBottom: idx < dayEvents.length - 1 ? "1px solid var(--glass-border)" : "none",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: "4px",
-                                  height: "40px",
-                                  borderRadius: "2px",
-                                  backgroundColor: "var(--accent)",
-                                  flexShrink: 0,
-                                }}
-                              />
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)", marginBottom: "4px" }}>
-                                  {event.summary}
-                                </div>
-                                <div style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                                  {formatEventTime(event)}
-                                </div>
-                              </div>
-                              {event.htmlLink && (
-                                <a
-                                  href={event.htmlLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    padding: "6px 10px",
-                                    borderRadius: "6px",
-                                    border: "1px solid var(--glass-border)",
-                                    color: "var(--foreground-muted)",
-                                    fontSize: "12px",
-                                    textDecoration: "none",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                  }}
-                                >
-                                  <ExternalLink style={{ width: "12px", height: "12px" }} />
-                                  View
-                                </a>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <div
-                  className="glass"
-                  style={{
-                    borderRadius: "12px",
-                    padding: "40px",
-                    textAlign: "center",
-                  }}
-                >
-                  <Calendar style={{ width: "40px", height: "40px", color: "var(--foreground-muted)", margin: "0 auto 16px" }} />
-                  <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-                    No events scheduled for this {viewMode}
-                  </p>
-                </div>
-              )}
+              {/* Calendar Views */}
+              {viewMode === "day" && renderDayView()}
+              {viewMode === "week" && renderWeekView()}
+              {viewMode === "month" && renderMonthView()}
             </motion.div>
           )}
         </div>
