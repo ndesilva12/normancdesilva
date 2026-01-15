@@ -112,24 +112,19 @@ interface BasicPlayer {
 // Extract player page URLs from roster HTML
 function extractPlayerUrls(rosterHtml: string, league: League): Map<string, string> {
   const playerUrls = new Map<string, string>();
+  const leagueConfig = getLeagueConfig(league);
+  if (!leagueConfig) return playerUrls;
 
   // Match player links in the roster table
-  // Pattern: <a href="/cbb/players/player-name-1.html">Player Name</a>
-  const linkPattern = /<a\s+href="([^"]*\/players\/[^"]+)"[^>]*>([^<]+)<\/a>/gi;
+  // Pattern varies by site: /players/, /en/players/, etc.
+  const linkPattern = /<a\s+href="([^"]*\/players?\/[^"]+)"[^>]*>([^<]+)<\/a>/gi;
   let match;
 
   while ((match = linkPattern.exec(rosterHtml)) !== null) {
     const path = match[1];
     const name = match[2].trim();
 
-    // Build full URL based on league
-    let baseUrl = "https://www.sports-reference.com";
-    if (league === "nba") baseUrl = "https://www.basketball-reference.com";
-    else if (league === "nfl") baseUrl = "https://www.pro-football-reference.com";
-    else if (league === "mlb") baseUrl = "https://www.baseball-reference.com";
-    else if (league === "nhl") baseUrl = "https://www.hockey-reference.com";
-
-    const fullUrl = path.startsWith("http") ? path : `${baseUrl}${path}`;
+    const fullUrl = path.startsWith("http") ? path : `${leagueConfig.baseUrl}${path}`;
     playerUrls.set(name.toLowerCase(), fullUrl);
   }
 
@@ -140,23 +135,35 @@ function extractPlayerUrls(rosterHtml: string, league: League): Map<string, stri
 async function fetchPlayerHistory(
   playerName: string,
   playerUrl: string,
-  currentSeason: number
+  currentSeason: number,
+  league: League
 ): Promise<{ previousSchools: string[]; seasons: { year: string; team: string | null }[] } | null> {
   try {
     console.log(`Fetching player page for ${playerName}: ${playerUrl}`);
     const html = await fetchSportsRefPage(playerUrl);
 
+    const leagueConfig = getLeagueConfig(league);
+    const sportType = league.includes("basketball") || league === "nba" || league === "euroleague"
+      ? "basketball"
+      : league.includes("football") || league === "nfl"
+        ? "football"
+        : league === "mlb"
+          ? "baseball"
+          : league === "nhl"
+            ? "hockey"
+            : "soccer";
+
     // Use Gemini to parse the player's history from their page
-    const prompt = `Parse this player's college basketball history from their sports-reference.com page.
+    const prompt = `Parse this player's ${sportType} career history from their stats page.
 
 Extract:
-1. All schools/teams they played for (in order, oldest to newest)
-2. Which years they played at each school
+1. All teams they played for (in order, oldest to newest)
+2. Which years/seasons they played at each team
 
 Look for:
-- A stats table showing year-by-year data with school names
-- Any "Per Game" or career stats tables
-- Transfer information
+- A stats table showing year-by-year or season-by-season data with team names
+- Any career stats tables
+- Transfer/trade information
 
 The current season is ${currentSeason}. Return the last 5 seasons.
 
@@ -165,18 +172,18 @@ ${html.substring(0, 15000)}
 
 Return ONLY valid JSON (no markdown):
 {
-  "previousSchools": ["School1", "School2"],
+  "previousSchools": ["Team1", "Team2"],
   "seasons": [
-    {"year": "${currentSeason}", "team": "Current School"},
-    {"year": "${currentSeason - 1}", "team": "School or null"},
-    {"year": "${currentSeason - 2}", "team": "School or null"},
-    {"year": "${currentSeason - 3}", "team": "School or null"},
-    {"year": "${currentSeason - 4}", "team": "School or null"}
+    {"year": "${currentSeason}", "team": "Current Team"},
+    {"year": "${currentSeason - 1}", "team": "Team or null"},
+    {"year": "${currentSeason - 2}", "team": "Team or null"},
+    {"year": "${currentSeason - 3}", "team": "Team or null"},
+    {"year": "${currentSeason - 4}", "team": "Team or null"}
   ]
 }
 
-- previousSchools should list schools BEFORE the current one (empty if no transfers)
-- Use null for years the player wasn't in college`;
+- previousSchools should list teams BEFORE the current one (empty array if no transfers)
+- Use null for years the player wasn't playing professionally`;
 
     const response = await callGemini(prompt, false);
     const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -207,7 +214,7 @@ async function enrichPlayersFromSportsRef(
     const playerUrl = playerUrls.get(player.name.toLowerCase());
 
     if (playerUrl) {
-      const history = await fetchPlayerHistory(player.name, playerUrl, currentSeason);
+      const history = await fetchPlayerHistory(player.name, playerUrl, currentSeason, league);
 
       if (history) {
         enrichedPlayers.push({
@@ -253,6 +260,12 @@ function getSportsRefUrl(league: League, teamSlug: string, year: number): string
       return `https://www.baseball-reference.com/teams/${teamSlug}/${year}.shtml`;
     case "nhl":
       return `https://www.hockey-reference.com/teams/${teamSlug}/${year}.html`;
+    case "soccer":
+      // fbref uses format: /en/squads/team-id/Team-Name-Stats
+      return `https://fbref.com/en/squads/${teamSlug}`;
+    case "euroleague":
+      // eurobasket uses team pages
+      return `https://www.eurobasket.com/team/${teamSlug}`;
     default:
       throw new Error(`Unknown league: ${league}`);
   }
@@ -365,6 +378,53 @@ const TEAM_SLUGS: Record<string, Record<string, string>> = {
     "browns": "cle",
     "patriots": "nwe",
     "commanders": "was",
+  },
+  "soccer": {
+    // FBref uses unique team IDs - format: /en/squads/{id}/{Team-Name}-Stats
+    "manchester united": "19538871/Manchester-United",
+    "man united": "19538871/Manchester-United",
+    "manchester city": "b8fd03ef/Manchester-City",
+    "man city": "b8fd03ef/Manchester-City",
+    "liverpool": "822bd0ba/Liverpool",
+    "arsenal": "18bb7c10/Arsenal",
+    "chelsea": "cff3d9bb/Chelsea",
+    "tottenham": "361ca564/Tottenham-Hotspur",
+    "spurs": "361ca564/Tottenham-Hotspur",
+    "real madrid": "53a2f082/Real-Madrid",
+    "barcelona": "206d90db/Barcelona",
+    "barca": "206d90db/Barcelona",
+    "bayern munich": "054efa67/Bayern-Munich",
+    "bayern": "054efa67/Bayern-Munich",
+    "psg": "e2d8892c/Paris-Saint-Germain",
+    "paris saint-germain": "e2d8892c/Paris-Saint-Germain",
+    "juventus": "e0652b02/Juventus",
+    "inter milan": "d609edc0/Inter",
+    "inter": "d609edc0/Inter",
+    "ac milan": "dc56fe14/Milan",
+    "milan": "dc56fe14/Milan",
+    "atletico madrid": "db3b9613/Atletico-Madrid",
+    "atletico": "db3b9613/Atletico-Madrid",
+    "borussia dortmund": "add600ae/Borussia-Dortmund",
+    "dortmund": "add600ae/Borussia-Dortmund",
+  },
+  "euroleague": {
+    // EuroBasket team slugs
+    "real madrid": "Real-Madrid",
+    "barcelona": "Barcelona",
+    "olympiacos": "Olympiacos",
+    "panathinaikos": "Panathinaikos",
+    "fenerbahce": "Fenerbahce",
+    "anadolu efes": "Anadolu-Efes",
+    "cska moscow": "CSKA-Moscow",
+    "maccabi tel aviv": "Maccabi-Tel-Aviv",
+    "maccabi": "Maccabi-Tel-Aviv",
+    "zalgiris": "Zalgiris",
+    "baskonia": "Baskonia",
+    "milan": "AX-Armani-Exchange-Milan",
+    "virtus bologna": "Virtus-Bologna",
+    "partizan": "Partizan",
+    "bayern munich": "Bayern-Munich",
+    "monaco": "AS-Monaco",
   },
 };
 

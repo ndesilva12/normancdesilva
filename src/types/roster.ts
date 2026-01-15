@@ -4,21 +4,26 @@ export type League =
   | "nfl"
   | "ncaa-football"
   | "mlb"
-  | "nhl";
+  | "nhl"
+  | "soccer"
+  | "euroleague";
 
 export interface LeagueOption {
   id: League;
   name: string;
   sportsRefPath: string;
+  baseUrl: string;
 }
 
 export const LEAGUES: LeagueOption[] = [
-  { id: "nba", name: "NBA", sportsRefPath: "basketball" },
-  { id: "ncaa-basketball", name: "NCAA Basketball", sportsRefPath: "cbb" },
-  { id: "nfl", name: "NFL", sportsRefPath: "football" },
-  { id: "ncaa-football", name: "NCAA Football", sportsRefPath: "cfb" },
-  { id: "mlb", name: "MLB", sportsRefPath: "baseball" },
-  { id: "nhl", name: "NHL", sportsRefPath: "hockey" },
+  { id: "nba", name: "NBA", sportsRefPath: "teams", baseUrl: "https://www.basketball-reference.com" },
+  { id: "ncaa-basketball", name: "NCAA Basketball", sportsRefPath: "cbb/schools", baseUrl: "https://www.sports-reference.com" },
+  { id: "nfl", name: "NFL", sportsRefPath: "teams", baseUrl: "https://www.pro-football-reference.com" },
+  { id: "ncaa-football", name: "NCAA Football", sportsRefPath: "cfb/schools", baseUrl: "https://www.sports-reference.com" },
+  { id: "mlb", name: "MLB", sportsRefPath: "teams", baseUrl: "https://www.baseball-reference.com" },
+  { id: "nhl", name: "NHL", sportsRefPath: "teams", baseUrl: "https://www.hockey-reference.com" },
+  { id: "soccer", name: "Soccer", sportsRefPath: "squads", baseUrl: "https://fbref.com" },
+  { id: "euroleague", name: "Euroleague Basketball", sportsRefPath: "teams", baseUrl: "https://www.eurobasket.com" },
 ];
 
 export interface Player {
