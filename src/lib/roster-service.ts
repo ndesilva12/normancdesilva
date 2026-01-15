@@ -109,112 +109,123 @@ interface BasicPlayer {
   seasons: { year: string; team: string | null }[];
 }
 
-async function enrichPlayerData(
-  players: BasicPlayer[],
-  teamName: string,
-  league: League,
+// Extract player page URLs from roster HTML
+function extractPlayerUrls(rosterHtml: string, league: League): Map<string, string> {
+  const playerUrls = new Map<string, string>();
+
+  // Match player links in the roster table
+  // Pattern: <a href="/cbb/players/player-name-1.html">Player Name</a>
+  const linkPattern = /<a\s+href="([^"]*\/players\/[^"]+)"[^>]*>([^<]+)<\/a>/gi;
+  let match;
+
+  while ((match = linkPattern.exec(rosterHtml)) !== null) {
+    const path = match[1];
+    const name = match[2].trim();
+
+    // Build full URL based on league
+    let baseUrl = "https://www.sports-reference.com";
+    if (league === "nba") baseUrl = "https://www.basketball-reference.com";
+    else if (league === "nfl") baseUrl = "https://www.pro-football-reference.com";
+    else if (league === "mlb") baseUrl = "https://www.baseball-reference.com";
+    else if (league === "nhl") baseUrl = "https://www.hockey-reference.com";
+
+    const fullUrl = path.startsWith("http") ? path : `${baseUrl}${path}`;
+    playerUrls.set(name.toLowerCase(), fullUrl);
+  }
+
+  return playerUrls;
+}
+
+// Fetch and parse a single player's page for their history
+async function fetchPlayerHistory(
+  playerName: string,
+  playerUrl: string,
   currentSeason: number
-): Promise<BasicPlayer[]> {
-  const seasonYears = [
-    currentSeason,
-    currentSeason - 1,
-    currentSeason - 2,
-    currentSeason - 3,
-    currentSeason - 4,
-  ];
+): Promise<{ previousSchools: string[]; seasons: { year: string; team: string | null }[] } | null> {
+  try {
+    console.log(`Fetching player page for ${playerName}: ${playerUrl}`);
+    const html = await fetchSportsRefPage(playerUrl);
 
-  // Build a detailed list of players with what we know
-  const playerList = players.map(p =>
-    `- ${p.name} (#${p.number}, ${p.position}, ${p.age || 'class unknown'})`
-  ).join("\n");
+    // Use Gemini to parse the player's history from their page
+    const prompt = `Parse this player's college basketball history from their sports-reference.com page.
 
-  const enrichPrompt = `Search for transfer portal and recruiting information for these ${teamName} college basketball players (${currentSeason} season).
+Extract:
+1. All schools/teams they played for (in order, oldest to newest)
+2. Which years they played at each school
 
-PLAYERS TO RESEARCH:
-${playerList}
+Look for:
+- A stats table showing year-by-year data with school names
+- Any "Per Game" or career stats tables
+- Transfer information
 
-For EACH player, search for:
-1. Their complete college basketball history - which schools did they play for BEFORE ${teamName}?
-2. Transfer portal entries - many college players are transfers from other programs
-3. Their recruiting profile (247sports, rivals, etc.) to find their high school
+The current season is ${currentSeason}. Return the last 5 seasons.
 
-IMPORTANT CONTEXT:
-- College basketball has a transfer portal - players frequently transfer between schools
-- Search for "[player name] transfer" or "[player name] college basketball" to find history
-- For example, if a Senior transferred from School A to ${teamName}, they played at School A for years before joining ${teamName}
-- Freshmen typically have no previous college (use null for previous years)
-- Check if any players came from junior college (JUCO) programs
+HTML content (relevant sections):
+${html.substring(0, 15000)}
 
-Return ONLY valid JSON (no markdown, no code blocks, no explanation):
+Return ONLY valid JSON (no markdown):
 {
-  "players": [
-    {
-      "name": "Exact Player Name",
-      "previousSchools": ["School Before Current", "Even Earlier School"],
-      "highSchool": "High School Name",
-      "seasons": [
-        {"year": "${seasonYears[0]}", "team": "${teamName}"},
-        {"year": "${seasonYears[1]}", "team": "Previous school name OR ${teamName} if they were there OR null if not in college"},
-        {"year": "${seasonYears[2]}", "team": "School name or null"},
-        {"year": "${seasonYears[3]}", "team": "School name or null"},
-        {"year": "${seasonYears[4]}", "team": "School name or null"}
-      ]
-    }
+  "previousSchools": ["School1", "School2"],
+  "seasons": [
+    {"year": "${currentSeason}", "team": "Current School"},
+    {"year": "${currentSeason - 1}", "team": "School or null"},
+    {"year": "${currentSeason - 2}", "team": "School or null"},
+    {"year": "${currentSeason - 3}", "team": "School or null"},
+    {"year": "${currentSeason - 4}", "team": "School or null"}
   ]
 }
 
-CRITICAL INSTRUCTIONS:
-- Return data for ALL ${players.length} players
-- Use the EXACT player names from the list above
-- If a player transferred, their previousSchools array should NOT be empty
-- For seasons, use the actual school name they played at that year, not "${teamName}" for years before they transferred
-- Use null for years the player was in high school or not playing college basketball`;
+- previousSchools should list schools BEFORE the current one (empty if no transfers)
+- Use null for years the player wasn't in college`;
 
-  try {
-    console.log("Calling Gemini with Google Search for transfer history...");
-    const enrichResponse = await callGemini(enrichPrompt, true);
-    console.log("Enrichment response received, parsing...");
+    const response = await callGemini(prompt, false);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
 
-    const jsonMatch = enrichResponse.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.log("No JSON found in enrichment response");
-      return players;
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+  } catch (error) {
+    console.error(`Failed to fetch history for ${playerName}:`, error);
+  }
+
+  return null;
+}
+
+// Enrich players by fetching their individual sports-reference pages
+async function enrichPlayersFromSportsRef(
+  players: BasicPlayer[],
+  rosterHtml: string,
+  league: League,
+  currentSeason: number
+): Promise<BasicPlayer[]> {
+  const playerUrls = extractPlayerUrls(rosterHtml, league);
+  console.log(`Found ${playerUrls.size} player page URLs`);
+
+  const enrichedPlayers: BasicPlayer[] = [];
+
+  for (const player of players) {
+    const playerUrl = playerUrls.get(player.name.toLowerCase());
+
+    if (playerUrl) {
+      const history = await fetchPlayerHistory(player.name, playerUrl, currentSeason);
+
+      if (history) {
+        enrichedPlayers.push({
+          ...player,
+          previousSchools: history.previousSchools?.length > 0
+            ? history.previousSchools
+            : player.previousSchools,
+          seasons: history.seasons || player.seasons,
+        });
+        continue;
+      }
     }
 
-    const enrichData = JSON.parse(jsonMatch[0]);
-    console.log(`Enrichment found data for ${enrichData.players?.length || 0} players`);
-
-    // Merge enrichment data with original players
-    return players.map(player => {
-      const enrichedPlayer = enrichData.players?.find(
-        (ep: { name: string }) =>
-          ep.name.toLowerCase().trim() === player.name.toLowerCase().trim() ||
-          ep.name.toLowerCase().includes(player.name.toLowerCase()) ||
-          player.name.toLowerCase().includes(ep.name.toLowerCase())
-      );
-
-      if (enrichedPlayer) {
-        const hasPreviousSchools = enrichedPlayer.previousSchools?.length > 0 &&
-          enrichedPlayer.previousSchools.some((s: string) => s && s !== "N/A" && s !== "None");
-
-        return {
-          ...player,
-          previousSchools: hasPreviousSchools
-            ? enrichedPlayer.previousSchools.filter((s: string) => s && s !== "N/A" && s !== "None")
-            : player.previousSchools,
-          highSchool: (enrichedPlayer.highSchool && enrichedPlayer.highSchool !== "N/A")
-            ? enrichedPlayer.highSchool
-            : player.highSchool,
-          seasons: enrichedPlayer.seasons || player.seasons,
-        };
-      }
-
-      return player;
-    });
-  } catch (error) {
-    console.error("Enrichment failed, using original data:", error);
-    return players;
+    // No URL found or fetch failed - keep original data
+    enrichedPlayers.push(player);
   }
+
+  return enrichedPlayers;
 }
 
 function getLeagueConfig(league: League) {
@@ -494,11 +505,11 @@ CRITICAL: Extract EVERY player row from the table. Do not skip any players. Retu
     throw new Error("Failed to parse roster data from AI response");
   }
 
-  // Enrich player data with transfer history using Google Search
-  console.log("Enriching player data with transfer history...");
-  const enrichedPlayers = await enrichPlayerData(
+  // Enrich player data by fetching individual player pages from sports-reference
+  console.log("Enriching player data from sports-reference player pages...");
+  const enrichedPlayers = await enrichPlayersFromSportsRef(
     rosterData.players,
-    rosterData.teamName || teamQuery,
+    htmlContent,
     league,
     currentSeason
   );
