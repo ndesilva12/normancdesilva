@@ -24,11 +24,11 @@ export async function GET() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "grok-3-latest",
+        model: "grok-beta",
         messages: [
           {
             role: "system",
-            content: `You are a helpful assistant that provides current trending topics on X (Twitter).
+            content: `You are Grok, an AI with real-time access to X (formerly Twitter). Your task is to provide current trending topics.
 Return ONLY a JSON array of trending topics. Each item should have:
 - "topic": the trending topic or hashtag (string)
 - "description": a brief 1-sentence description of why it's trending (string)
@@ -38,15 +38,9 @@ Do not include any markdown formatting, code blocks, or explanations - just the 
           },
           {
             role: "user",
-            content: "What are the current trending topics on X (Twitter) right now? Include a mix of news, entertainment, sports, and general trends."
+            content: "What are the current trending topics on X right now? Include a mix of news, entertainment, sports, and general trends."
           }
         ],
-        search_parameters: {
-          mode: "auto",
-          sources: [{ type: "x" }],
-          recency_filter: "day",
-          max_search_results: 30,
-        },
         temperature: 0.3,
         max_tokens: 2000,
       }),
@@ -55,7 +49,7 @@ Do not include any markdown formatting, code blocks, or explanations - just the 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error("xAI API error:", response.status, errorData);
-      throw new Error(`xAI API error: ${response.status}`);
+      throw new Error(`xAI API error: ${response.status} - ${JSON.stringify(errorData)}`);
     }
 
     const data = await response.json();
