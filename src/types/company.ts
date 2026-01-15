@@ -5,7 +5,11 @@ export interface CompanyAnalysis {
   description: string;
   overallLeaning: "Far Left" | "Left" | "Center-Left" | "Center" | "Center-Right" | "Right" | "Far Right";
   confidenceScore: number;
+  // Political compass coordinates (-100 to 100)
+  economicScore: number; // -100 = Far Left, 100 = Far Right
+  governmentScore: number; // -100 = Libertarian (less govt), 100 = Authoritarian (more govt)
   positions: CompanyPosition[];
+  subsidiaries: CompanySubsidiary[];
   affiliates: CompanyAffiliate[];
   newsItems: NewsItem[];
   donations: Donation[];
@@ -20,6 +24,13 @@ export interface CompanyPosition {
   topic: string;
   stance: string;
   description: string;
+}
+
+export interface CompanySubsidiary {
+  name: string;
+  industry: string;
+  description: string;
+  acquisitionYear?: string;
 }
 
 export interface CompanyAffiliate {

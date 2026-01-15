@@ -88,6 +88,8 @@ Research and provide factual information about this company's:
 - Executive statements on political issues
 - Lobbying activities
 - Corporate governance policies on taxes, regulations, free speech, trade, and government spending
+- Subsidiaries (companies owned)
+- Key business partnerships and affiliates
 
 Respond with a JSON object in this exact format:
 {
@@ -97,11 +99,16 @@ Respond with a JSON object in this exact format:
   "description": "Brief company description (2-3 sentences)",
   "overallLeaning": "One of: Far Left, Left, Center-Left, Center, Center-Right, Right, Far Right",
   "confidenceScore": 0-100 based on data availability,
+  "economicScore": -100 to 100 (left/right economic axis: -100=far left, 0=center, 100=far right),
+  "governmentScore": -100 to 100 (government involvement axis: -100=libertarian/less govt, 0=moderate, 100=authoritarian/more govt),
   "positions": [
     {"topic": "Issue name", "stance": "Brief stance", "description": "Detailed explanation"}
   ],
+  "subsidiaries": [
+    {"name": "Subsidiary name", "industry": "Industry", "description": "Brief description", "acquisitionYear": "YYYY or null"}
+  ],
   "affiliates": [
-    {"name": "Affiliate name", "relationship": "Type of relationship", "description": "Details"}
+    {"name": "Partner/affiliate name", "relationship": "Type of partnership", "description": "Details about the business relationship and synergy"}
   ],
   "newsItems": [
     {"headline": "News headline", "source": "Publication", "date": "YYYY-MM", "summary": "Brief summary", "sentiment": "positive/negative/neutral"}
@@ -120,7 +127,7 @@ Respond with a JSON object in this exact format:
   ]
 }
 
-Provide 3-5 items for each array. Be factual and cite real events where possible. If information is limited, indicate lower confidence score.`;
+IMPORTANT: Provide up to 25 items for subsidiaries and affiliates arrays. Provide 3-5 items for other arrays. Be factual and cite real events where possible. If information is limited, indicate lower confidence score.`;
 
   const response = await callAI(prompt);
 

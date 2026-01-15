@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  Layers,
 } from "lucide-react";
 import { CompanyAnalysis } from "@/types/company";
 
@@ -47,6 +48,167 @@ function PoliticalLeaningBadge({ leaning }: { leaning: string }) {
     <span className={`${getColor()} rounded-full px-4 py-1.5 text-sm font-medium text-white`}>
       {leaning}
     </span>
+  );
+}
+
+function PoliticalCompass({ economicScore, governmentScore, companyName }: { economicScore: number; governmentScore: number; companyName: string }) {
+  // Convert scores from -100 to 100 range to 0-100% for positioning
+  const xPos = ((economicScore + 100) / 200) * 100;
+  const yPos = ((100 - governmentScore) / 200) * 100; // Invert Y so positive is up
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        maxWidth: "400px",
+        aspectRatio: "1",
+        position: "relative",
+        margin: "0 auto",
+      }}
+    >
+      {/* Grid background */}
+      <svg
+        viewBox="0 0 200 200"
+        style={{
+          width: "100%",
+          height: "100%",
+          position: "absolute",
+          top: 0,
+          left: 0,
+        }}
+      >
+        {/* Background quadrants */}
+        <rect x="0" y="0" width="100" height="100" fill="rgba(147, 51, 234, 0.15)" /> {/* Top-Left: Authoritarian Left */}
+        <rect x="100" y="0" width="100" height="100" fill="rgba(59, 130, 246, 0.15)" /> {/* Top-Right: Authoritarian Right */}
+        <rect x="0" y="100" width="100" height="100" fill="rgba(34, 197, 94, 0.15)" /> {/* Bottom-Left: Libertarian Left */}
+        <rect x="100" y="100" width="100" height="100" fill="rgba(234, 179, 8, 0.15)" /> {/* Bottom-Right: Libertarian Right */}
+
+        {/* Grid lines */}
+        <line x1="100" y1="0" x2="100" y2="200" stroke="var(--glass-border)" strokeWidth="2" />
+        <line x1="0" y1="100" x2="200" y2="100" stroke="var(--glass-border)" strokeWidth="2" />
+
+        {/* Minor grid lines */}
+        <line x1="50" y1="0" x2="50" y2="200" stroke="var(--glass-border)" strokeWidth="0.5" strokeDasharray="4,4" />
+        <line x1="150" y1="0" x2="150" y2="200" stroke="var(--glass-border)" strokeWidth="0.5" strokeDasharray="4,4" />
+        <line x1="0" y1="50" x2="200" y2="50" stroke="var(--glass-border)" strokeWidth="0.5" strokeDasharray="4,4" />
+        <line x1="0" y1="150" x2="200" y2="150" stroke="var(--glass-border)" strokeWidth="0.5" strokeDasharray="4,4" />
+
+        {/* Border */}
+        <rect x="0" y="0" width="200" height="200" fill="none" stroke="var(--glass-border)" strokeWidth="2" />
+
+        {/* Company marker */}
+        <circle
+          cx={xPos * 2}
+          cy={yPos * 2}
+          r="8"
+          fill="var(--accent)"
+          stroke="var(--background)"
+          strokeWidth="2"
+        />
+        <circle
+          cx={xPos * 2}
+          cy={yPos * 2}
+          r="12"
+          fill="none"
+          stroke="var(--accent)"
+          strokeWidth="2"
+          opacity="0.5"
+        />
+      </svg>
+
+      {/* Labels */}
+      <div
+        style={{
+          position: "absolute",
+          top: "-28px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          fontSize: "12px",
+          fontWeight: 600,
+          color: "var(--foreground)",
+          textAlign: "center",
+        }}
+      >
+        More Government
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          bottom: "-28px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          fontSize: "12px",
+          fontWeight: 600,
+          color: "var(--foreground)",
+          textAlign: "center",
+        }}
+      >
+        Less Government
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: "-8px",
+          top: "50%",
+          transform: "translateY(-50%) rotate(-90deg)",
+          fontSize: "12px",
+          fontWeight: 600,
+          color: "var(--foreground)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Left
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          right: "-12px",
+          top: "50%",
+          transform: "translateY(-50%) rotate(90deg)",
+          fontSize: "12px",
+          fontWeight: 600,
+          color: "var(--foreground)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Right
+      </div>
+
+      {/* Quadrant labels */}
+      <div style={{ position: "absolute", top: "8px", left: "8px", fontSize: "10px", color: "rgba(147, 51, 234, 0.8)", fontWeight: 500 }}>
+        Auth Left
+      </div>
+      <div style={{ position: "absolute", top: "8px", right: "8px", fontSize: "10px", color: "rgba(59, 130, 246, 0.8)", fontWeight: 500 }}>
+        Auth Right
+      </div>
+      <div style={{ position: "absolute", bottom: "8px", left: "8px", fontSize: "10px", color: "rgba(34, 197, 94, 0.8)", fontWeight: 500 }}>
+        Lib Left
+      </div>
+      <div style={{ position: "absolute", bottom: "8px", right: "8px", fontSize: "10px", color: "rgba(234, 179, 8, 0.8)", fontWeight: 500 }}>
+        Lib Right
+      </div>
+
+      {/* Company name tooltip */}
+      <div
+        style={{
+          position: "absolute",
+          left: `${xPos}%`,
+          top: `${yPos}%`,
+          transform: "translate(-50%, -150%)",
+          backgroundColor: "var(--glass-background)",
+          border: "1px solid var(--glass-border)",
+          borderRadius: "6px",
+          padding: "4px 8px",
+          fontSize: "11px",
+          fontWeight: 500,
+          color: "var(--foreground)",
+          whiteSpace: "nowrap",
+          backdropFilter: "blur(8px)",
+        }}
+      >
+        {companyName}
+      </div>
+    </div>
   );
 }
 
@@ -127,6 +289,34 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
         </div>
       </div>
 
+      {/* Political Compass */}
+      {(report.economicScore !== undefined && report.governmentScore !== undefined) && (
+        <div className="glass rounded-2xl p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 text-center">Political Compass</h3>
+          <div style={{ padding: "32px 24px" }}>
+            <PoliticalCompass
+              economicScore={report.economicScore}
+              governmentScore={report.governmentScore}
+              companyName={report.companyName}
+            />
+          </div>
+          <div className="flex justify-center gap-8 mt-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-foreground-muted">Economic:</span>
+              <span className={`font-medium ${report.economicScore < 0 ? 'text-blue-400' : report.economicScore > 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                {report.economicScore > 0 ? '+' : ''}{report.economicScore}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-foreground-muted">Government:</span>
+              <span className={`font-medium ${report.governmentScore > 0 ? 'text-purple-400' : report.governmentScore < 0 ? 'text-green-400' : 'text-gray-400'}`}>
+                {report.governmentScore > 0 ? '+' : ''}{report.governmentScore}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Positions */}
       <Section title="Political Positions" icon={Scale} count={report.positions.length}>
         <div className="space-y-3">
@@ -142,9 +332,27 @@ export function CompanyReport({ report, cached }: CompanyReportProps) {
         </div>
       </Section>
 
+      {/* Subsidiaries */}
+      {report.subsidiaries && report.subsidiaries.length > 0 && (
+        <Section title="Subsidiaries (Companies Owned)" icon={Layers} count={report.subsidiaries.length}>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {report.subsidiaries.map((subsidiary, i) => (
+              <div key={i} className="rounded-lg bg-white/5 p-3">
+                <div className="font-medium text-foreground">{subsidiary.name}</div>
+                <div className="text-xs text-accent mb-1">{subsidiary.industry}</div>
+                <p className="text-sm text-foreground-muted">{subsidiary.description}</p>
+                {subsidiary.acquisitionYear && (
+                  <div className="text-xs text-foreground-muted mt-1">Acquired: {subsidiary.acquisitionYear}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
       {/* Affiliates */}
-      <Section title="Key Affiliates" icon={Users} count={report.affiliates.length}>
-        <div className="grid gap-3 sm:grid-cols-2">
+      <Section title="Key Affiliates & Partners" icon={Users} count={report.affiliates.length}>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {report.affiliates.map((affiliate, i) => (
             <div key={i} className="rounded-lg bg-white/5 p-3">
               <div className="font-medium text-foreground">{affiliate.name}</div>
