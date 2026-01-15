@@ -45,7 +45,6 @@ async function callGemini(prompt: string): Promise<string> {
     console.error("Gemini API error status:", response.status);
     console.error("Gemini API error body:", errorText);
 
-    // Parse error for more details
     try {
       const errorJson = JSON.parse(errorText);
       const errorMessage = errorJson.error?.message || errorText;
@@ -94,39 +93,170 @@ function getLeagueConfig(league: League) {
   return LEAGUES.find((l) => l.id === league);
 }
 
-function getSportsRefUrl(league: League, teamName: string, year: number): string {
-  const config = getLeagueConfig(league);
-  if (!config) throw new Error(`Unknown league: ${league}`);
+function getCurrentSeason(): number {
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+  return month >= 7 ? year + 1 : year;
+}
 
-  // Different URL patterns for different sports reference sites
+function getSportsRefUrl(league: League, teamSlug: string, year: number): string {
   switch (league) {
     case "nba":
-      return `https://www.basketball-reference.com/teams/${teamName}/${year}.html`;
+      return `https://www.basketball-reference.com/teams/${teamSlug}/${year}.html`;
     case "ncaa-basketball":
-      return `https://www.sports-reference.com/cbb/schools/${teamName}/men/${year}.html`;
+      return `https://www.sports-reference.com/cbb/schools/${teamSlug}/men/${year}.html`;
     case "nfl":
-      return `https://www.pro-football-reference.com/teams/${teamName}/${year}_roster.htm`;
+      return `https://www.pro-football-reference.com/teams/${teamSlug}/${year}_roster.htm`;
     case "ncaa-football":
-      return `https://www.sports-reference.com/cfb/schools/${teamName}/${year}-roster.html`;
+      return `https://www.sports-reference.com/cfb/schools/${teamSlug}/${year}-roster.html`;
     case "mlb":
-      return `https://www.baseball-reference.com/teams/${teamName}/${year}.shtml`;
+      return `https://www.baseball-reference.com/teams/${teamSlug}/${year}.shtml`;
     case "nhl":
-      return `https://www.hockey-reference.com/teams/${teamName}/${year}.html`;
+      return `https://www.hockey-reference.com/teams/${teamSlug}/${year}.html`;
     default:
       throw new Error(`Unknown league: ${league}`);
   }
 }
 
-function getCurrentSeason(): number {
-  const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  // For most sports, season year is the ending year
-  // NBA/NHL: Oct-June (season labeled by end year)
-  // NFL: Sept-Feb (season labeled by start year)
-  // NCAA Basketball: Nov-April (season labeled by end year)
-  // NCAA Football: Aug-Jan (season labeled by start year)
-  return month >= 7 ? year + 1 : year;
+// Common team name to sports-reference slug mappings
+const TEAM_SLUGS: Record<string, Record<string, string>> = {
+  "ncaa-basketball": {
+    "duke": "duke",
+    "north carolina": "north-carolina",
+    "unc": "north-carolina",
+    "kentucky": "kentucky",
+    "kansas": "kansas",
+    "ucla": "ucla",
+    "gonzaga": "gonzaga",
+    "villanova": "villanova",
+    "michigan state": "michigan-state",
+    "michigan": "michigan",
+    "ohio state": "ohio-state",
+    "indiana": "indiana",
+    "purdue": "purdue",
+    "iowa": "iowa",
+    "iowa state": "iowa-state",
+    "texas": "texas",
+    "baylor": "baylor",
+    "arizona": "arizona",
+    "uconn": "connecticut",
+    "connecticut": "connecticut",
+    "louisville": "louisville",
+    "syracuse": "syracuse",
+    "florida": "florida",
+    "tennessee": "tennessee",
+    "auburn": "auburn",
+    "alabama": "alabama",
+    "arkansas": "arkansas",
+    "houston": "houston",
+    "creighton": "creighton",
+    "marquette": "marquette",
+    "st johns": "st-johns-ny",
+    "st. johns": "st-johns-ny",
+  },
+  "nba": {
+    "lakers": "LAL",
+    "celtics": "BOS",
+    "warriors": "GSW",
+    "heat": "MIA",
+    "bulls": "CHI",
+    "knicks": "NYK",
+    "nets": "BRK",
+    "76ers": "PHI",
+    "sixers": "PHI",
+    "bucks": "MIL",
+    "suns": "PHO",
+    "mavericks": "DAL",
+    "mavs": "DAL",
+    "nuggets": "DEN",
+    "clippers": "LAC",
+    "thunder": "OKC",
+    "rockets": "HOU",
+    "spurs": "SAS",
+    "grizzlies": "MEM",
+    "pelicans": "NOP",
+    "timberwolves": "MIN",
+    "wolves": "MIN",
+    "jazz": "UTA",
+    "trail blazers": "POR",
+    "blazers": "POR",
+    "kings": "SAC",
+    "hawks": "ATL",
+    "hornets": "CHO",
+    "magic": "ORL",
+    "wizards": "WAS",
+    "cavaliers": "CLE",
+    "cavs": "CLE",
+    "pistons": "DET",
+    "pacers": "IND",
+    "raptors": "TOR",
+  },
+  "nfl": {
+    "chiefs": "kan",
+    "eagles": "phi",
+    "bills": "buf",
+    "49ers": "sfo",
+    "cowboys": "dal",
+    "lions": "det",
+    "ravens": "rav",
+    "dolphins": "mia",
+    "packers": "gnb",
+    "bengals": "cin",
+    "jets": "nyj",
+    "giants": "nyg",
+    "broncos": "den",
+    "raiders": "rai",
+    "chargers": "sdg",
+    "seahawks": "sea",
+    "cardinals": "crd",
+    "rams": "ram",
+    "vikings": "min",
+    "bears": "chi",
+    "saints": "nor",
+    "buccaneers": "tam",
+    "bucs": "tam",
+    "falcons": "atl",
+    "panthers": "car",
+    "texans": "htx",
+    "titans": "oti",
+    "colts": "clt",
+    "jaguars": "jax",
+    "steelers": "pit",
+    "browns": "cle",
+    "patriots": "nwe",
+    "commanders": "was",
+  },
+};
+
+function getTeamSlug(league: League, teamQuery: string): string {
+  const normalizedQuery = teamQuery.toLowerCase().trim();
+  const leagueSlugs = TEAM_SLUGS[league];
+
+  if (leagueSlugs && leagueSlugs[normalizedQuery]) {
+    return leagueSlugs[normalizedQuery];
+  }
+
+  // Default: convert to slug format (lowercase, replace spaces with hyphens)
+  return normalizedQuery.replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
+async function fetchSportsRefPage(url: string): Promise<string> {
+  console.log("Fetching sports-reference URL:", url);
+
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.5",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+  }
+
+  return await response.text();
 }
 
 export async function fetchTeamRoster(
@@ -134,6 +264,25 @@ export async function fetchTeamRoster(
   teamQuery: string
 ): Promise<TeamRoster> {
   const currentSeason = getCurrentSeason();
+  const teamSlug = getTeamSlug(league, teamQuery);
+  const url = getSportsRefUrl(league, teamSlug, currentSeason);
+
+  // Fetch the actual page from sports-reference
+  let htmlContent: string;
+  try {
+    htmlContent = await fetchSportsRefPage(url);
+  } catch (fetchError) {
+    console.error("Failed to fetch sports-reference page:", fetchError);
+    throw new Error(`Could not find team "${teamQuery}" on sports-reference.com. Try using the official team name.`);
+  }
+
+  // Limit HTML size to avoid token limits (extract just roster-related portions)
+  const rosterTableMatch = htmlContent.match(/<table[^>]*id="roster"[^>]*>[\s\S]*?<\/table>/i) ||
+                           htmlContent.match(/<table[^>]*class="[^"]*roster[^"]*"[^>]*>[\s\S]*?<\/table>/i) ||
+                           htmlContent.match(/<table[^>]*>[\s\S]*?<\/table>/i);
+
+  const tableHtml = rosterTableMatch ? rosterTableMatch[0] : htmlContent.substring(0, 50000);
+
   const seasonYears = [
     currentSeason,
     currentSeason - 1,
@@ -142,68 +291,66 @@ export async function fetchTeamRoster(
     currentSeason - 4,
   ];
 
-  // Use Gemini to search and parse roster data
-  const prompt = `You are a sports data expert. I need you to provide the current roster for the ${teamQuery} ${getLeagueConfig(league)?.name} team.
+  // Use Gemini to parse the HTML
+  const prompt = `You are a sports data parser. I have fetched the HTML from sports-reference.com for a ${getLeagueConfig(league)?.name} team roster.
 
-Search your knowledge for the ${teamQuery} team in ${getLeagueConfig(league)?.name}.
+Parse this HTML table and extract the roster information.
 
-For each player, provide:
+HTML Content:
+${tableHtml}
+
+For each player found in the roster table, extract:
 - Jersey number
 - Full name
 - Position
-- Height (format: 6-2 or 6'2")
-- Weight (in lbs)
-- Age or birth year
-- Hometown (City, State/Country)
-- High school name and location
-- Previous college/team (if applicable)
-- What team they played for in each of these seasons: ${seasonYears.join(", ")}
+- Height
+- Weight
+- Class/Year or Age
+- Hometown (City, State/Country) - look for birthplace or hometown columns
+- High school (if available)
+- Previous school (if available, for transfers)
 
-Also provide:
-- The official team name
-- The team's primary color (hex code)
-- The team's secondary color (hex code)
+Also determine:
+- The official team name (from page title or header)
+- Team's primary color (hex code) - use your knowledge of ${teamQuery}'s colors
+- Team's secondary color (hex code)
 
-Respond with a JSON object in this exact format (no markdown, just raw JSON):
+For the seasons array, use your knowledge to fill in what team each player was on for these years: ${seasonYears.join(", ")}. Use null if they weren't playing college/pro ball that year.
+
+Respond with ONLY a valid JSON object (no markdown, no explanation):
 {
-  "teamName": "Full official team name",
-  "primaryColor": "#hexcode",
-  "secondaryColor": "#hexcode",
+  "teamName": "Full Team Name",
+  "primaryColor": "#001A57",
+  "secondaryColor": "#FFFFFF",
   "players": [
     {
-      "number": "23",
-      "name": "Player Full Name",
-      "position": "PG",
+      "number": "1",
+      "name": "Player Name",
+      "position": "G",
       "height": "6-2",
       "weight": "185",
-      "age": "22",
-      "hometown": "Chicago, IL",
-      "highSchool": "Whitney Young HS (Chicago, IL)",
-      "previousSchools": ["Previous College"],
+      "age": "Jr.",
+      "hometown": "City, State",
+      "highSchool": "High School Name",
+      "previousSchools": ["Previous School"],
       "seasons": [
-        {"year": "${seasonYears[0]}", "team": "Current Team or null"},
-        {"year": "${seasonYears[1]}", "team": "Team Name or null"},
-        {"year": "${seasonYears[2]}", "team": "Team Name or null"},
-        {"year": "${seasonYears[3]}", "team": "Team Name or null"},
-        {"year": "${seasonYears[4]}", "team": "Team Name or null"}
+        {"year": "${seasonYears[0]}", "team": "Current Team"},
+        {"year": "${seasonYears[1]}", "team": "Team or null"},
+        {"year": "${seasonYears[2]}", "team": "Team or null"},
+        {"year": "${seasonYears[3]}", "team": "Team or null"},
+        {"year": "${seasonYears[4]}", "team": "Team or null"}
       ]
     }
   ]
 }
 
-IMPORTANT:
-- Include ALL players on the current roster (typically 12-15 for basketball, 53+ for football)
-- Use "null" (without quotes in JSON) if player didn't play that season
-- Be accurate with the data - use real player information
-- For NCAA teams, default to Men's teams
-- If you cannot find the exact team, find the closest match and note it in the team name`;
+IMPORTANT: Extract ALL players from the roster table. Return valid JSON only.`;
 
   const responseText = await callGemini(prompt);
 
   // Parse the JSON response
   let rosterData;
   try {
-    // Try to extract JSON from the response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error("No JSON found in response");
@@ -214,16 +361,15 @@ IMPORTANT:
     throw new Error("Failed to parse roster data from AI response");
   }
 
-  // Geocode player hometowns
-  const playersWithCoords: Player[] = await Promise.all(
-    rosterData.players.map(async (player: Player) => {
-      const coordinates = await geocodeLocation(player.hometown);
-      return {
-        ...player,
-        coordinates,
-      };
-    })
-  );
+  // Geocode player hometowns (limit concurrent requests)
+  const playersWithCoords: Player[] = [];
+  for (const player of rosterData.players) {
+    const coordinates = await geocodeLocation(player.hometown);
+    playersWithCoords.push({
+      ...player,
+      coordinates,
+    });
+  }
 
   return {
     teamName: rosterData.teamName,
