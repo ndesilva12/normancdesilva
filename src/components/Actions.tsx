@@ -253,8 +253,8 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
   return (
     <div
       style={{
-        width: isExpanded ? "380px" : "160px",
-        transition: "width 0.3s ease",
+        position: "relative",
+        width: "160px",
         flexShrink: 0,
       }}
     >
@@ -398,7 +398,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
         </div>
       )}
 
-      {/* Main Panel */}
+      {/* Header button - always visible */}
       <div
         className="glass"
         style={{
@@ -406,7 +406,6 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
           overflow: "hidden",
         }}
       >
-        {/* Header */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           style={{
@@ -418,7 +417,6 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
             background: "none",
             border: "none",
             cursor: "pointer",
-            borderBottom: isExpanded ? "1px solid var(--glass-border)" : "none",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -451,10 +449,23 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
             }}
           />
         </button>
+      </div>
 
-        {/* Content */}
-        {isExpanded && (
-          <div style={{ padding: "16px" }}>
+      {/* Dropdown content - absolutely positioned */}
+      {isExpanded && (
+        <div
+          className="glass"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            right: 0,
+            width: "380px",
+            borderRadius: "10px",
+            padding: "16px",
+            zIndex: 50,
+            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.3)",
+          }}
+        >
             {/* Google Calendar Connection */}
             {!isGoogleConnected && (
               <button
@@ -686,9 +697,8 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
                 No actions yet. Add one above.
               </div>
             )}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <style jsx global>{`
         @keyframes pulse {

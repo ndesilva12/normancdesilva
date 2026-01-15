@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Calendar, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Calendar, ExternalLink, Loader2, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 
@@ -14,11 +14,14 @@ interface CalendarEvent {
   htmlLink?: string;
 }
 
+type ViewMode = "day" | "week" | "month";
+
 export default function CalendarPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
 
   useEffect(() => {
     checkAuthAndLoadEvents();
@@ -28,7 +31,7 @@ export default function CalendarPage() {
     if (isAuthenticated) {
       loadEvents();
     }
-  }, [selectedDate, isAuthenticated]);
+  }, [currentDate, viewMode, isAuthenticated]);
 
   const checkAuthAndLoadEvents = async () => {
     try {
@@ -47,16 +50,37 @@ export default function CalendarPage() {
     }
   };
 
+  const getDateRange = () => {
+    const start = new Date(currentDate);
+    const end = new Date(currentDate);
+
+    if (viewMode === "day") {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (viewMode === "week") {
+      // Start from Sunday of current week
+      const day = start.getDay();
+      start.setDate(start.getDate() - day);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+    } else if (viewMode === "month") {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(0); // Last day of current month
+      end.setHours(23, 59, 59, 999);
+    }
+
+    return { start, end };
+  };
+
   const loadEvents = async () => {
     try {
-      const startDate = new Date(selectedDate);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(selectedDate);
-      endDate.setDate(endDate.getDate() + 7); // Load 7 days
-      endDate.setHours(23, 59, 59, 999);
+      const { start, end } = getDateRange();
 
       const response = await fetch(
-        `/api/calendar?timeMin=${startDate.toISOString()}&timeMax=${endDate.toISOString()}`
+        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`
       );
 
       if (response.ok) {
@@ -65,6 +89,53 @@ export default function CalendarPage() {
       }
     } catch (error) {
       console.error("Failed to load events:", error);
+    }
+  };
+
+  const navigatePrev = () => {
+    const newDate = new Date(currentDate);
+    if (viewMode === "day") {
+      newDate.setDate(newDate.getDate() - 1);
+    } else if (viewMode === "week") {
+      newDate.setDate(newDate.getDate() - 7);
+    } else if (viewMode === "month") {
+      newDate.setMonth(newDate.getMonth() - 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  const navigateNext = () => {
+    const newDate = new Date(currentDate);
+    if (viewMode === "day") {
+      newDate.setDate(newDate.getDate() + 1);
+    } else if (viewMode === "week") {
+      newDate.setDate(newDate.getDate() + 7);
+    } else if (viewMode === "month") {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const getHeaderTitle = () => {
+    const { start, end } = getDateRange();
+
+    if (viewMode === "day") {
+      return currentDate.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+    } else if (viewMode === "week") {
+      const startStr = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const endStr = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      return `${startStr} - ${endStr}`;
+    } else {
+      return currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
     }
   };
 
@@ -96,13 +167,6 @@ export default function CalendarPage() {
       return timeStr;
     }
     return "All day";
-  };
-
-  const formatEventDate = (event: CalendarEvent) => {
-    const dateStr = event.start.dateTime || event.start.date;
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
   };
 
   // Group events by date
@@ -253,41 +317,128 @@ export default function CalendarPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              {/* Date selector and refresh */}
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  style={{
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    border: "1px solid var(--glass-border)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "var(--foreground)",
-                    fontSize: "14px",
-                    outline: "none",
-                  }}
-                />
-                <button
-                  onClick={loadEvents}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    border: "1px solid var(--glass-border)",
-                    background: "transparent",
-                    color: "var(--foreground-muted)",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                  }}
-                >
-                  <RefreshCw style={{ width: "16px", height: "16px" }} />
-                  Refresh
-                </button>
+              {/* View mode selector and navigation */}
+              <div
+                className="glass"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "16px",
+                  padding: "16px 20px",
+                  borderRadius: "12px",
+                  marginBottom: "24px",
+                }}
+              >
+                {/* View mode buttons */}
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {(["day", "week", "month"] as ViewMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setViewMode(mode)}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        border: "none",
+                        backgroundColor: viewMode === mode ? "var(--accent)" : "rgba(255, 255, 255, 0.05)",
+                        color: viewMode === mode ? "var(--background)" : "var(--foreground-muted)",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Navigation */}
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <button
+                    onClick={goToToday}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--glass-border)",
+                      backgroundColor: "transparent",
+                      color: "var(--foreground-muted)",
+                      fontSize: "13px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Today
+                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <button
+                      onClick={navigatePrev}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "6px",
+                        border: "1px solid var(--glass-border)",
+                        backgroundColor: "transparent",
+                        color: "var(--foreground-muted)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <ChevronLeft style={{ width: "18px", height: "18px" }} />
+                    </button>
+                    <button
+                      onClick={navigateNext}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "6px",
+                        border: "1px solid var(--glass-border)",
+                        backgroundColor: "transparent",
+                        color: "var(--foreground-muted)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <ChevronRight style={{ width: "18px", height: "18px" }} />
+                    </button>
+                  </div>
+                  <button
+                    onClick={loadEvents}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--glass-border)",
+                      backgroundColor: "transparent",
+                      color: "var(--foreground-muted)",
+                      cursor: "pointer",
+                    }}
+                    title="Refresh"
+                  >
+                    <RefreshCw style={{ width: "16px", height: "16px" }} />
+                  </button>
+                </div>
               </div>
+
+              {/* Current date range header */}
+              <h2
+                style={{
+                  fontSize: "20px",
+                  fontWeight: 600,
+                  color: "var(--foreground)",
+                  marginBottom: "20px",
+                  textAlign: "center",
+                }}
+              >
+                {getHeaderTitle()}
+              </h2>
 
               {/* Events list */}
               {Object.keys(groupedEvents).length > 0 ? (
@@ -304,7 +455,7 @@ export default function CalendarPage() {
                           }}
                         >
                           <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)" }}>
-                            {new Date(dateKey).toLocaleDateString([], {
+                            {new Date(dateKey).toLocaleDateString("en-US", {
                               weekday: "long",
                               month: "long",
                               day: "numeric",
@@ -312,7 +463,7 @@ export default function CalendarPage() {
                           </h3>
                         </div>
                         <div style={{ padding: "12px 20px" }}>
-                          {dayEvents.map((event) => (
+                          {dayEvents.map((event, idx) => (
                             <div
                               key={event.id}
                               style={{
@@ -320,7 +471,7 @@ export default function CalendarPage() {
                                 alignItems: "flex-start",
                                 gap: "16px",
                                 padding: "12px 0",
-                                borderBottom: "1px solid var(--glass-border)",
+                                borderBottom: idx < dayEvents.length - 1 ? "1px solid var(--glass-border)" : "none",
                               }}
                             >
                               <div
@@ -378,7 +529,7 @@ export default function CalendarPage() {
                 >
                   <Calendar style={{ width: "40px", height: "40px", color: "var(--foreground-muted)", margin: "0 auto 16px" }} />
                   <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-                    No events scheduled for this week
+                    No events scheduled for this {viewMode}
                   </p>
                 </div>
               )}

@@ -16,47 +16,66 @@ function CalendarWidget() {
 
   return (
     <div
-      className="glass"
       style={{
-        borderRadius: "10px",
-        overflow: "hidden",
-        width: isExpanded ? "320px" : "160px",
-        transition: "width 0.3s ease",
+        position: "relative",
+        width: "160px",
         flexShrink: 0,
       }}
     >
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
+      {/* Header button - always visible */}
+      <div
+        className="glass"
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          width: "100%",
-          padding: "10px 14px",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
+          borderRadius: "10px",
+          overflow: "hidden",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Calendar style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
-          <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)" }}>
-            Calendar
-          </span>
-        </div>
-        <ChevronDown
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
           style={{
-            width: "14px",
-            height: "14px",
-            color: "var(--foreground-muted)",
-            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.2s",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            padding: "10px 14px",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
           }}
-        />
-      </button>
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Calendar style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
+            <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)" }}>
+              Calendar
+            </span>
+          </div>
+          <ChevronDown
+            style={{
+              width: "14px",
+              height: "14px",
+              color: "var(--foreground-muted)",
+              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.2s",
+            }}
+          />
+        </button>
+      </div>
 
+      {/* Dropdown content - absolutely positioned */}
       {isExpanded && (
-        <div style={{ padding: "12px 14px", borderTop: "1px solid var(--glass-border)" }}>
+        <div
+          className="glass"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            left: 0,
+            width: "200px",
+            borderRadius: "10px",
+            padding: "12px 14px",
+            zIndex: 50,
+            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.3)",
+          }}
+        >
           <Link
             href="/tools/calendar"
             style={{
