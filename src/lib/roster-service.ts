@@ -1392,7 +1392,18 @@ export async function fetchTeamRoster(
   // Parse the JSON response
   let rosterData;
   try {
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    // Strip markdown code blocks if present
+    let cleanedResponse = responseText;
+    if (responseText.includes("```")) {
+      // Remove ```json or ``` wrappers
+      cleanedResponse = responseText
+        .replace(/```json\s*/gi, "")
+        .replace(/```\s*/g, "")
+        .trim();
+      console.log("Stripped markdown code blocks from response");
+    }
+
+    const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("No JSON found in Gemini response. Full response:", responseText);
       throw new Error("No JSON found in response");
