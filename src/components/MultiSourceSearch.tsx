@@ -651,6 +651,39 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             }}
           />
 
+          {/* Clear button */}
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "28px",
+                height: "28px",
+                borderRadius: "50%",
+                backgroundColor: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--foreground-muted)",
+                marginTop: "6px",
+                flexShrink: 0,
+                transition: "color 0.15s, background 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                e.currentTarget.style.color = "var(--foreground)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = "var(--foreground-muted)";
+              }}
+            >
+              <X style={{ width: "16px", height: "16px" }} />
+            </button>
+          )}
+
           <button
             type="submit"
             disabled={isSearching || !query.trim()}

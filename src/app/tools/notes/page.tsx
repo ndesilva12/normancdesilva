@@ -1,0 +1,236 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { ArrowLeft, StickyNote, Loader2, RefreshCw, ExternalLink } from "lucide-react";
+import { OneNotePage } from "@/lib/microsoft-graph";
+
+export default function NotesPage() {
+  const [pages, setPages] = useState<OneNotePage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    checkConnectionAndFetch();
+  }, []);
+
+  const checkConnectionAndFetch = async () => {
+    try {
+      const statusResponse = await fetch("/api/auth/microsoft/status");
+      const status = await statusResponse.json();
+      setIsConnected(status.connected);
+
+      if (status.connected) {
+        fetchNotes();
+      } else {
+        setLoading(false);
+      }
+    } catch {
+      setLoading(false);
+    }
+  };
+
+  const fetchNotes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/onenote?limit=30&type=pages");
+      if (!response.ok) {
+        throw new Error("Failed to fetch notes");
+      }
+      const data = await response.json();
+      setPages(data.pages || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load notes");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConnect = async () => {
+    try {
+      const response = await fetch("/api/auth/microsoft");
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("Failed to connect:", err);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  const getOneNoteUrl = (page: OneNotePage): string => {
+    return page.links?.oneNoteWebUrl?.href || page.links?.oneNoteClientUrl?.href || "#";
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", padding: "20px" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+          <Link
+            href="/"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "40px",
+              height: "40px",
+              borderRadius: "10px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              color: "var(--foreground-muted)",
+              textDecoration: "none",
+            }}
+          >
+            <ArrowLeft style={{ width: "20px", height: "20px" }} />
+          </Link>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <StickyNote style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
+              <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>Notes</h1>
+            </div>
+            <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginTop: "4px" }}>
+              Your OneNote pages
+            </p>
+          </div>
+          {isConnected && (
+            <button
+              onClick={fetchNotes}
+              disabled={loading}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                color: "var(--foreground-muted)",
+                border: "none",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontSize: "13px",
+              }}
+            >
+              <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
+              Refresh
+            </button>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="glass" style={{ borderRadius: "12px", overflow: "hidden" }}>
+          {!isConnected ? (
+            <div style={{ textAlign: "center", padding: "60px 20px" }}>
+              <StickyNote style={{ width: "48px", height: "48px", color: "var(--accent)", margin: "0 auto 16px" }} />
+              <h2 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+                Connect Microsoft
+              </h2>
+              <p style={{ color: "var(--foreground-muted)", fontSize: "14px", marginBottom: "20px" }}>
+                Access your OneNote notebooks and pages
+              </p>
+              <button
+                onClick={handleConnect}
+                style={{
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  backgroundColor: "var(--accent)",
+                  color: "var(--background)",
+                  border: "none",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                Connect Microsoft
+              </button>
+            </div>
+          ) : loading ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px" }}>
+              <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+            </div>
+          ) : error ? (
+            <div style={{ textAlign: "center", padding: "60px 20px", color: "#f87171" }}>
+              <p>{error}</p>
+              <button
+                onClick={fetchNotes}
+                style={{
+                  marginTop: "16px",
+                  padding: "8px 16px",
+                  borderRadius: "6px",
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  color: "var(--foreground)",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Try Again
+              </button>
+            </div>
+          ) : pages.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--foreground-muted)" }}>
+              No notes found
+            </div>
+          ) : (
+            <div>
+              {pages.map((page, index) => (
+                <a
+                  key={page.id}
+                  href={getOneNoteUrl(page)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "14px",
+                    padding: "16px 20px",
+                    borderBottom: index < pages.length - 1 ? "1px solid var(--glass-border)" : "none",
+                    textDecoration: "none",
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <span style={{ fontSize: "24px" }}>📝</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: "15px",
+                      color: "var(--foreground)",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}>
+                      {page.title || "Untitled"}
+                    </div>
+                    <div style={{ fontSize: "13px", color: "var(--foreground-muted)", marginTop: "4px" }}>
+                      {page.parentSection?.displayName || "Section"} • Modified {formatDate(page.lastModifiedDateTime)}
+                    </div>
+                  </div>
+                  <ExternalLink style={{ width: "16px", height: "16px", color: "var(--foreground-muted)", flexShrink: 0 }} />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <style jsx global>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}

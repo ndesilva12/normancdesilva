@@ -8,6 +8,10 @@ import { Header } from "@/components/Header";
 import { ToolCard } from "@/components/ToolCard";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { Reminders, type ReminderItem } from "@/components/Actions";
+import { FilesPreview } from "@/components/FilesPreview";
+import { EmailsPreview } from "@/components/EmailsPreview";
+import { NotesPreview } from "@/components/NotesPreview";
+import { ContactsPreview } from "@/components/ContactsPreview";
 import { useAuth } from "@/contexts/AuthContext";
 import { tools } from "@/lib/tools";
 
@@ -200,6 +204,7 @@ function LiveDateTime({
 
 export default function Home() {
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+  const [isMicrosoftConnected, setIsMicrosoftConnected] = useState(false);
   const [hasSearchResults, setHasSearchResults] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -211,24 +216,44 @@ export default function Home() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Check Google Calendar auth status
+  // Check Google auth status
   useEffect(() => {
-    async function checkAuth() {
+    async function checkGoogleAuth() {
       try {
         const response = await fetch("/api/auth/google/status");
         const data = await response.json();
-        setIsGoogleConnected(data.authenticated);
+        setIsGoogleConnected(data.connected || data.authenticated);
       } catch {
         setIsGoogleConnected(false);
       }
     }
-    checkAuth();
+    checkGoogleAuth();
 
     // Check for auth callback
     const params = new URLSearchParams(window.location.search);
     if (params.get("auth_success")) {
       setIsGoogleConnected(true);
-      // Clean up URL
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  // Check Microsoft auth status
+  useEffect(() => {
+    async function checkMicrosoftAuth() {
+      try {
+        const response = await fetch("/api/auth/microsoft/status");
+        const data = await response.json();
+        setIsMicrosoftConnected(data.connected);
+      } catch {
+        setIsMicrosoftConnected(false);
+      }
+    }
+    checkMicrosoftAuth();
+
+    // Check for Microsoft auth callback
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("microsoft_connected")) {
+      setIsMicrosoftConnected(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
@@ -242,6 +267,18 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Failed to connect Google:", error);
+    }
+  };
+
+  const handleConnectMicrosoft = async () => {
+    try {
+      const response = await fetch("/api/auth/microsoft");
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Failed to connect Microsoft:", error);
     }
   };
 
@@ -285,12 +322,47 @@ export default function Home() {
             <MultiSourceSearch onResultsChange={(results) => setHasSearchResults(results.length > 0)} />
           </motion.section>
 
-          {/* Tools Section - Hidden when search results are shown */}
+          {/* Preview Widgets - Hidden when search results are shown */}
           {!hasSearchResults && (
             <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
+              style={{ marginBottom: "24px" }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
+                  gap: "16px",
+                }}
+              >
+                <FilesPreview
+                  isGoogleConnected={isGoogleConnected}
+                  onConnectGoogle={handleConnectGoogle}
+                />
+                <EmailsPreview
+                  isGoogleConnected={isGoogleConnected}
+                  onConnectGoogle={handleConnectGoogle}
+                />
+                <NotesPreview
+                  isMicrosoftConnected={isMicrosoftConnected}
+                  onConnectMicrosoft={handleConnectMicrosoft}
+                />
+                <ContactsPreview
+                  isGoogleConnected={isGoogleConnected}
+                  onConnectGoogle={handleConnectGoogle}
+                />
+              </div>
+            </motion.section>
+          )}
+
+          {/* Tools Section - Hidden when search results are shown */}
+          {!hasSearchResults && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
               style={{ width: "100%" }}
             >
               {/* Tools Grid */}
