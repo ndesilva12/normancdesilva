@@ -207,7 +207,7 @@ function UnifiedWidgetsGrid({
           display: "grid",
           gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
           gap: "16px",
-          gridAutoRows: "260px",
+          gridAutoRows: "364px",
         }}
       >
         {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}

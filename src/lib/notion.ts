@@ -5,12 +5,29 @@ import {
   RichTextItemResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 
+// Validate environment variables
+const NOTION_TOKEN = process.env.NOTION_INTEGRATION_TOKEN;
+
+if (!NOTION_TOKEN) {
+  console.error("NOTION_INTEGRATION_TOKEN environment variable is not set");
+}
+
 // Initialize Notion client
 const notion = new Client({
-  auth: process.env.NOTION_INTEGRATION_TOKEN,
+  auth: NOTION_TOKEN,
 });
 
-export const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID || "fa33033c62334638a7b1f10e3159f0ba";
+export const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
+
+// Validation helper
+function validateConfig() {
+  if (!NOTION_TOKEN) {
+    throw new Error("NOTION_INTEGRATION_TOKEN environment variable is not set. Please add it to your Vercel environment variables.");
+  }
+  if (!NOTION_DATABASE_ID) {
+    throw new Error("NOTION_DATABASE_ID environment variable is not set. Please add it to your Vercel environment variables.");
+  }
+}
 
 export interface NotionPage {
   id: string;
@@ -132,6 +149,7 @@ function convertBlock(block: BlockObjectResponse): NotionBlock {
 
 // Fetch all pages from database
 export async function getNotionPages(limit = 20): Promise<NotionPage[]> {
+  validateConfig();
   try {
     // Use raw request to query database (bypassing SDK type issues)
     const response = await notion.request<{
@@ -172,6 +190,7 @@ export async function getNotionPages(limit = 20): Promise<NotionPage[]> {
 
 // Fetch a single page
 export async function getNotionPage(pageId: string): Promise<NotionPage> {
+  validateConfig();
   try {
     const page = (await notion.pages.retrieve({
       page_id: pageId,
@@ -195,6 +214,7 @@ export async function getNotionPage(pageId: string): Promise<NotionPage> {
 
 // Fetch blocks (content) of a page
 export async function getNotionPageContent(pageId: string): Promise<NotionBlock[]> {
+  validateConfig();
   try {
     const blocks: NotionBlock[] = [];
     let cursor: string | undefined;
@@ -231,6 +251,7 @@ export async function getNotionPageContent(pageId: string): Promise<NotionBlock[
 
 // Create a new page in the database
 export async function createNotionPage(title: string, content?: string): Promise<NotionPage> {
+  validateConfig();
   try {
     const children: Parameters<typeof notion.pages.create>[0]["children"] = [];
 
@@ -275,6 +296,7 @@ export async function createNotionPage(title: string, content?: string): Promise
 
 // Update a page title
 export async function updateNotionPageTitle(pageId: string, title: string): Promise<NotionPage> {
+  validateConfig();
   try {
     const page = (await notion.pages.update({
       page_id: pageId,
@@ -302,6 +324,7 @@ export async function updateNotionPageTitle(pageId: string, title: string): Prom
 
 // Append content to a page
 export async function appendToNotionPage(pageId: string, content: string): Promise<void> {
+  validateConfig();
   try {
     const lines = content.split("\n").filter(line => line.trim());
     const children: Parameters<typeof notion.blocks.children.append>[0]["children"] = [];
@@ -330,6 +353,7 @@ export async function appendToNotionPage(pageId: string, content: string): Promi
 
 // Update a specific block
 export async function updateNotionBlock(blockId: string, content: string, blockType: string = "paragraph"): Promise<void> {
+  validateConfig();
   try {
     const richText = [{ type: "text", text: { content } }];
 
@@ -376,6 +400,7 @@ export async function updateNotionBlock(blockId: string, content: string, blockT
 
 // Delete a block
 export async function deleteNotionBlock(blockId: string): Promise<void> {
+  validateConfig();
   try {
     await notion.blocks.delete({ block_id: blockId });
   } catch (error) {
@@ -386,6 +411,7 @@ export async function deleteNotionBlock(blockId: string): Promise<void> {
 
 // Archive (soft delete) a page
 export async function archiveNotionPage(pageId: string): Promise<void> {
+  validateConfig();
   try {
     await notion.pages.update({
       page_id: pageId,
@@ -399,6 +425,7 @@ export async function archiveNotionPage(pageId: string): Promise<void> {
 
 // Search pages
 export async function searchNotionPages(query: string): Promise<NotionPage[]> {
+  validateConfig();
   try {
     const response = await notion.search({
       query,
