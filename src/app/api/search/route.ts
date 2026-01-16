@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { queryGrok, queryGemini, queryClaude, SearchSource } from "@/lib/search-service";
+import { queryGrok, queryGemini, queryClaude, queryChatGPT, SearchSource } from "@/lib/search-service";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   }
 
   // Only AI sources need API calls
-  if (!["grok", "gemini", "claude"].includes(source)) {
+  if (!["grok", "gemini", "claude", "chatgpt"].includes(source)) {
     return NextResponse.json({ error: "Invalid AI source" }, { status: 400 });
   }
 
@@ -31,6 +31,9 @@ export async function GET(request: Request) {
         break;
       case "claude":
         content = await queryClaude(query);
+        break;
+      case "chatgpt":
+        content = await queryChatGPT(query);
         break;
       default:
         return NextResponse.json({ error: "Unknown source" }, { status: 400 });
@@ -48,9 +51,14 @@ export async function GET(request: Request) {
                           errorMessage.includes("not configured");
 
     if (isApiKeyError) {
-      const sourceName = source === "grok" ? "Grok" : source === "gemini" ? "Gemini" : "Claude";
+      const sourceNames: Record<string, string> = {
+        grok: "Grok",
+        gemini: "Gemini",
+        claude: "Claude",
+        chatgpt: "ChatGPT"
+      };
       return NextResponse.json(
-        { error: `${sourceName} API key not configured`, isConfigError: true },
+        { error: `${sourceNames[source] || source} API key not configured`, isConfigError: true },
         { status: 503 }
       );
     }

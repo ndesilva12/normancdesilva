@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, FormEvent, useCallback } from "react";
+import { useState, useEffect, FormEvent, useCallback, useRef } from "react";
 import { Search, ExternalLink, X, Loader2, TrendingUp, ChevronDown } from "lucide-react";
 import {
   SearchSource,
   SEARCH_SOURCES,
+  AI_SOURCES,
   getSearchUrl,
   SearchResult,
   WebSearchResultItem,
@@ -57,6 +58,8 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
     fetchTrends();
   }, [fetchTrends]);
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const toggleSource = (source: SearchSource) => {
     setSelectedSources((prev) => {
       if (prev.includes(source)) {
@@ -66,6 +69,40 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
       return [...prev, source];
     });
   };
+
+  // Check if all AI sources are selected
+  const allAISelected = AI_SOURCES.every((s) => selectedSources.includes(s));
+
+  // Toggle all AI sources
+  const toggleAllAI = () => {
+    if (allAISelected) {
+      // Deselect all AI sources (keep at least one source selected)
+      const nonAISources = selectedSources.filter((s) => !AI_SOURCES.includes(s));
+      if (nonAISources.length > 0) {
+        setSelectedSources(nonAISources);
+      } else {
+        // If only AI sources were selected, keep the first one
+        setSelectedSources([AI_SOURCES[0]]);
+      }
+    } else {
+      // Select all AI sources (add to existing selection)
+      const newSources = [...new Set([...selectedSources, ...AI_SOURCES])];
+      setSelectedSources(newSources);
+    }
+  };
+
+  // Auto-expand textarea
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [query]);
 
   const handleTrendClick = (trend: TrendingSearch) => {
     setQuery(trend.title);
@@ -568,7 +605,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
           className="glass"
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             gap: "8px",
             borderRadius: "12px",
             padding: "8px",
@@ -581,13 +618,23 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               height: "20px",
               flexShrink: 0,
               color: "var(--foreground-muted)",
+              marginTop: "10px",
             }}
           />
-          <input
-            type="text"
+          <textarea
+            ref={textareaRef}
             placeholder="Search across multiple sources..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (query.trim()) {
+                  handleSearch(e as unknown as FormEvent);
+                }
+              }
+            }}
+            rows={1}
             style={{
               flex: 1,
               minWidth: 0,
@@ -597,6 +644,10 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               fontSize: "15px",
               color: "var(--foreground)",
               padding: "8px 0",
+              resize: "none",
+              overflow: "hidden",
+              lineHeight: 1.5,
+              fontFamily: "inherit",
             }}
           />
 
@@ -617,6 +668,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               border: "none",
               cursor: isSearching || !query.trim() ? "not-allowed" : "pointer",
               opacity: isSearching || !query.trim() ? 0.5 : 1,
+              marginTop: "2px",
             }}
           >
             {isSearching ? (
@@ -675,8 +727,33 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
                   backgroundColor: "#1c1c1c",
                   zIndex: 50,
                   overflow: "hidden",
+                  maxHeight: "300px",
+                  overflowY: "auto",
                 }}
               >
+                {/* All AI Button */}
+                <button
+                  type="button"
+                  onClick={toggleAllAI}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 14px",
+                    border: "none",
+                    borderBottom: "2px solid rgba(255, 255, 255, 0.1)",
+                    background: allAISelected ? "rgba(6, 182, 212, 0.15)" : "transparent",
+                    color: allAISelected ? "var(--accent)" : "var(--foreground)",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  All AI Models
+                  {allAISelected && <span style={{ fontSize: "12px" }}>✓</span>}
+                </button>
                 {SEARCH_SOURCES.map((source) => (
                   <button
                     key={source.id}
@@ -722,6 +799,30 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               gap: "6px",
             }}
           >
+            {/* All AI Button - First */}
+            <button
+              type="button"
+              onClick={toggleAllAI}
+              className={!allAISelected ? "glass" : ""}
+              style={{
+                whiteSpace: "nowrap",
+                borderRadius: "9999px",
+                padding: "5px 12px",
+                fontSize: "12px",
+                fontWeight: 600,
+                border: "none",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                backgroundColor: allAISelected
+                  ? "var(--accent)"
+                  : "transparent",
+                color: allAISelected
+                  ? "var(--background)"
+                  : "var(--foreground-muted)",
+              }}
+            >
+              AI
+            </button>
             {SEARCH_SOURCES.map((source) => (
               <button
                 key={source.id}

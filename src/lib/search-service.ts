@@ -11,7 +11,8 @@ export type SearchSource =
   | "trends"
   | "grok"
   | "gemini"
-  | "claude";
+  | "claude"
+  | "chatgpt";
 
 export interface SearchSourceConfig {
   id: SearchSource;
@@ -30,10 +31,14 @@ export const SEARCH_SOURCES: SearchSourceConfig[] = [
   { id: "youtube", name: "YouTube", description: "Search YouTube", icon: "▶️", type: "web" },
   { id: "rumble", name: "Rumble", description: "Search Rumble", icon: "🎬", type: "web" },
   { id: "trends", name: "Google Trends", description: "Search trends", icon: "📈", type: "web" },
-  { id: "grok", name: "Grok AI", description: "xAI Grok", icon: "🤖", type: "ai" },
+  { id: "grok", name: "Grok", description: "xAI Grok", icon: "🤖", type: "ai" },
   { id: "gemini", name: "Gemini", description: "Google Gemini", icon: "✨", type: "ai" },
   { id: "claude", name: "Claude", description: "Anthropic Claude", icon: "🔮", type: "ai" },
+  { id: "chatgpt", name: "ChatGPT", description: "OpenAI ChatGPT", icon: "💬", type: "ai" },
 ];
+
+// List of all AI source IDs for the "All AI" button
+export const AI_SOURCES: SearchSource[] = ["grok", "gemini", "claude", "chatgpt"];
 
 export interface WebSearchResultItem {
   title: string;
@@ -86,6 +91,7 @@ export function getSearchUrl(source: SearchSource, query: string): string {
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export async function queryGrok(query: string): Promise<string> {
   if (!GROK_API_KEY) throw new Error("Grok API key not configured");
@@ -179,6 +185,40 @@ export async function queryClaude(query: string): Promise<string> {
 
   const data = await response.json();
   return data.content[0].text;
+}
+
+export async function queryChatGPT(query: string): Promise<string> {
+  if (!OPENAI_API_KEY) throw new Error("ChatGPT API key not configured");
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful assistant. Provide concise, informative answers.",
+        },
+        {
+          role: "user",
+          content: query,
+        },
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`ChatGPT API error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
 }
 
 // Get trending companies using Grok
