@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Newspaper, Loader2, ExternalLink, RefreshCw, ChevronDown } from "lucide-react";
+import { Newspaper, Loader2, ExternalLink, RefreshCw } from "lucide-react";
 
 interface NewsArticle {
   title: string;
@@ -23,7 +23,6 @@ export function NewsPreview() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<NewsSource>("zerohedge");
-  const [showDropdown, setShowDropdown] = useState(false);
 
   const fetchArticles = useCallback(async (source: NewsSource) => {
     setLoading(true);
@@ -48,7 +47,6 @@ export function NewsPreview() {
 
   const handleSourceChange = (source: NewsSource) => {
     setSelectedSource(source);
-    setShowDropdown(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -72,120 +70,89 @@ export function NewsPreview() {
     }
   };
 
-  const currentSource = NEWS_SOURCES.find((s) => s.id === selectedSource);
-
   return (
     <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
-      {/* Header - clickable to navigate to full page */}
+      {/* Header */}
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
           padding: "14px 16px",
           borderBottom: "1px solid var(--glass-border)",
           flexShrink: 0,
         }}
       >
-        <Link
-          href="/tools/news"
+        {/* Title row */}
+        <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            textDecoration: "none",
-            flex: 1,
+            marginBottom: "10px",
           }}
         >
-          <Newspaper style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
-          <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)" }}>
-            News
-          </span>
-        </Link>
-
-        {/* Source Dropdown */}
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setShowDropdown(!showDropdown);
-            }}
+          <Link
+            href="/tools/news"
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "4px",
-              padding: "4px 8px",
-              borderRadius: "6px",
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-              border: "none",
-              color: "var(--foreground-muted)",
-              fontSize: "12px",
-              cursor: "pointer",
+              gap: "10px",
+              textDecoration: "none",
+              flex: 1,
             }}
           >
-            {currentSource?.name}
-            <ChevronDown style={{ width: "12px", height: "12px" }} />
-          </button>
+            <Newspaper style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
+            <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)" }}>
+              News
+            </span>
+          </Link>
 
-          {showDropdown && (
-            <div
-              style={{
-                position: "absolute",
-                top: "calc(100% + 4px)",
-                right: 0,
-                minWidth: "120px",
-                backgroundColor: "#1a1a1a",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "8px",
-                padding: "4px",
-                zIndex: 100,
-                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)",
-              }}
-            >
-              {NEWS_SOURCES.map((source) => (
-                <button
-                  key={source.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSourceChange(source.id);
-                  }}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: "6px",
-                    border: "none",
-                    backgroundColor: selectedSource === source.id ? "rgba(var(--accent-rgb), 0.2)" : "transparent",
-                    color: selectedSource === source.id ? "var(--accent)" : "var(--foreground)",
-                    fontSize: "13px",
-                    textAlign: "left",
-                    cursor: "pointer",
-                  }}
-                >
-                  {source.name}
-                </button>
-              ))}
-            </div>
-          )}
+          <Link
+            href="/tools/news"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textDecoration: "none",
+            }}
+          >
+            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+          </Link>
         </div>
 
-        <Link
-          href="/tools/news"
+        {/* Source Pills */}
+        <div
           style={{
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            textDecoration: "none",
+            flexWrap: "wrap",
+            gap: "6px",
           }}
         >
-          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-        </Link>
+          {NEWS_SOURCES.map((source) => (
+            <button
+              key={source.id}
+              onClick={(e) => {
+                e.preventDefault();
+                handleSourceChange(source.id);
+              }}
+              style={{
+                padding: "4px 10px",
+                borderRadius: "12px",
+                border: "none",
+                backgroundColor: selectedSource === source.id ? "var(--accent)" : "rgba(255, 255, 255, 0.08)",
+                color: selectedSource === source.id ? "var(--background)" : "var(--foreground-muted)",
+                fontSize: "11px",
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              {source.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}
-      <div style={{ padding: "8px 12px", flex: 1, minHeight: "160px", overflow: "hidden" }}>
+      <div style={{ padding: "8px 12px", flex: 1, minHeight: 0, overflow: "hidden" }}>
         {loading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "30px 0" }}>
             <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
@@ -266,18 +233,6 @@ export function NewsPreview() {
           </div>
         )}
       </div>
-
-      {/* Click anywhere overlay to close dropdown */}
-      {showDropdown && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 50,
-          }}
-          onClick={() => setShowDropdown(false)}
-        />
-      )}
     </div>
   );
 }

@@ -34,15 +34,11 @@ const WIDGET_TITLES: Record<string, string> = {
 // Unified widgets grid - combines preview widgets and tool cards into a single grid
 function UnifiedWidgetsGrid({
   isGoogleConnected,
-  isMicrosoftConnected,
   onConnectGoogle,
-  onConnectMicrosoft,
   isMobile,
 }: {
   isGoogleConnected: boolean;
-  isMicrosoftConnected: boolean;
   onConnectGoogle: () => void;
-  onConnectMicrosoft: () => void;
   isMobile: boolean;
 }) {
   const { layout, isEditMode, reorderWidgets, getWidgetConfig } = useLayout();
@@ -77,8 +73,6 @@ function UnifiedWidgetsGrid({
 
   const renderPreviewWidget = (widgetConfig: WidgetConfig & { widgetType: "previewWidgets" }, index: number) => {
     const { id } = widgetConfig;
-    const config = getWidgetConfig("previewWidgets", id);
-    const size = config?.size || "default";
 
     const widgetContent = (() => {
       switch (id) {
@@ -87,7 +81,7 @@ function UnifiedWidgetsGrid({
         case "emails":
           return <EmailsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={onConnectGoogle} />;
         case "notes":
-          return <NotesPreview isMicrosoftConnected={isMicrosoftConnected} onConnectMicrosoft={onConnectMicrosoft} />;
+          return <NotesPreview />;
         case "stocks":
           return <StocksPreview />;
         case "news":
@@ -110,12 +104,7 @@ function UnifiedWidgetsGrid({
         isDragging={previewDragState.isDragging}
         dragOverIndex={previewDragState.dragOverIndex}
       >
-        <div
-          style={{
-            gridColumn: !isMobile && size === "expanded" ? "span 2" : "span 1",
-            height: "260px",
-          }}
-        >
+        <div style={{ height: "260px" }}>
           {widgetContent}
         </div>
       </DraggableWidget>
@@ -197,24 +186,30 @@ function UnifiedWidgetsGrid({
   // Normal mode: Tool widgets first, then data widgets
   return (
     <>
-      {/* Tool Widgets - First */}
+      {/* Tool Widgets - First (centered with even distribution) */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))",
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
           gap: isMobile ? "8px" : "10px",
           marginBottom: "24px",
         }}
       >
-        {toolCards.map((widget, index) => renderToolCard(widget, index))}
+        {toolCards.map((widget, index) => (
+          <div key={`tool-wrapper-${widget.id}`} style={{ width: isMobile ? "calc(50% - 4px)" : "140px" }}>
+            {renderToolCard(widget, index)}
+          </div>
+        ))}
       </div>
 
-      {/* Data Widgets - Second */}
+      {/* Data Widgets - Second (uniform grid) */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(2, 1fr)",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
           gap: "16px",
+          gridAutoRows: "260px",
         }}
       >
         {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}
@@ -225,7 +220,6 @@ function UnifiedWidgetsGrid({
 
 export default function Home() {
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
-  const [isMicrosoftConnected, setIsMicrosoftConnected] = useState(false);
   const [hasSearchResults, setHasSearchResults] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { isEditMode } = useLayout();
@@ -259,27 +253,6 @@ export default function Home() {
     }
   }, []);
 
-  // Check Microsoft auth status
-  useEffect(() => {
-    async function checkMicrosoftAuth() {
-      try {
-        const response = await fetch("/api/auth/microsoft/status");
-        const data = await response.json();
-        setIsMicrosoftConnected(data.connected);
-      } catch {
-        setIsMicrosoftConnected(false);
-      }
-    }
-    checkMicrosoftAuth();
-
-    // Check for Microsoft auth callback
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("microsoft_connected")) {
-      setIsMicrosoftConnected(true);
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
-
   const handleConnectGoogle = async () => {
     try {
       const response = await fetch("/api/auth/google");
@@ -289,18 +262,6 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Failed to connect Google:", error);
-    }
-  };
-
-  const handleConnectMicrosoft = async () => {
-    try {
-      const response = await fetch("/api/auth/microsoft");
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error("Failed to connect Microsoft:", error);
     }
   };
 
@@ -351,9 +312,7 @@ export default function Home() {
             >
               <UnifiedWidgetsGrid
                 isGoogleConnected={isGoogleConnected}
-                isMicrosoftConnected={isMicrosoftConnected}
                 onConnectGoogle={handleConnectGoogle}
-                onConnectMicrosoft={handleConnectMicrosoft}
                 isMobile={isMobile}
               />
             </motion.section>

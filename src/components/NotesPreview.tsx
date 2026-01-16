@@ -1,31 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { StickyNote, Loader2, ExternalLink, RefreshCw } from "lucide-react";
-import { OneNotePage } from "@/lib/microsoft-graph";
 
-interface NotesPreviewProps {
-  isMicrosoftConnected: boolean;
-  onConnectMicrosoft: () => void;
+interface NotionPage {
+  id: string;
+  title: string;
+  icon?: string;
+  lastEditedTime: string;
+  url: string;
 }
 
-export function NotesPreview({ isMicrosoftConnected, onConnectMicrosoft }: NotesPreviewProps) {
-  const [pages, setPages] = useState<OneNotePage[]>([]);
-  const [loading, setLoading] = useState(false);
+export function NotesPreview() {
+  const [pages, setPages] = useState<NotionPage[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isMicrosoftConnected) {
-      fetchNotes();
-    }
-  }, [isMicrosoftConnected]);
-
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/onenote?limit=5&type=pages");
+      const response = await fetch("/api/notion?limit=5");
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to fetch notes");
@@ -36,70 +32,93 @@ export function NotesPreview({ isMicrosoftConnected, onConnectMicrosoft }: Notes
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleReconnect = async () => {
-    // Clear Microsoft tokens and reconnect
-    await fetch("/api/auth/microsoft/status", { method: "POST" });
-    onConnectMicrosoft();
-  };
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 
-  const getOneNoteUrl = (page: OneNotePage): string => {
-    return page.links?.oneNoteWebUrl?.href || page.links?.oneNoteClientUrl?.href || "#";
+    if (diffHours < 1) {
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      return `${diffMinutes}m ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours}h ago`;
+    } else {
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
   };
 
   return (
-    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden" }}>
+    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header - clickable to navigate to full page */}
-      <Link
-        href="/tools/notes"
+      <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: "10px",
           padding: "14px 16px",
           borderBottom: "1px solid var(--glass-border)",
-          textDecoration: "none",
-          cursor: "pointer",
-          transition: "background 0.15s",
+          flexShrink: 0,
         }}
       >
-        <StickyNote style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
-        <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)", flex: 1 }}>
-          Notes
-        </span>
-        <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-      </Link>
+        <Link
+          href="/tools/notes"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            textDecoration: "none",
+            flex: 1,
+          }}
+        >
+          <StickyNote style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
+          <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)" }}>
+            Notes
+          </span>
+        </Link>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            fetchNotes();
+          }}
+          disabled={loading}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "28px",
+            height: "28px",
+            borderRadius: "6px",
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
+            border: "none",
+            cursor: loading ? "not-allowed" : "pointer",
+            color: "var(--foreground-muted)",
+          }}
+        >
+          <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
+        </button>
+        <Link
+          href="/tools/notes"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textDecoration: "none",
+          }}
+        >
+          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+        </Link>
+      </div>
 
       {/* Content */}
-      <div style={{ padding: "12px 16px", minHeight: "120px" }}>
-        {!isMicrosoftConnected ? (
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <p style={{ color: "var(--foreground-muted)", fontSize: "13px", marginBottom: "12px" }}>
-              Connect Microsoft to see your notes
-            </p>
-            <button
-              onClick={onConnectMicrosoft}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "6px",
-                backgroundColor: "var(--accent)",
-                color: "var(--background)",
-                border: "none",
-                fontSize: "13px",
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
-            >
-              Connect Microsoft
-            </button>
-          </div>
-        ) : loading ? (
+      <div style={{ padding: "8px 12px", flex: 1, minHeight: "160px", overflow: "hidden" }}>
+        {loading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "30px 0" }}>
             <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
           </div>
@@ -107,7 +126,7 @@ export function NotesPreview({ isMicrosoftConnected, onConnectMicrosoft }: Notes
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <p style={{ color: "#f87171", fontSize: "13px", marginBottom: "12px" }}>{error}</p>
             <button
-              onClick={handleReconnect}
+              onClick={fetchNotes}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -123,26 +142,24 @@ export function NotesPreview({ isMicrosoftConnected, onConnectMicrosoft }: Notes
               }}
             >
               <RefreshCw style={{ width: "14px", height: "14px" }} />
-              Reconnect Microsoft
+              Retry
             </button>
           </div>
         ) : pages.length === 0 ? (
           <div style={{ color: "var(--foreground-muted)", fontSize: "13px", textAlign: "center", padding: "20px 0" }}>
-            No recent notes found
+            No notes found
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
             {pages.map((page) => (
-              <a
+              <Link
                 key={page.id}
-                href={getOneNoteUrl(page)}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`/tools/notes?id=${page.id}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "10px",
-                  padding: "8px",
+                  padding: "8px 4px",
                   borderRadius: "6px",
                   textDecoration: "none",
                   transition: "background 0.15s",
@@ -150,7 +167,7 @@ export function NotesPreview({ isMicrosoftConnected, onConnectMicrosoft }: Notes
                 onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                <span style={{ fontSize: "16px" }}>📝</span>
+                <span style={{ fontSize: "16px", flexShrink: 0 }}>{page.icon || "📝"}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontSize: "13px",
@@ -161,11 +178,11 @@ export function NotesPreview({ isMicrosoftConnected, onConnectMicrosoft }: Notes
                   }}>
                     {page.title || "Untitled"}
                   </div>
-                  <div style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>
-                    {page.parentSection?.displayName || "Section"} • {formatDate(page.lastModifiedDateTime)}
-                  </div>
                 </div>
-              </a>
+                <span style={{ fontSize: "11px", color: "var(--foreground-muted)", flexShrink: 0 }}>
+                  {formatDate(page.lastEditedTime)}
+                </span>
+              </Link>
             ))}
           </div>
         )}

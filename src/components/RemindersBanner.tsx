@@ -302,13 +302,13 @@ export function RemindersBanner() {
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          gap: "12px",
+          alignItems: "flex-start",
+          gap: "10px",
           marginBottom: "20px",
           flexWrap: "wrap",
         }}
       >
-        {incompleteReminders.slice(0, 5).map((reminder) => (
+        {incompleteReminders.map((reminder) => (
           <div
             key={reminder.id}
             style={{
@@ -365,16 +365,6 @@ export function RemindersBanner() {
             )}
           </div>
         ))}
-        {incompleteReminders.length > 5 && (
-          <span
-            style={{
-              fontSize: "12px",
-              color: "var(--foreground-muted)",
-            }}
-          >
-            +{incompleteReminders.length - 5} more
-          </span>
-        )}
       </div>
 
       <style jsx global>{`
