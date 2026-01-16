@@ -8,6 +8,12 @@ interface YahooQuote {
   regularMarketChange?: number;
   regularMarketChangePercent?: number;
   currency?: string;
+  marketCap?: number;
+  regularMarketVolume?: number;
+  regularMarketDayHigh?: number;
+  regularMarketDayLow?: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
 }
 
 interface StockQuote {
@@ -17,6 +23,12 @@ interface StockQuote {
   change: number;
   changePercent: number;
   currency: string;
+  marketCap?: number;
+  volume?: number;
+  dayHigh?: number;
+  dayLow?: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
 }
 
 export async function GET(request: NextRequest) {
@@ -56,6 +68,12 @@ export async function GET(request: NextRequest) {
       change: item.regularMarketChange || 0,
       changePercent: item.regularMarketChangePercent || 0,
       currency: item.currency || "USD",
+      marketCap: item.marketCap,
+      volume: item.regularMarketVolume,
+      dayHigh: item.regularMarketDayHigh,
+      dayLow: item.regularMarketDayLow,
+      fiftyTwoWeekHigh: item.fiftyTwoWeekHigh,
+      fiftyTwoWeekLow: item.fiftyTwoWeekLow,
     }));
 
     return NextResponse.json({ quotes });

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Newspaper, ExternalLink, Loader2, RefreshCw, Clock, Tag, TrendingUp } from "lucide-react";
+import { ArrowLeft, Newspaper, ExternalLink, Loader2, RefreshCw, Clock, Tag, X } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 
@@ -16,56 +16,37 @@ interface NewsArticle {
   thumbnail?: string;
 }
 
-interface TrendingTopic {
-  topic: string;
-  description?: string;
-  searchUrl: string;
-}
+type NewsSource = "zerohedge" | "reason" | "mises";
 
-type NewsSource = "zerohedge" | "reason" | "mises" | "x-trending";
-
-const NEWS_SOURCES: { id: NewsSource; name: string; url: string; isRss: boolean }[] = [
-  { id: "zerohedge", name: "ZeroHedge", url: "https://www.zerohedge.com", isRss: true },
-  { id: "x-trending", name: "X Trending", url: "https://x.com", isRss: false },
-  { id: "reason", name: "Reason", url: "https://reason.com", isRss: true },
-  { id: "mises", name: "Mises Institute", url: "https://mises.org", isRss: true },
+const NEWS_SOURCES: { id: NewsSource; name: string; url: string }[] = [
+  { id: "zerohedge", name: "ZeroHedge", url: "https://www.zerohedge.com" },
+  { id: "reason", name: "Reason", url: "https://reason.com" },
+  { id: "mises", name: "Mises Institute", url: "https://mises.org" },
 ];
 
 export default function NewsPage() {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<NewsSource>("zerohedge");
+  const [readerArticle, setReaderArticle] = useState<NewsArticle | null>(null);
+  const [readerContent, setReaderContent] = useState<string | null>(null);
+  const [readerLoading, setReaderLoading] = useState(false);
 
   const loadContent = useCallback(async (source: NewsSource) => {
     setIsLoading(true);
     setError(null);
     setArticles([]);
-    setTrendingTopics([]);
 
     try {
-      if (source === "x-trending") {
-        // Fetch X trending topics via xAI
-        const response = await fetch("/api/x-trending");
-        const data = await response.json();
+      const response = await fetch(`/api/news?source=${source}`);
+      const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to fetch trending topics");
-        }
-
-        setTrendingTopics(data.topics || []);
-      } else {
-        // Fetch RSS news
-        const response = await fetch(`/api/news?source=${source}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to fetch news");
-        }
-
-        setArticles(data.articles || []);
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch news");
       }
+
+      setArticles(data.articles || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load content");
     } finally {
@@ -81,8 +62,34 @@ export default function NewsPage() {
     setSelectedSource(source);
   };
 
+  const openReader = async (article: NewsArticle) => {
+    setReaderArticle(article);
+    setReaderContent(null);
+    setReaderLoading(true);
+
+    try {
+      const response = await fetch(`/api/news/reader?url=${encodeURIComponent(article.link)}`);
+      const data = await response.json();
+
+      if (response.ok && data.content) {
+        setReaderContent(data.content);
+      } else {
+        // Fallback to description if reader fails
+        setReaderContent(article.description || "Unable to load article content. Click the link below to read on the original site.");
+      }
+    } catch {
+      setReaderContent(article.description || "Unable to load article content. Click the link below to read on the original site.");
+    } finally {
+      setReaderLoading(false);
+    }
+  };
+
+  const closeReader = () => {
+    setReaderArticle(null);
+    setReaderContent(null);
+  };
+
   const currentSource = NEWS_SOURCES.find((s) => s.id === selectedSource);
-  const isXTrending = selectedSource === "x-trending";
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
@@ -308,249 +315,304 @@ export default function NewsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              {/* X Trending Topics */}
-              {isXTrending ? (
-                <>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    {trendingTopics.map((topic, index) => (
-                      <motion.a
-                        key={topic.topic}
-                        href={topic.searchUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.02 }}
-                        className="glass"
+              {/* Articles Grid */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {articles.map((article, index) => (
+                  <motion.div
+                    key={article.link}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="glass"
+                    style={{
+                      borderRadius: "12px",
+                      overflow: "hidden",
+                      display: "flex",
+                      cursor: "pointer",
+                      transition: "transform 0.2s, box-shadow 0.2s",
+                    }}
+                    onClick={() => openReader(article)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 8px 30px rgba(0, 0, 0, 0.2)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                  >
+                    {/* Thumbnail */}
+                    {article.thumbnail && (
+                      <div
                         style={{
-                          borderRadius: "10px",
-                          padding: "16px 20px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "16px",
-                          textDecoration: "none",
-                          transition: "transform 0.2s, box-shadow 0.2s",
+                          width: "200px",
+                          minHeight: "140px",
+                          flexShrink: 0,
+                          backgroundImage: `url(${article.thumbnail})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
                         }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = "translateX(4px)";
-                          e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.2)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = "translateX(0)";
-                          e.currentTarget.style.boxShadow = "none";
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "36px",
-                            height: "36px",
-                            borderRadius: "8px",
-                            backgroundColor: "rgba(29, 155, 240, 0.15)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                          }}
-                        >
-                          <TrendingUp style={{ width: "18px", height: "18px", color: "#1d9bf0" }} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <h3
-                            style={{
-                              fontSize: "15px",
-                              fontWeight: 600,
-                              color: "var(--foreground)",
-                              marginBottom: topic.description ? "4px" : 0,
-                            }}
-                          >
-                            {topic.topic}
-                          </h3>
-                          {topic.description && (
-                            <p
-                              style={{
-                                fontSize: "13px",
-                                color: "var(--foreground-muted)",
-                                lineHeight: 1.4,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {topic.description}
-                            </p>
-                          )}
-                        </div>
-                        <ExternalLink
-                          style={{
-                            width: "16px",
-                            height: "16px",
-                            color: "#1d9bf0",
-                            flexShrink: 0,
-                          }}
-                        />
-                      </motion.a>
-                    ))}
-                  </div>
+                      />
+                    )}
 
-                  {trendingTopics.length === 0 && (
-                    <div
-                      className="glass"
-                      style={{
-                        borderRadius: "12px",
-                        padding: "40px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <TrendingUp style={{ width: "40px", height: "40px", color: "var(--foreground-muted)", margin: "0 auto 16px" }} />
-                      <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-                        No trending topics available
-                      </p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  {/* Articles Grid */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    {articles.map((article, index) => (
-                      <motion.a
-                        key={article.link}
-                        href={article.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.03 }}
-                        className="glass"
+                    {/* Content */}
+                    <div style={{ flex: 1, padding: "16px 20px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {/* Title */}
+                      <h3
                         style={{
-                          borderRadius: "12px",
+                          fontSize: "16px",
+                          fontWeight: 600,
+                          color: "var(--foreground)",
+                          lineHeight: 1.4,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
                           overflow: "hidden",
-                          display: "flex",
-                          textDecoration: "none",
-                          transition: "transform 0.2s, box-shadow 0.2s",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = "translateY(-2px)";
-                          e.currentTarget.style.boxShadow = "0 8px 30px rgba(0, 0, 0, 0.2)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = "translateY(0)";
-                          e.currentTarget.style.boxShadow = "none";
                         }}
                       >
-                        {/* Thumbnail */}
-                        {article.thumbnail && (
-                          <div
-                            style={{
-                              width: "200px",
-                              minHeight: "140px",
-                              flexShrink: 0,
-                              backgroundImage: `url(${article.thumbnail})`,
-                              backgroundSize: "cover",
-                              backgroundPosition: "center",
-                            }}
-                          />
+                        {article.title}
+                      </h3>
+
+                      {/* Description */}
+                      <p
+                        style={{
+                          fontSize: "14px",
+                          color: "var(--foreground-muted)",
+                          lineHeight: 1.6,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          flex: 1,
+                        }}
+                      >
+                        {article.description}
+                      </p>
+
+                      {/* Meta */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                        {/* Time */}
+                        {article.pubDate && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <Clock style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                            <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                              {formatDate(article.pubDate)}
+                            </span>
+                          </div>
                         )}
 
-                        {/* Content */}
-                        <div style={{ flex: 1, padding: "16px 20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                          {/* Title */}
-                          <h3
-                            style={{
-                              fontSize: "16px",
-                              fontWeight: 600,
-                              color: "var(--foreground)",
-                              lineHeight: 1.4,
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
-                          >
-                            {article.title}
-                          </h3>
+                        {/* Author */}
+                        {article.creator && (
+                          <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                            by {article.creator}
+                          </span>
+                        )}
 
-                          {/* Description */}
-                          <p
-                            style={{
-                              fontSize: "14px",
-                              color: "var(--foreground-muted)",
-                              lineHeight: 1.6,
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                              flex: 1,
-                            }}
-                          >
-                            {article.description}
-                          </p>
-
-                          {/* Meta */}
-                          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-                            {/* Time */}
-                            {article.pubDate && (
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                <Clock style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-                                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                                  {formatDate(article.pubDate)}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Author */}
-                            {article.creator && (
-                              <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                                by {article.creator}
-                              </span>
-                            )}
-
-                            {/* Categories */}
-                            {article.categories && article.categories.length > 0 && (
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                <Tag style={{ width: "12px", height: "12px", color: "var(--foreground-muted)" }} />
-                                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                                  {article.categories.slice(0, 2).join(", ")}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* External link icon */}
-                            <ExternalLink
-                              style={{
-                                width: "14px",
-                                height: "14px",
-                                color: "var(--accent)",
-                                marginLeft: "auto",
-                              }}
-                            />
+                        {/* Categories */}
+                        {article.categories && article.categories.length > 0 && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <Tag style={{ width: "12px", height: "12px", color: "var(--foreground-muted)" }} />
+                            <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                              {article.categories.slice(0, 2).join(", ")}
+                            </span>
                           </div>
-                        </div>
-                      </motion.a>
-                    ))}
-                  </div>
+                        )}
 
-                  {articles.length === 0 && (
-                    <div
-                      className="glass"
-                      style={{
-                        borderRadius: "12px",
-                        padding: "40px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <Newspaper style={{ width: "40px", height: "40px", color: "var(--foreground-muted)", margin: "0 auto 16px" }} />
-                      <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-                        No articles available
-                      </p>
+                        <span
+                          style={{
+                            marginLeft: "auto",
+                            fontSize: "12px",
+                            color: "var(--accent)",
+                          }}
+                        >
+                          Click to read
+                        </span>
+                      </div>
                     </div>
-                  )}
-                </>
+                  </motion.div>
+                ))}
+              </div>
+
+              {articles.length === 0 && (
+                <div
+                  className="glass"
+                  style={{
+                    borderRadius: "12px",
+                    padding: "40px",
+                    textAlign: "center",
+                  }}
+                >
+                  <Newspaper style={{ width: "40px", height: "40px", color: "var(--foreground-muted)", margin: "0 auto 16px" }} />
+                  <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
+                    No articles available
+                  </p>
+                </div>
               )}
             </motion.div>
           )}
         </div>
       </main>
+
+      {/* Reader Modal */}
+      {readerArticle && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.85)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          onClick={closeReader}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            style={{
+              width: "100%",
+              maxWidth: "800px",
+              maxHeight: "90vh",
+              backgroundColor: "#0f0f0f",
+              borderRadius: "16px",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Reader Header */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--glass-border)",
+                flexShrink: 0,
+              }}
+            >
+              <Newspaper style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+              <span style={{ flex: 1, fontSize: "14px", color: "var(--foreground-muted)" }}>
+                {currentSource?.name}
+              </span>
+              <a
+                href={readerArticle.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 14px",
+                  borderRadius: "6px",
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  color: "var(--foreground)",
+                  fontSize: "13px",
+                  textDecoration: "none",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                Open Original
+                <ExternalLink style={{ width: "14px", height: "14px" }} />
+              </a>
+              <button
+                onClick={closeReader}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  border: "none",
+                  color: "var(--foreground)",
+                  cursor: "pointer",
+                }}
+              >
+                <X style={{ width: "18px", height: "18px" }} />
+              </button>
+            </div>
+
+            {/* Reader Content */}
+            <div
+              style={{
+                flex: 1,
+                overflow: "auto",
+                padding: "24px",
+              }}
+            >
+              {/* Title */}
+              <h1
+                style={{
+                  fontSize: "24px",
+                  fontWeight: 700,
+                  color: "var(--foreground)",
+                  lineHeight: 1.3,
+                  marginBottom: "16px",
+                }}
+              >
+                {readerArticle.title}
+              </h1>
+
+              {/* Meta */}
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px", flexWrap: "wrap" }}>
+                {readerArticle.pubDate && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Clock style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                    <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
+                      {formatDate(readerArticle.pubDate)}
+                    </span>
+                  </div>
+                )}
+                {readerArticle.creator && (
+                  <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
+                    by {readerArticle.creator}
+                  </span>
+                )}
+              </div>
+
+              {/* Thumbnail */}
+              {readerArticle.thumbnail && (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "300px",
+                    borderRadius: "12px",
+                    marginBottom: "24px",
+                    backgroundImage: `url(${readerArticle.thumbnail})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
+                />
+              )}
+
+              {/* Article Content */}
+              {readerLoading ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>
+                  <Loader2 style={{ width: "24px", height: "24px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+                </div>
+              ) : (
+                <div
+                  style={{
+                    fontSize: "16px",
+                    lineHeight: 1.8,
+                    color: "var(--foreground)",
+                  }}
+                  dangerouslySetInnerHTML={{ __html: readerContent || "" }}
+                />
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <style jsx global>{`
         @keyframes spin {

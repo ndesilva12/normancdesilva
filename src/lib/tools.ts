@@ -6,7 +6,6 @@ import {
   Search,
   TrendingUp,
   Contact2,
-  LineChart,
 } from "lucide-react";
 import { Tool } from "@/types/tool";
 
@@ -75,15 +74,6 @@ export const tools: Tool[] = [
     icon: Contact2,
     href: "/tools/contacts",
     category: "productivity",
-    status: "available",
-  },
-  {
-    id: "market",
-    name: "Market",
-    description: "Track stocks, crypto, and market indices.",
-    icon: LineChart,
-    href: "/tools/market",
-    category: "finance",
     status: "available",
   },
 ];

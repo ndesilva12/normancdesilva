@@ -129,15 +129,20 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
   };
 
   return (
-    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", position: "relative" }}>
-      {/* Header */}
-      <div
+    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Header - clickable to navigate to market page */}
+      <Link
+        href="/tools/market"
         style={{
           display: "flex",
           alignItems: "center",
           gap: "10px",
           padding: "14px 16px",
           borderBottom: "1px solid var(--glass-border)",
+          textDecoration: "none",
+          cursor: "pointer",
+          transition: "background 0.15s",
+          flexShrink: 0,
         }}
       >
         <TrendingUp style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
@@ -145,7 +150,11 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
           Market
         </span>
         <button
-          onClick={() => setShowSettings(!showSettings)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowSettings(!showSettings);
+          }}
           style={{
             display: "flex",
             alignItems: "center",
@@ -162,18 +171,8 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
         >
           <Settings style={{ width: "14px", height: "14px" }} />
         </button>
-        <Link
-          href="/tools/stocks"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--foreground-muted)",
-          }}
-        >
-          <ExternalLink style={{ width: "14px", height: "14px" }} />
-        </Link>
-      </div>
+        <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+      </Link>
 
       {/* Settings Panel */}
       {showSettings && (
@@ -278,7 +277,7 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
       )}
 
       {/* Content */}
-      <div style={{ padding: "8px 12px", minHeight: "120px" }}>
+      <div style={{ padding: "8px 12px", flex: 1, minHeight: "160px" }}>
         {loading && quotes.length === 0 ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "30px 0" }}>
             <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />

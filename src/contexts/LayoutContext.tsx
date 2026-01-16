@@ -38,7 +38,6 @@ const DEFAULT_TOOL_CARDS: WidgetConfig[] = [
   { id: "spotify", size: "default", visible: true, order: 4 },
   { id: "trending", size: "default", visible: true, order: 5 },
   { id: "contacts", size: "default", visible: true, order: 6 },
-  { id: "market", size: "default", visible: true, order: 7 },
 ];
 
 const DEFAULT_LAYOUT: LayoutConfig = {

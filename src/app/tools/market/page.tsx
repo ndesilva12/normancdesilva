@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, TrendingUp, TrendingDown, Loader2, RefreshCw, Settings, X, Plus } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, Loader2, RefreshCw, Settings, X, Plus, ExternalLink, Newspaper } from "lucide-react";
 import { Header } from "@/components/Header";
 
 interface StockQuote {
@@ -12,6 +12,12 @@ interface StockQuote {
   change: number;
   changePercent: number;
   currency: string;
+  marketCap?: number;
+  volume?: number;
+  dayHigh?: number;
+  dayLow?: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
 }
 
 const DEFAULT_SYMBOLS = [
@@ -113,6 +119,28 @@ export default function MarketPage() {
   const formatChange = (change: number, changePercent: number) => {
     const sign = change >= 0 ? "+" : "";
     return `${sign}${change.toFixed(2)} (${sign}${changePercent.toFixed(2)}%)`;
+  };
+
+  const formatLargeNumber = (num: number | undefined) => {
+    if (!num) return "N/A";
+    if (num >= 1e12) return `$${(num / 1e12).toFixed(2)}T`;
+    if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
+    if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
+    return `$${num.toLocaleString()}`;
+  };
+
+  const formatVolume = (num: number | undefined) => {
+    if (!num) return "N/A";
+    if (num >= 1e9) return `${(num / 1e9).toFixed(2)}B`;
+    if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M`;
+    if (num >= 1e3) return `${(num / 1e3).toFixed(2)}K`;
+    return num.toLocaleString();
+  };
+
+  const getNewsUrl = (symbol: string) => {
+    // Clean symbol for news search
+    const cleanSymbol = symbol.replace("^", "").replace("=F", "").replace("-USD", "");
+    return `https://www.google.com/search?q=${encodeURIComponent(cleanSymbol + " stock news")}&tbm=nws`;
   };
 
   const getTradingViewUrl = (symbol: string) => {
@@ -346,24 +374,17 @@ export default function MarketPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: "12px",
+                gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                gap: "16px",
               }}
             >
               {quotes.map((quote) => (
-                <a
+                <div
                   key={quote.symbol}
-                  href={getTradingViewUrl(quote.symbol)}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="glass"
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "16px",
-                    borderRadius: "10px",
-                    textDecoration: "none",
+                    borderRadius: "12px",
+                    overflow: "hidden",
                     transition: "transform 0.15s, box-shadow 0.15s",
                   }}
                   onMouseEnter={(e) => {
@@ -375,54 +396,179 @@ export default function MarketPage() {
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 >
-                  <div
+                  {/* Main Quote Info */}
+                  <a
+                    href={getTradingViewUrl(quote.symbol)}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "8px",
-                      backgroundColor: quote.change >= 0 ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
+                      gap: "12px",
+                      padding: "16px",
+                      textDecoration: "none",
+                      borderBottom: "1px solid var(--glass-border)",
                     }}
                   >
-                    {quote.change >= 0 ? (
-                      <TrendingUp style={{ width: "20px", height: "20px", color: "#22c55e" }} />
-                    ) : (
-                      <TrendingDown style={{ width: "20px", height: "20px", color: "#ef4444" }} />
-                    )}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--foreground)" }}>
-                      {quote.symbol}
-                    </div>
                     <div
                       style={{
-                        fontSize: "12px",
+                        width: "44px",
+                        height: "44px",
+                        borderRadius: "10px",
+                        backgroundColor: quote.change >= 0 ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {quote.change >= 0 ? (
+                        <TrendingUp style={{ width: "22px", height: "22px", color: "#22c55e" }} />
+                      ) : (
+                        <TrendingDown style={{ width: "22px", height: "22px", color: "#ef4444" }} />
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)" }}>
+                        {quote.symbol}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "var(--foreground-muted)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {quote.name}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: "18px", fontWeight: 700, color: "var(--foreground)" }}>
+                        {formatPrice(quote.price, quote.currency)}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: 500,
+                          color: quote.change >= 0 ? "#22c55e" : "#ef4444",
+                        }}
+                      >
+                        {formatChange(quote.change, quote.changePercent)}
+                      </div>
+                    </div>
+                  </a>
+
+                  {/* Additional Data */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: "1px",
+                      backgroundColor: "var(--glass-border)",
+                    }}
+                  >
+                    <div style={{ padding: "10px 12px", backgroundColor: "rgba(0, 0, 0, 0.2)" }}>
+                      <div style={{ fontSize: "10px", color: "var(--foreground-muted)", marginBottom: "2px" }}>
+                        Volume
+                      </div>
+                      <div style={{ fontSize: "12px", fontWeight: 500, color: "var(--foreground)" }}>
+                        {formatVolume(quote.volume)}
+                      </div>
+                    </div>
+                    <div style={{ padding: "10px 12px", backgroundColor: "rgba(0, 0, 0, 0.2)" }}>
+                      <div style={{ fontSize: "10px", color: "var(--foreground-muted)", marginBottom: "2px" }}>
+                        Day Range
+                      </div>
+                      <div style={{ fontSize: "12px", fontWeight: 500, color: "var(--foreground)" }}>
+                        {quote.dayLow && quote.dayHigh
+                          ? `${quote.dayLow.toFixed(2)} - ${quote.dayHigh.toFixed(2)}`
+                          : "N/A"}
+                      </div>
+                    </div>
+                    <div style={{ padding: "10px 12px", backgroundColor: "rgba(0, 0, 0, 0.2)" }}>
+                      <div style={{ fontSize: "10px", color: "var(--foreground-muted)", marginBottom: "2px" }}>
+                        Mkt Cap
+                      </div>
+                      <div style={{ fontSize: "12px", fontWeight: 500, color: "var(--foreground)" }}>
+                        {formatLargeNumber(quote.marketCap)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Links */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "10px 12px",
+                      borderTop: "1px solid var(--glass-border)",
+                    }}
+                  >
+                    <a
+                      href={getTradingViewUrl(quote.symbol)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        backgroundColor: "rgba(6, 182, 212, 0.15)",
+                        color: "var(--accent)",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        textDecoration: "none",
+                      }}
+                    >
+                      <ExternalLink style={{ width: "12px", height: "12px" }} />
+                      Chart
+                    </a>
+                    <a
+                      href={getNewsUrl(quote.symbol)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        backgroundColor: "rgba(255, 255, 255, 0.08)",
                         color: "var(--foreground-muted)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        textDecoration: "none",
                       }}
                     >
-                      {quote.name}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--foreground)" }}>
-                      {formatPrice(quote.price, quote.currency)}
-                    </div>
-                    <div
+                      <Newspaper style={{ width: "12px", height: "12px" }} />
+                      News
+                    </a>
+                    <a
+                      href={`https://finance.yahoo.com/quote/${quote.symbol}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       style={{
-                        fontSize: "12px",
-                        color: quote.change >= 0 ? "#22c55e" : "#ef4444",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        backgroundColor: "rgba(255, 255, 255, 0.08)",
+                        color: "var(--foreground-muted)",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        textDecoration: "none",
+                        marginLeft: "auto",
                       }}
                     >
-                      {formatChange(quote.change, quote.changePercent)}
-                    </div>
+                      Yahoo Finance
+                    </a>
                   </div>
-                </a>
+                </div>
               ))}
             </div>
           )}

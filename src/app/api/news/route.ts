@@ -156,15 +156,44 @@ function decodeHTMLEntities(text: string): string {
 }
 
 function cleanDescription(description: string): string {
-  // Remove HTML tags but preserve text
+  // Handle CDATA sections
   let clean = description
     .replace(/<!\[CDATA\[/g, "")
-    .replace(/\]\]>/g, "")
+    .replace(/\]\]>/g, "");
+
+  // Remove common problematic HTML patterns from ZeroHedge
+  clean = clean
+    // Remove image tags with all attributes
+    .replace(/<img[^>]*>/gi, "")
+    // Remove figure and figcaption
+    .replace(/<figure[^>]*>[\s\S]*?<\/figure>/gi, "")
+    .replace(/<figcaption[^>]*>[\s\S]*?<\/figcaption>/gi, "")
+    // Remove iframes and embeds
+    .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, "")
+    .replace(/<embed[^>]*>/gi, "")
+    .replace(/<object[^>]*>[\s\S]*?<\/object>/gi, "")
+    // Remove divs with specific classes
+    .replace(/<div[^>]*class="[^"]*(?:image|video|embed|social)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, "")
+    // Remove standalone divs and spans
+    .replace(/<\/?div[^>]*>/gi, "")
+    .replace(/<\/?span[^>]*>/gi, "")
+    // Remove links but keep text
+    .replace(/<a[^>]*>([^<]*)<\/a>/gi, "$1")
+    // Remove remaining HTML tags
     .replace(/<[^>]*>/g, "")
+    // Clean up whitespace
     .replace(/\s+/g, " ")
     .trim();
 
+  // Decode HTML entities
   clean = decodeHTMLEntities(clean);
+
+  // Remove common ZeroHedge boilerplate
+  clean = clean
+    .replace(/Authored by[^.]+\./i, "")
+    .replace(/Via [^.]+\./i, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
   // Truncate to reasonable length
   if (clean.length > 300) {
