@@ -157,7 +157,7 @@ export async function getNotionPages(limit = 20): Promise<NotionPage[]> {
       has_more: boolean;
       next_cursor: string | null;
     }>({
-      path: `databases/${NOTION_DATABASE_ID}/query`,
+      path: `databases/${NOTION_DATABASE_ID!}/query`,
       method: "post",
       body: {
         page_size: limit,
@@ -270,7 +270,7 @@ export async function createNotionPage(title: string, content?: string): Promise
     }
 
     const page = (await notion.pages.create({
-      parent: { database_id: NOTION_DATABASE_ID },
+      parent: { database_id: NOTION_DATABASE_ID! },
       properties: {
         title: {
           title: [{ type: "text", text: { content: title } }],
