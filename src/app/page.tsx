@@ -8,10 +8,10 @@ import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { FilesPreview } from "@/components/FilesPreview";
 import { EmailsPreview } from "@/components/EmailsPreview";
 import { NotesPreview } from "@/components/NotesPreview";
-import { ContactsPreview } from "@/components/ContactsPreview";
 import { StocksPreview } from "@/components/StocksPreview";
 import { LayoutEditor } from "@/components/LayoutEditor";
 import { DraggableWidget, useDragState } from "@/components/DraggableWidget";
+import { RemindersBanner } from "@/components/RemindersBanner";
 import { useLayout, WidgetConfig } from "@/contexts/LayoutContext";
 import { tools } from "@/lib/tools";
 
@@ -20,7 +20,6 @@ const WIDGET_TITLES: Record<string, string> = {
   files: "Files",
   emails: "Emails",
   notes: "Notes",
-  contacts: "Contacts",
   stocks: "Market",
   "contact-finder": "Contact Finder",
   "company-politics": "Company Info",
@@ -28,6 +27,7 @@ const WIDGET_TITLES: Record<string, string> = {
   news: "News",
   spotify: "Spotify",
   trending: "Trending",
+  contacts: "Contacts",
 };
 
 // Unified widgets grid - combines preview widgets and tool cards into a single grid
@@ -45,10 +45,14 @@ function UnifiedWidgetsGrid({
   isMobile: boolean;
 }) {
   const { layout, isEditMode, reorderWidgets, getWidgetConfig } = useLayout();
-  const { isDragging, dragIndex, dragOverIndex, handleDragStart, handleDragOver, handleDragEnd } = useDragState();
 
-  // Combine preview widgets and tool cards into a unified list
+  // Separate drag states for each section to avoid dual highlighting
+  const previewDragState = useDragState();
+  const toolDragState = useDragState();
+
+  // Data widgets (Files, Emails, Notes, Market) - removed Contacts
   const previewWidgets = [...layout.previewWidgets]
+    .filter((w) => w.id !== "contacts") // Contacts is now a tool widget
     .sort((a, b) => a.order - b.order)
     .map((w) => ({ ...w, widgetType: "previewWidgets" as const }));
 
@@ -56,18 +60,19 @@ function UnifiedWidgetsGrid({
     .sort((a, b) => a.order - b.order)
     .map((w) => ({ ...w, widgetType: "toolCards" as const }));
 
-  // In edit mode, show sections separately for clarity
-  // In normal mode, combine all widgets
-  const allWidgets = isEditMode
-    ? [...previewWidgets, ...toolCards]
-    : [...previewWidgets, ...toolCards];
-
-  const handleDrop = useCallback((widgetType: "previewWidgets" | "toolCards") => {
-    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
-      reorderWidgets(widgetType, dragIndex, dragOverIndex);
+  const handlePreviewDrop = useCallback(() => {
+    if (previewDragState.dragIndex !== null && previewDragState.dragOverIndex !== null && previewDragState.dragIndex !== previewDragState.dragOverIndex) {
+      reorderWidgets("previewWidgets", previewDragState.dragIndex, previewDragState.dragOverIndex);
     }
-    handleDragEnd();
-  }, [dragIndex, dragOverIndex, reorderWidgets, handleDragEnd]);
+    previewDragState.handleDragEnd();
+  }, [previewDragState, reorderWidgets]);
+
+  const handleToolDrop = useCallback(() => {
+    if (toolDragState.dragIndex !== null && toolDragState.dragOverIndex !== null && toolDragState.dragIndex !== toolDragState.dragOverIndex) {
+      reorderWidgets("toolCards", toolDragState.dragIndex, toolDragState.dragOverIndex);
+    }
+    toolDragState.handleDragEnd();
+  }, [toolDragState, reorderWidgets]);
 
   const renderPreviewWidget = (widgetConfig: WidgetConfig & { widgetType: "previewWidgets" }, index: number) => {
     const { id } = widgetConfig;
@@ -82,8 +87,6 @@ function UnifiedWidgetsGrid({
           return <EmailsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={onConnectGoogle} />;
         case "notes":
           return <NotesPreview isMicrosoftConnected={isMicrosoftConnected} onConnectMicrosoft={onConnectMicrosoft} />;
-        case "contacts":
-          return <ContactsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={onConnectGoogle} />;
         case "stocks":
           return <StocksPreview />;
         default:
@@ -98,15 +101,16 @@ function UnifiedWidgetsGrid({
         type="previewWidgets"
         title={WIDGET_TITLES[id] || id}
         index={index}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={() => handleDrop("previewWidgets")}
-        isDragging={isDragging}
-        dragOverIndex={dragOverIndex}
+        onDragStart={previewDragState.handleDragStart}
+        onDragOver={previewDragState.handleDragOver}
+        onDragEnd={handlePreviewDrop}
+        isDragging={previewDragState.isDragging}
+        dragOverIndex={previewDragState.dragOverIndex}
       >
         <div
           style={{
             gridColumn: !isMobile && size === "expanded" ? "span 2" : "span 1",
+            minHeight: "220px",
           }}
         >
           {widgetContent}
@@ -120,9 +124,6 @@ function UnifiedWidgetsGrid({
     const tool = tools.find((t) => t.id === id);
     if (!tool) return null;
 
-    const config = getWidgetConfig("toolCards", id);
-    const size = config?.size || "default";
-
     return (
       <DraggableWidget
         key={`tool-${id}`}
@@ -130,19 +131,13 @@ function UnifiedWidgetsGrid({
         type="toolCards"
         title={WIDGET_TITLES[id] || tool.name}
         index={index}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={() => handleDrop("toolCards")}
-        isDragging={isDragging}
-        dragOverIndex={dragOverIndex}
+        onDragStart={toolDragState.handleDragStart}
+        onDragOver={toolDragState.handleDragOver}
+        onDragEnd={handleToolDrop}
+        isDragging={toolDragState.isDragging}
+        dragOverIndex={toolDragState.dragOverIndex}
       >
-        <div
-          style={{
-            gridColumn: !isMobile && size === "expanded" ? "span 2" : "span 1",
-          }}
-        >
-          <ToolCard tool={tool} index={index} compact={isMobile} />
-        </div>
+        <ToolCard tool={tool} index={index} compact />
       </DraggableWidget>
     );
   };
@@ -151,13 +146,34 @@ function UnifiedWidgetsGrid({
   if (isEditMode) {
     return (
       <>
-        {/* Preview Widgets Section */}
-        <div style={{ marginBottom: "16px" }}>
+        {/* Tool Widgets Section - First */}
+        <div style={{ marginBottom: "24px" }}>
+          <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+            Tool Widgets
+          </h3>
+          <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginBottom: "12px" }}>
+            Interactive tools and features
+          </p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))",
+              gap: isMobile ? "8px" : "10px",
+              position: "relative",
+              zIndex: 50,
+            }}
+          >
+            {toolCards.map((widget, index) => renderToolCard(widget, index))}
+          </div>
+        </div>
+
+        {/* Data Widgets Section - Second */}
+        <div>
           <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
             Data Widgets
           </h3>
           <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginBottom: "12px" }}>
-            Your connected services (Files, Emails, Notes, Contacts)
+            Your connected services (Files, Emails, Notes, Market)
           </p>
           <div
             style={{
@@ -171,55 +187,34 @@ function UnifiedWidgetsGrid({
             {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}
           </div>
         </div>
-
-        {/* Tool Cards Section */}
-        <div style={{ marginTop: "24px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
-            Tool Widgets
-          </h3>
-          <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginBottom: "12px" }}>
-            Interactive tools and features
-          </p>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(300px, 1fr))",
-              gap: isMobile ? "10px" : "12px",
-              position: "relative",
-              zIndex: 50,
-            }}
-          >
-            {toolCards.map((widget, index) => renderToolCard(widget, index))}
-          </div>
-        </div>
       </>
     );
   }
 
-  // Normal mode: unified display
+  // Normal mode: Tool widgets first, then data widgets
   return (
     <>
-      {/* Data Widgets (Files, Emails, etc.) */}
+      {/* Tool Widgets - First */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
-          gap: "16px",
+          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))",
+          gap: isMobile ? "8px" : "10px",
           marginBottom: "24px",
         }}
       >
-        {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}
+        {toolCards.map((widget, index) => renderToolCard(widget, index))}
       </div>
 
-      {/* Tool Widgets */}
+      {/* Data Widgets - Second */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(300px, 1fr))",
-          gap: isMobile ? "10px" : "16px",
+          gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(2, 1fr)",
+          gap: "16px",
         }}
       >
-        {toolCards.map((widget, index) => renderToolCard(widget, index))}
+        {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}
       </div>
     </>
   );
@@ -320,6 +315,17 @@ export default function Home() {
             padding: "24px 24px 100px 24px",
           }}
         >
+          {/* Reminders Banner - Hidden in edit mode */}
+          {!isEditMode && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <RemindersBanner />
+            </motion.div>
+          )}
+
           {/* Multi-Source Search - Hidden in edit mode */}
           {!isEditMode && (
             <motion.section

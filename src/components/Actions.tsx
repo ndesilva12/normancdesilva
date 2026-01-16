@@ -438,34 +438,30 @@ export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "center",
             width: "100%",
             padding: "10px 14px",
             background: "none",
             border: "none",
             cursor: "pointer",
+            gap: "6px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Bell style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
-            <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)" }}>
-              Reminders
+          <Bell style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
+          {incompleteCount > 0 && (
+            <span
+              style={{
+                backgroundColor: "var(--accent)",
+                color: "var(--background)",
+                borderRadius: "9999px",
+                padding: "2px 8px",
+                fontSize: "11px",
+                fontWeight: 600,
+              }}
+            >
+              {incompleteCount}
             </span>
-            {incompleteCount > 0 && (
-              <span
-                style={{
-                  backgroundColor: "var(--accent)",
-                  color: "var(--background)",
-                  borderRadius: "9999px",
-                  padding: "2px 8px",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                }}
-              >
-                {incompleteCount}
-              </span>
-            )}
-          </div>
+          )}
           <ChevronDown
             style={{
               width: "14px",

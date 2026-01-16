@@ -14,8 +14,78 @@ export interface WebSearchResponse {
   instant_answer?: string;
 }
 
-// DuckDuckGo Instant Answer API
+// DuckDuckGo Search - uses HTML scraping for actual search results
 async function searchDuckDuckGo(query: string): Promise<WebSearchResponse> {
+  // First try the HTML lite version for actual search results
+  const htmlUrl = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`;
+
+  try {
+    const htmlResponse = await fetch(htmlUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+
+    if (htmlResponse.ok) {
+      const html = await htmlResponse.text();
+      const results: WebSearchResult[] = [];
+
+      // Parse the lite HTML version - results are in table rows
+      // Look for result links and snippets
+      const linkRegex = /<a[^>]+class="result-link"[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
+      const snippetRegex = /<td[^>]+class="result-snippet"[^>]*>([^<]+(?:<[^>]+>[^<]*<\/[^>]+>)*[^<]*)<\/td>/gi;
+
+      // Alternative pattern for the lite version
+      const resultBlockRegex = /<tr[^>]*>[\s\S]*?<a[^>]+href="(https?:\/\/[^"]+)"[^>]*>([^<]+)<\/a>[\s\S]*?<\/tr>/gi;
+
+      let match;
+      const links: { url: string; title: string }[] = [];
+      const snippets: string[] = [];
+
+      // Extract links
+      while ((match = resultBlockRegex.exec(html)) !== null) {
+        const url = match[1];
+        const title = match[2].trim();
+        if (url && title && !url.includes("duckduckgo.com") && !title.includes("DuckDuckGo")) {
+          links.push({ url, title });
+        }
+      }
+
+      // Try to extract snippets from following table cells
+      const snippetMatches = html.match(/<td class="result-snippet">([\s\S]*?)<\/td>/gi);
+      if (snippetMatches) {
+        for (const sm of snippetMatches) {
+          const cleaned = sm.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
+          if (cleaned) {
+            snippets.push(cleaned);
+          }
+        }
+      }
+
+      // Combine links with snippets
+      for (let i = 0; i < links.length && i < 10; i++) {
+        results.push({
+          title: links[i].title,
+          url: links[i].url,
+          snippet: snippets[i] || `Result from ${new URL(links[i].url).hostname}`,
+        });
+      }
+
+      if (results.length > 0) {
+        return {
+          results,
+          source: "duckduckgo",
+          query,
+        };
+      }
+    }
+  } catch (error) {
+    console.error("DuckDuckGo HTML search error:", error);
+  }
+
+  // Fallback to Instant Answer API for at least some results
   const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
 
   try {

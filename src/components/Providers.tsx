@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LayoutProvider } from "@/contexts/LayoutContext";
+import { RemindersProvider } from "@/contexts/RemindersContext";
 
 interface ProvidersProps {
   children: ReactNode;
@@ -11,7 +12,9 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <AuthProvider>
-      <LayoutProvider>{children}</LayoutProvider>
+      <RemindersProvider>
+        <LayoutProvider>{children}</LayoutProvider>
+      </RemindersProvider>
     </AuthProvider>
   );
 }

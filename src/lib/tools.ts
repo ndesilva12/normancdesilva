@@ -5,6 +5,8 @@ import {
   Music,
   Search,
   TrendingUp,
+  Contact2,
+  LineChart,
 } from "lucide-react";
 import { Tool } from "@/types/tool";
 
@@ -66,6 +68,24 @@ export const tools: Tool[] = [
     category: "news",
     status: "available",
   },
+  {
+    id: "contacts",
+    name: "Contacts",
+    description: "View and manage your Google Contacts.",
+    icon: Contact2,
+    href: "/tools/contacts",
+    category: "productivity",
+    status: "available",
+  },
+  {
+    id: "market",
+    name: "Market",
+    description: "Track stocks, crypto, and market indices.",
+    icon: LineChart,
+    href: "/tools/market",
+    category: "finance",
+    status: "available",
+  },
 ];
 
 export const categories = [
@@ -74,4 +94,6 @@ export const categories = [
   { id: "sports", label: "Sports" },
   { id: "news", label: "News" },
   { id: "media", label: "Media" },
+  { id: "productivity", label: "Productivity" },
+  { id: "finance", label: "Finance" },
 ] as const;

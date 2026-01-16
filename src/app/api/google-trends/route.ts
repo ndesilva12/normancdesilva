@@ -7,7 +7,50 @@ export interface TrendingSearch {
 
 export async function GET() {
   try {
-    // Method 1: Try rss2json proxy service for Google Trends RSS
+    // Method 1: Try the realtime trends API (trending now, matches 4-hour filter)
+    // This matches: https://trends.google.com/trending?geo=US&hours=4
+    const realtimeUrl = "https://trends.google.com/trends/api/realtimetrends?hl=en-US&tz=-300&cat=all&fi=0&fs=0&geo=US&ri=300&rs=20&sort=0";
+    const realtimeResponse = await fetch(realtimeUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://trends.google.com/trending?geo=US&hours=4",
+      },
+      next: { revalidate: 180 }, // Cache for 3 minutes
+    });
+
+    if (realtimeResponse.ok) {
+      let text = await realtimeResponse.text();
+      // Remove the XSSI protection prefix
+      if (text.startsWith(")]}'")) {
+        text = text.substring(4);
+      }
+
+      try {
+        const data = JSON.parse(text);
+        const trends: TrendingSearch[] = [];
+        const stories = data?.storySummaries?.trendingStories || [];
+
+        for (const story of stories.slice(0, 15)) {
+          const title = story?.title || story?.entityNames?.[0];
+          if (title && !trends.some((t) => t.title === title)) {
+            trends.push({
+              title,
+              searchUrl: `https://www.google.com/search?q=${encodeURIComponent(title)}`,
+            });
+          }
+        }
+
+        if (trends.length > 0) {
+          return NextResponse.json({ trends, source: "google-realtime" });
+        }
+      } catch {
+        // JSON parse failed, try next method
+      }
+    }
+
+    // Method 2: Try rss2json proxy service for Google Trends RSS
     const rss2jsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(
       "https://trends.google.com/trending/rss?geo=US"
     )}`;
@@ -22,7 +65,7 @@ export async function GET() {
     if (proxyResponse.ok) {
       const data = await proxyResponse.json();
       if (data.status === "ok" && data.items && data.items.length > 0) {
-        const trends: TrendingSearch[] = data.items.slice(0, 10).map((item: { title: string }) => ({
+        const trends: TrendingSearch[] = data.items.slice(0, 15).map((item: { title: string }) => ({
           title: item.title,
           searchUrl: `https://www.google.com/search?q=${encodeURIComponent(item.title)}`,
         }));
@@ -30,7 +73,7 @@ export async function GET() {
       }
     }
 
-    // Method 2: Try direct RSS fetch with different headers
+    // Method 3: Try direct RSS fetch with different headers
     const rssUrl = "https://trends.google.com/trending/rss?geo=US";
     const directResponse = await fetch(rssUrl, {
       headers: {
@@ -49,7 +92,7 @@ export async function GET() {
       let titleMatches = text.matchAll(/<title><!\[CDATA\[(.*?)\]\]><\/title>/g);
       let count = 0;
       for (const match of titleMatches) {
-        if (count > 0 && count <= 10) {
+        if (count > 0 && count <= 15) {
           const title = match[1].trim();
           if (title) {
             trends.push({
@@ -66,7 +109,7 @@ export async function GET() {
         titleMatches = text.matchAll(/<title>([^<]+)<\/title>/g);
         count = 0;
         for (const match of titleMatches) {
-          if (count > 0 && count <= 10) {
+          if (count > 0 && count <= 15) {
             const title = match[1].trim();
             if (title && !title.includes("Daily Search Trends")) {
               trends.push({
@@ -84,7 +127,7 @@ export async function GET() {
       }
     }
 
-    // Method 3: Try the daily trends API endpoint
+    // Method 4: Try the daily trends API endpoint as fallback
     const dailyUrl = "https://trends.google.com/trends/api/dailytrends?hl=en-US&tz=-300&geo=US&ns=15";
     const dailyResponse = await fetch(dailyUrl, {
       headers: {
@@ -105,7 +148,7 @@ export async function GET() {
         const trends: TrendingSearch[] = [];
         const trendingSearches = data?.default?.trendingSearchesDays?.[0]?.trendingSearches || [];
 
-        for (const item of trendingSearches.slice(0, 10)) {
+        for (const item of trendingSearches.slice(0, 15)) {
           const title = item?.title?.query;
           if (title) {
             trends.push({

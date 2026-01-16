@@ -21,15 +21,15 @@ export interface LayoutConfig {
   version: number;
 }
 
-// Default widget configurations
+// Default widget configurations - Data Widgets (connected services)
 const DEFAULT_PREVIEW_WIDGETS: WidgetConfig[] = [
   { id: "files", size: "default", visible: true, order: 0 },
   { id: "emails", size: "default", visible: true, order: 1 },
   { id: "notes", size: "default", visible: true, order: 2 },
-  { id: "contacts", size: "default", visible: true, order: 3 },
-  { id: "stocks", size: "default", visible: true, order: 4 },
+  { id: "stocks", size: "default", visible: true, order: 3 },
 ];
 
+// Tool Widgets (interactive tools and features)
 const DEFAULT_TOOL_CARDS: WidgetConfig[] = [
   { id: "contact-finder", size: "default", visible: true, order: 0 },
   { id: "company-politics", size: "default", visible: true, order: 1 },
@@ -37,6 +37,8 @@ const DEFAULT_TOOL_CARDS: WidgetConfig[] = [
   { id: "news", size: "default", visible: true, order: 3 },
   { id: "spotify", size: "default", visible: true, order: 4 },
   { id: "trending", size: "default", visible: true, order: 5 },
+  { id: "contacts", size: "default", visible: true, order: 6 },
+  { id: "market", size: "default", visible: true, order: 7 },
 ];
 
 const DEFAULT_LAYOUT: LayoutConfig = {
