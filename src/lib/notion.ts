@@ -6,10 +6,10 @@ import {
 } from "@notionhq/client/build/src/api-endpoints";
 
 // Validate environment variables
-const NOTION_TOKEN = process.env.NOTION_INTEGRATION_TOKEN;
+const NOTION_TOKEN = process.env.NOTION_API_KEY;
 
 if (!NOTION_TOKEN) {
-  console.error("NOTION_INTEGRATION_TOKEN environment variable is not set");
+  console.error("NOTION_API_KEY environment variable is not set");
 }
 
 // Initialize Notion client
@@ -22,7 +22,7 @@ export const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
 // Validation helper
 function validateConfig() {
   if (!NOTION_TOKEN) {
-    throw new Error("NOTION_INTEGRATION_TOKEN environment variable is not set. Please add it to your Vercel environment variables.");
+    throw new Error("NOTION_API_KEY environment variable is not set. Please add it to your Vercel environment variables.");
   }
   if (!NOTION_DATABASE_ID) {
     throw new Error("NOTION_DATABASE_ID environment variable is not set. Please add it to your Vercel environment variables.");
