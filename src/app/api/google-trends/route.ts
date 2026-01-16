@@ -44,7 +44,7 @@ export async function GET() {
           if (title && !trends.some((t) => t.title === title)) {
             trends.push({
               title,
-              searchUrl: `https://www.google.com/search?q=${encodeURIComponent(title)}`,
+              searchUrl: `https://www.google.com/search?q=${encodeURIComponent(title)}&tbm=nws`,
             });
           }
         }
@@ -78,7 +78,7 @@ export async function GET() {
         if (data && data.united_states) {
           const trends: TrendingSearch[] = data.united_states.slice(0, 15).map((item: string) => ({
             title: item,
-            searchUrl: `https://www.google.com/search?q=${encodeURIComponent(item)}`,
+            searchUrl: `https://www.google.com/search?q=${encodeURIComponent(item)}&tbm=nws`,
           }));
           if (trends.length > 0) {
             return NextResponse.json({
@@ -126,7 +126,7 @@ export async function GET() {
             if (title && !trends.some(t => t.title === title)) {
               trends.push({
                 title,
-                searchUrl: `https://www.google.com/search?q=${encodeURIComponent(title)}`,
+                searchUrl: `https://www.google.com/search?q=${encodeURIComponent(title)}&tbm=nws`,
               });
             }
           }
@@ -162,7 +162,7 @@ export async function GET() {
       if (data.status === "ok" && data.items && data.items.length > 0) {
         const trends: TrendingSearch[] = data.items.slice(0, 15).map((item: { title: string }) => ({
           title: item.title,
-          searchUrl: `https://www.google.com/search?q=${encodeURIComponent(item.title)}`,
+          searchUrl: `https://www.google.com/search?q=${encodeURIComponent(item.title)}&tbm=nws`,
         }));
         return NextResponse.json({
           trends,
@@ -197,7 +197,7 @@ export async function GET() {
           if (title) {
             trends.push({
               title,
-              searchUrl: `https://www.google.com/search?q=${encodeURIComponent(title)}`,
+              searchUrl: `https://www.google.com/search?q=${encodeURIComponent(title)}&tbm=nws`,
             });
           }
         }
@@ -214,7 +214,7 @@ export async function GET() {
             if (title && !title.includes("Daily Search Trends")) {
               trends.push({
                 title,
-                searchUrl: `https://www.google.com/search?q=${encodeURIComponent(title)}`,
+                searchUrl: `https://www.google.com/search?q=${encodeURIComponent(title)}&tbm=nws`,
               });
             }
           }
