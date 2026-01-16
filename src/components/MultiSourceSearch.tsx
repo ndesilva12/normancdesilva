@@ -383,7 +383,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             style={{
               marginTop: "12px",
               display: "flex",
-              flexWrap: "wrap",
+              flexWrap: "nowrap",
               alignItems: "center",
               justifyContent: "center",
               gap: "6px",

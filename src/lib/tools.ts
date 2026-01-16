@@ -9,7 +9,7 @@ import { Tool } from "@/types/tool";
 export const tools: Tool[] = [
   {
     id: "company-politics",
-    name: "Company Politics Search",
+    name: "Company Info",
     description: "Analyze corporate political leanings, donations, lobbying activities, and public statements.",
     icon: Building2,
     href: "/tools/company-politics",

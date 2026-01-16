@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Calendar, ChevronDown, ExternalLink } from "lucide-react";
+import { Calendar } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { ToolCard } from "@/components/ToolCard";
@@ -10,118 +10,24 @@ import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { Actions, ACTIONS_STORAGE_KEY, type ActionItem } from "@/components/Actions";
 import { tools } from "@/lib/tools";
 
-// Collapsed Calendar Widget
-function CalendarWidget() {
-  const [isExpanded, setIsExpanded] = useState(false);
-
+// Calendar Button - Simple icon button that opens calendar page
+function CalendarButton() {
   return (
-    <div
+    <Link
+      href="/tools/calendar"
+      className="glass"
       style={{
-        position: "relative",
-        width: "160px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "40px",
+        height: "40px",
+        borderRadius: "10px",
         flexShrink: 0,
       }}
     >
-      {/* Header button - always visible */}
-      <div
-        className="glass"
-        style={{
-          borderRadius: "10px",
-          overflow: "hidden",
-        }}
-      >
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            width: "100%",
-            padding: "10px 14px",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Calendar style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
-            <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)" }}>
-              Calendar
-            </span>
-          </div>
-          <ChevronDown
-            style={{
-              width: "14px",
-              height: "14px",
-              color: "var(--foreground-muted)",
-              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 0.2s",
-            }}
-          />
-        </button>
-      </div>
-
-      {/* Dropdown content - absolutely positioned */}
-      {isExpanded && (
-        <div
-          className="glass"
-          style={{
-            position: "absolute",
-            top: "calc(100% + 8px)",
-            left: 0,
-            width: "200px",
-            borderRadius: "10px",
-            padding: "12px 14px",
-            zIndex: 50,
-            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.3)",
-          }}
-        >
-          <Link
-            href="/tools/calendar"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              width: "100%",
-              padding: "10px 16px",
-              borderRadius: "8px",
-              backgroundColor: "var(--accent)",
-              color: "var(--background)",
-              fontSize: "13px",
-              fontWeight: 500,
-              textDecoration: "none",
-              marginBottom: "10px",
-            }}
-          >
-            Open Calendar
-            <ExternalLink style={{ width: "14px", height: "14px" }} />
-          </Link>
-          <a
-            href="https://calendar.google.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              width: "100%",
-              padding: "10px 16px",
-              borderRadius: "8px",
-              border: "1px solid var(--glass-border)",
-              backgroundColor: "transparent",
-              color: "var(--foreground-muted)",
-              fontSize: "13px",
-              textDecoration: "none",
-            }}
-          >
-            Google Calendar
-            <ExternalLink style={{ width: "14px", height: "14px" }} />
-          </a>
-        </div>
-      )}
-    </div>
+      <Calendar style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
+    </Link>
   );
 }
 
@@ -210,6 +116,7 @@ function LiveDateTime({
 }) {
   const [dateTime, setDateTime] = useState<Date | null>(null);
   const [isActionsExpanded, setIsActionsExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setDateTime(new Date());
@@ -219,14 +126,22 @@ function LiveDateTime({
     return () => clearInterval(interval);
   }, []);
 
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   if (!dateTime) {
     return <div style={{ height: "100px" }} />;
   }
 
   const formattedDate = dateTime.toLocaleDateString("en-US", {
-    weekday: "long",
+    weekday: isMobile ? "short" : "long",
     year: "numeric",
-    month: "long",
+    month: isMobile ? "short" : "long",
     day: "numeric",
   });
 
@@ -239,10 +154,10 @@ function LiveDateTime({
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", width: "100%" }}>
       {/* Date Row with Calendar */}
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <h1
           style={{
-            fontSize: "clamp(22px, 3.5vw, 36px)",
+            fontSize: isMobile ? "18px" : "clamp(22px, 3.5vw, 36px)",
             fontWeight: 700,
             color: "var(--foreground)",
             letterSpacing: "-0.02em",
@@ -251,27 +166,30 @@ function LiveDateTime({
         >
           {formattedDate}
         </h1>
-        <CalendarWidget />
+        <CalendarButton />
       </div>
 
-      {/* Time Row with Actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+      {/* Time Row with Actions - Actions wrapper has fixed width to prevent shifting */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <p
           style={{
-            fontSize: "clamp(18px, 2.5vw, 28px)",
+            fontSize: isMobile ? "16px" : "clamp(18px, 2.5vw, 28px)",
             fontWeight: 300,
             color: "var(--accent)",
             whiteSpace: "nowrap",
+            fontVariantNumeric: "tabular-nums",
           }}
         >
           {formattedTime}
         </p>
-        <Actions
-          isGoogleConnected={isGoogleConnected}
-          onConnectGoogle={onConnectGoogle}
-          defaultCollapsed={true}
-          onExpandChange={setIsActionsExpanded}
-        />
+        <div style={{ width: "160px", flexShrink: 0 }}>
+          <Actions
+            isGoogleConnected={isGoogleConnected}
+            onConnectGoogle={onConnectGoogle}
+            defaultCollapsed={true}
+            onExpandChange={setIsActionsExpanded}
+          />
+        </div>
       </div>
 
       {/* Actions Row - visible items (only when tool is collapsed) */}
@@ -284,6 +202,15 @@ function LiveDateTime({
 export default function Home() {
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [hasSearchResults, setHasSearchResults] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Check Google Calendar auth status
   useEffect(() => {
@@ -371,12 +298,12 @@ export default function Home() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                  gap: "16px",
+                  gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(300px, 1fr))",
+                  gap: isMobile ? "10px" : "16px",
                 }}
               >
                 {tools.map((tool, index) => (
-                  <ToolCard key={tool.id} tool={tool} index={index} />
+                  <ToolCard key={tool.id} tool={tool} index={index} compact={isMobile} />
                 ))}
               </div>
             </motion.section>

@@ -226,36 +226,47 @@ export default function NewsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="glass"
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "8px",
-              borderRadius: "12px",
               marginBottom: "24px",
-              width: "fit-content",
+              overflowX: "auto",
+              WebkitOverflowScrolling: "touch",
+              msOverflowStyle: "none",
+              scrollbarWidth: "none",
             }}
           >
-            {NEWS_SOURCES.map((source) => (
-              <button
-                key={source.id}
-                onClick={() => handleSourceChange(source.id)}
-                style={{
-                  padding: "10px 20px",
-                  borderRadius: "8px",
-                  border: "none",
-                  backgroundColor: selectedSource === source.id ? "var(--accent)" : "transparent",
-                  color: selectedSource === source.id ? "var(--background)" : "var(--foreground-muted)",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-              >
-                {source.name}
-              </button>
-            ))}
+            <div
+              className="glass"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px",
+                borderRadius: "12px",
+                width: "fit-content",
+                minWidth: "max-content",
+              }}
+            >
+              {NEWS_SOURCES.map((source) => (
+                <button
+                  key={source.id}
+                  onClick={() => handleSourceChange(source.id)}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    border: "none",
+                    backgroundColor: selectedSource === source.id ? "var(--accent)" : "transparent",
+                    color: selectedSource === source.id ? "var(--background)" : "var(--foreground-muted)",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {source.name}
+                </button>
+              ))}
+            </div>
           </motion.div>
 
           {/* Content */}
