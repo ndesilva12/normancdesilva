@@ -2,13 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { LayoutDashboard, LogIn, LogOut } from "lucide-react";
+import { LayoutDashboard, LogIn, LogOut, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLayout } from "@/contexts/LayoutContext";
 
 export function Header() {
   const { user, loading, signInWithGoogle, signOut } = useAuth();
+  const { enterEditMode, isEditMode } = useLayout();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -74,6 +76,18 @@ export function Header() {
                 className="absolute right-0 top-full mt-2 min-w-[140px] rounded-lg border border-white/10 bg-[#1c1c1c] py-1 shadow-lg"
                 style={{ zIndex: 100 }}
               >
+                <button
+                  onClick={() => {
+                    enterEditMode();
+                    setMenuOpen(false);
+                  }}
+                  disabled={isEditMode}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-sm text-foreground-muted transition-colors hover:bg-white/5 hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  Layout
+                </button>
+                <div className="my-1 border-t border-white/10" />
                 <button
                   onClick={() => {
                     signOut();

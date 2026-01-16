@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Calendar } from "lucide-react";
 import Link from "next/link";
@@ -12,8 +12,23 @@ import { FilesPreview } from "@/components/FilesPreview";
 import { EmailsPreview } from "@/components/EmailsPreview";
 import { NotesPreview } from "@/components/NotesPreview";
 import { ContactsPreview } from "@/components/ContactsPreview";
+import { LayoutEditor } from "@/components/LayoutEditor";
+import { DraggableWidget, useDragState } from "@/components/DraggableWidget";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLayout, WidgetConfig } from "@/contexts/LayoutContext";
 import { tools } from "@/lib/tools";
+
+// Widget title mapping
+const WIDGET_TITLES: Record<string, string> = {
+  files: "Files",
+  emails: "Emails",
+  notes: "Notes",
+  contacts: "Contacts",
+  "company-politics": "Company Info",
+  "visual-rosters": "Visual Rosters",
+  news: "News",
+  spotify: "Spotify",
+};
 
 // Calendar Button - Simple icon button that opens calendar page
 function CalendarButton() {
@@ -201,12 +216,158 @@ function LiveDateTime({
   );
 }
 
+// Preview widgets grid with drag & drop support
+function PreviewWidgetsGrid({
+  isGoogleConnected,
+  isMicrosoftConnected,
+  onConnectGoogle,
+  onConnectMicrosoft,
+  isMobile,
+}: {
+  isGoogleConnected: boolean;
+  isMicrosoftConnected: boolean;
+  onConnectGoogle: () => void;
+  onConnectMicrosoft: () => void;
+  isMobile: boolean;
+}) {
+  const { layout, isEditMode, reorderWidgets, getWidgetConfig } = useLayout();
+  const { isDragging, dragIndex, dragOverIndex, handleDragStart, handleDragOver, handleDragEnd } = useDragState();
+
+  const sortedWidgets = [...layout.previewWidgets].sort((a, b) => a.order - b.order);
+
+  const handleDrop = useCallback(() => {
+    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+      reorderWidgets("previewWidgets", dragIndex, dragOverIndex);
+    }
+    handleDragEnd();
+  }, [dragIndex, dragOverIndex, reorderWidgets, handleDragEnd]);
+
+  const renderWidget = (widgetConfig: WidgetConfig, index: number) => {
+    const { id } = widgetConfig;
+    const config = getWidgetConfig("previewWidgets", id);
+    const size = config?.size || "default";
+
+    const widgetContent = (() => {
+      switch (id) {
+        case "files":
+          return <FilesPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={onConnectGoogle} />;
+        case "emails":
+          return <EmailsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={onConnectGoogle} />;
+        case "notes":
+          return <NotesPreview isMicrosoftConnected={isMicrosoftConnected} onConnectMicrosoft={onConnectMicrosoft} />;
+        case "contacts":
+          return <ContactsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={onConnectGoogle} />;
+        default:
+          return null;
+      }
+    })();
+
+    return (
+      <DraggableWidget
+        key={id}
+        id={id}
+        type="previewWidgets"
+        title={WIDGET_TITLES[id] || id}
+        index={index}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDrop}
+        isDragging={isDragging}
+        dragOverIndex={dragOverIndex}
+      >
+        <div
+          style={{
+            gridColumn: !isMobile && size === "expanded" ? "span 2" : "span 1",
+          }}
+        >
+          {widgetContent}
+        </div>
+      </DraggableWidget>
+    );
+  };
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
+        gap: "16px",
+        position: "relative",
+        zIndex: isEditMode ? 50 : "auto",
+      }}
+    >
+      {sortedWidgets.map((widget, index) => renderWidget(widget, index))}
+    </div>
+  );
+}
+
+// Tool cards grid with drag & drop support
+function ToolCardsGrid({ isMobile }: { isMobile: boolean }) {
+  const { layout, isEditMode, reorderWidgets, getWidgetConfig } = useLayout();
+  const { isDragging, dragIndex, dragOverIndex, handleDragStart, handleDragOver, handleDragEnd } = useDragState();
+
+  const sortedWidgets = [...layout.toolCards].sort((a, b) => a.order - b.order);
+
+  const handleDrop = useCallback(() => {
+    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+      reorderWidgets("toolCards", dragIndex, dragOverIndex);
+    }
+    handleDragEnd();
+  }, [dragIndex, dragOverIndex, reorderWidgets, handleDragEnd]);
+
+  const renderToolCard = (widgetConfig: WidgetConfig, index: number) => {
+    const { id } = widgetConfig;
+    const tool = tools.find((t) => t.id === id);
+    if (!tool) return null;
+
+    const config = getWidgetConfig("toolCards", id);
+    const size = config?.size || "default";
+
+    return (
+      <DraggableWidget
+        key={id}
+        id={id}
+        type="toolCards"
+        title={WIDGET_TITLES[id] || tool.name}
+        index={index}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDrop}
+        isDragging={isDragging}
+        dragOverIndex={dragOverIndex}
+      >
+        <div
+          style={{
+            gridColumn: !isMobile && size === "expanded" ? "span 2" : "span 1",
+          }}
+        >
+          <ToolCard tool={tool} index={index} compact={isMobile} />
+        </div>
+      </DraggableWidget>
+    );
+  };
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(300px, 1fr))",
+        gap: isMobile ? "10px" : "16px",
+        position: "relative",
+        zIndex: isEditMode ? 50 : "auto",
+      }}
+    >
+      {sortedWidgets.map((widget, index) => renderToolCard(widget, index))}
+    </div>
+  );
+}
 
 export default function Home() {
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [isMicrosoftConnected, setIsMicrosoftConnected] = useState(false);
   const [hasSearchResults, setHasSearchResults] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const { isEditMode } = useLayout();
 
   // Detect mobile viewport
   useEffect(() => {
@@ -285,8 +446,9 @@ export default function Home() {
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
+      <LayoutEditor />
 
-      <main style={{ flex: 1, width: "100%" }}>
+      <main style={{ flex: 1, width: "100%", paddingTop: isEditMode ? "0" : undefined }}>
         <div
           style={{
             width: "100%",
@@ -295,112 +457,114 @@ export default function Home() {
             padding: "40px 24px 100px 24px",
           }}
         >
-          {/* Date/Time with Calendar & Actions inline */}
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            style={{
-              marginBottom: "32px",
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <LiveDateTime
-              isGoogleConnected={isGoogleConnected}
-              onConnectGoogle={handleConnectGoogle}
-            />
-          </motion.section>
+          {/* Date/Time with Calendar & Actions inline - Hidden in edit mode */}
+          {!isEditMode && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              style={{
+                marginBottom: "32px",
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <LiveDateTime
+                isGoogleConnected={isGoogleConnected}
+                onConnectGoogle={handleConnectGoogle}
+              />
+            </motion.section>
+          )}
 
-          {/* Multi-Source Search */}
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            style={{ marginBottom: "40px" }}
-          >
-            <MultiSourceSearch onResultsChange={(results) => setHasSearchResults(results.length > 0)} />
-          </motion.section>
+          {/* Multi-Source Search - Hidden in edit mode */}
+          {!isEditMode && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              style={{ marginBottom: "40px" }}
+            >
+              <MultiSourceSearch onResultsChange={(results) => setHasSearchResults(results.length > 0)} />
+            </motion.section>
+          )}
 
-          {/* Preview Widgets - Hidden when search results are shown */}
-          {!hasSearchResults && (
+          {/* Edit mode section labels */}
+          {isEditMode && (
+            <div style={{ marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+                Preview Widgets
+              </h3>
+              <p style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                Drag to reorder, adjust size, or toggle visibility
+              </p>
+            </div>
+          )}
+
+          {/* Preview Widgets - Hidden when search results are shown (unless in edit mode) */}
+          {(isEditMode || !hasSearchResults) && (
             <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
               style={{ marginBottom: "24px" }}
             >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
-                  gap: "16px",
-                }}
-              >
-                <FilesPreview
-                  isGoogleConnected={isGoogleConnected}
-                  onConnectGoogle={handleConnectGoogle}
-                />
-                <EmailsPreview
-                  isGoogleConnected={isGoogleConnected}
-                  onConnectGoogle={handleConnectGoogle}
-                />
-                <NotesPreview
-                  isMicrosoftConnected={isMicrosoftConnected}
-                  onConnectMicrosoft={handleConnectMicrosoft}
-                />
-                <ContactsPreview
-                  isGoogleConnected={isGoogleConnected}
-                  onConnectGoogle={handleConnectGoogle}
-                />
-              </div>
+              <PreviewWidgetsGrid
+                isGoogleConnected={isGoogleConnected}
+                isMicrosoftConnected={isMicrosoftConnected}
+                onConnectGoogle={handleConnectGoogle}
+                onConnectMicrosoft={handleConnectMicrosoft}
+                isMobile={isMobile}
+              />
             </motion.section>
           )}
 
-          {/* Tools Section - Hidden when search results are shown */}
-          {!hasSearchResults && (
+          {/* Edit mode section labels */}
+          {isEditMode && (
+            <div style={{ marginTop: "32px", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+                Tool Cards
+              </h3>
+              <p style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                Drag to reorder, adjust size, or toggle visibility
+              </p>
+            </div>
+          )}
+
+          {/* Tools Section - Hidden when search results are shown (unless in edit mode) */}
+          {(isEditMode || !hasSearchResults) && (
             <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
               style={{ width: "100%" }}
             >
-              {/* Tools Grid */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(300px, 1fr))",
-                  gap: isMobile ? "10px" : "16px",
-                }}
-              >
-                {tools.map((tool, index) => (
-                  <ToolCard key={tool.id} tool={tool} index={index} compact={isMobile} />
-                ))}
-              </div>
+              <ToolCardsGrid isMobile={isMobile} />
             </motion.section>
           )}
 
-          {/* Footer */}
-          <motion.footer
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            style={{
-              marginTop: "48px",
-              borderTop: "1px solid var(--glass-border)",
-              padding: "24px 0",
-              textAlign: "center",
-              fontSize: "14px",
-              color: "var(--foreground-muted)",
-            }}
-          >
-            <p>
-              Built by{" "}
-              <span style={{ fontWeight: 500, color: "var(--foreground)" }}>
-                Norman C. de Silva
-              </span>
-            </p>
-          </motion.footer>
+          {/* Footer - Hidden in edit mode */}
+          {!isEditMode && (
+            <motion.footer
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              style={{
+                marginTop: "48px",
+                borderTop: "1px solid var(--glass-border)",
+                padding: "24px 0",
+                textAlign: "center",
+                fontSize: "14px",
+                color: "var(--foreground-muted)",
+              }}
+            >
+              <p>
+                Built by{" "}
+                <span style={{ fontWeight: 500, color: "var(--foreground)" }}>
+                  Norman C. de Silva
+                </span>
+              </p>
+            </motion.footer>
+          )}
         </div>
       </main>
     </div>
