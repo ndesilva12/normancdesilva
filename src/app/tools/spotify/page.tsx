@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { RemindersBanner } from "@/components/RemindersBanner";
 
 interface SpotifyTrack {
   id: string;
@@ -264,7 +265,7 @@ export default function SpotifyPage() {
     return (
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
         <Header />
-        <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", paddingTop: "64px" }}>
           <Loader2 style={{ width: "40px", height: "40px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
         </main>
       </div>
@@ -275,8 +276,9 @@ export default function SpotifyPage() {
     return (
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
         <Header />
-        <main style={{ flex: 1, width: "100%" }}>
+        <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
           <div style={{ width: "100%", maxWidth: "600px", margin: "0 auto", padding: "32px 24px" }}>
+            <RemindersBanner />
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -360,8 +362,9 @@ export default function SpotifyPage() {
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
 
-      <main style={{ flex: 1, width: "100%" }}>
+      <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ width: "100%", maxWidth: "800px", margin: "0 auto", padding: "32px 24px 100px 24px" }}>
+          <RemindersBanner />
           {/* Back Link */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}

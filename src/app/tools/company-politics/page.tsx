@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Sparkles, AlertCircle, Clock, TrendingUp, History, X as XIcon } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { RemindersBanner } from "@/components/RemindersBanner";
 import { CompanySearchBar } from "@/components/company/CompanySearchBar";
 import { CompanyReport } from "@/components/company/CompanyReport";
 import { CompanyAnalysis } from "@/types/company";
@@ -101,7 +102,7 @@ export default function CompanyPoliticsPage() {
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
 
-      <main style={{ flex: 1, width: "100%" }}>
+      <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div
           style={{
             width: "100%",
@@ -110,6 +111,7 @@ export default function CompanyPoliticsPage() {
             padding: "32px 24px 100px 24px",
           }}
         >
+          <RemindersBanner />
           {/* Back Link */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}

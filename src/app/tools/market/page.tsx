@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { ArrowLeft, TrendingUp, TrendingDown, Loader2, RefreshCw, Settings, X, Plus, ExternalLink, Newspaper } from "lucide-react";
 import { Header } from "@/components/Header";
+import { RemindersBanner } from "@/components/RemindersBanner";
 
 interface StockQuote {
   symbol: string;
@@ -166,8 +167,9 @@ export default function MarketPage() {
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
 
-      <main style={{ flex: 1, width: "100%" }}>
+      <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ width: "100%", maxWidth: "1000px", margin: "0 auto", padding: "24px 24px 100px 24px" }}>
+          <RemindersBanner />
           {/* Back Link */}
           <div style={{ marginBottom: "24px" }}>
             <Link

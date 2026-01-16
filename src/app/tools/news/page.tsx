@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Newspaper, ExternalLink, Loader2, RefreshCw, Clock, Tag, X } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { RemindersBanner } from "@/components/RemindersBanner";
 
 interface NewsArticle {
   title: string;
@@ -122,7 +123,7 @@ export default function NewsPage() {
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
 
-      <main style={{ flex: 1, width: "100%" }}>
+      <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div
           style={{
             width: "100%",
@@ -131,6 +132,7 @@ export default function NewsPage() {
             padding: "32px 24px 100px 24px",
           }}
         >
+          <RemindersBanner />
           {/* Back Link */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}

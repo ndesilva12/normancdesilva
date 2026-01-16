@@ -28,6 +28,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
+import { RemindersBanner } from "@/components/RemindersBanner";
 import {
   SearchType,
   AISource,
@@ -547,52 +549,58 @@ export default function ContactFinderPage() {
 
   if (!user) {
     return (
-      <div style={{ minHeight: "100vh", padding: "20px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div className="glass" style={{ padding: "40px", borderRadius: "16px", textAlign: "center", maxWidth: "400px" }}>
-          <AlertCircle style={{ width: "48px", height: "48px", color: "var(--accent)", margin: "0 auto 16px" }} />
-          <h2 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
-            Sign In Required
-          </h2>
-          <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-            Please sign in to use Contact Finder and save your search history.
-          </p>
-        </div>
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+        <Header />
+        <main style={{ flex: 1, width: "100%", paddingTop: "64px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="glass" style={{ padding: "40px", borderRadius: "16px", textAlign: "center", maxWidth: "400px" }}>
+            <AlertCircle style={{ width: "48px", height: "48px", color: "var(--accent)", margin: "0 auto 16px" }} />
+            <h2 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+              Sign In Required
+            </h2>
+            <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
+              Please sign in to use Contact Finder and save your search history.
+            </p>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", padding: "20px" }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
-          <Link
-            href="/"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "40px",
-              height: "40px",
-              borderRadius: "10px",
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-              color: "var(--foreground-muted)",
-              textDecoration: "none",
-            }}
-          >
-            <ArrowLeft style={{ width: "20px", height: "20px" }} />
-          </Link>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Search style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
-              <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>Contact Finder</h1>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+      <Header />
+      <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px" }}>
+          <RemindersBanner />
+          {/* Page Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+            <Link
+              href="/"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "40px",
+                height: "40px",
+                borderRadius: "10px",
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                color: "var(--foreground-muted)",
+                textDecoration: "none",
+              }}
+            >
+              <ArrowLeft style={{ width: "20px", height: "20px" }} />
+            </Link>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Search style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
+                <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>Contact Finder</h1>
+              </div>
+              <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginTop: "4px" }}>
+                Find publicly available contact information
+              </p>
             </div>
-            <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginTop: "4px" }}>
-              Find publicly available contact information
-            </p>
-          </div>
-          <button
-            onClick={() => setShowHistory(!showHistory)}
+            <button
+              onClick={() => setShowHistory(!showHistory)}
             style={{
               display: "flex",
               alignItems: "center",
@@ -903,7 +911,8 @@ export default function ContactFinderPage() {
             </div>
           )}
         </div>
-      </div>
+        </div>
+      </main>
 
       <style jsx global>{`
         @keyframes spin {

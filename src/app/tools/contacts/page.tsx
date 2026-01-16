@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Users, Loader2, RefreshCw, Search, Mail, Phone } from "lucide-react";
 import { GoogleContact } from "@/lib/google-services";
+import { Header } from "@/components/Header";
+import { RemindersBanner } from "@/components/RemindersBanner";
 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<GoogleContact[]>([]);
@@ -103,59 +105,62 @@ export default function ContactsPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", padding: "20px" }}>
-      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
-          <Link
-            href="/"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "40px",
-              height: "40px",
-              borderRadius: "10px",
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-              color: "var(--foreground-muted)",
-              textDecoration: "none",
-            }}
-          >
-            <ArrowLeft style={{ width: "20px", height: "20px" }} />
-          </Link>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Users style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
-              <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>Contacts</h1>
-            </div>
-            <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginTop: "4px" }}>
-              Your Google Contacts
-            </p>
-          </div>
-          {isConnected && (
-            <button
-              onClick={() => fetchContacts()}
-              disabled={loading}
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+      <Header />
+      <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "20px" }}>
+          <RemindersBanner />
+          {/* Page Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+            <Link
+              href="/"
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "6px",
-                padding: "8px 14px",
-                borderRadius: "8px",
+                justifyContent: "center",
+                width: "40px",
+                height: "40px",
+                borderRadius: "10px",
                 backgroundColor: "rgba(255, 255, 255, 0.05)",
                 color: "var(--foreground-muted)",
-                border: "none",
-                cursor: loading ? "not-allowed" : "pointer",
-                fontSize: "13px",
+                textDecoration: "none",
               }}
             >
-              <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
-              Refresh
-            </button>
-          )}
-        </div>
+              <ArrowLeft style={{ width: "20px", height: "20px" }} />
+            </Link>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Users style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
+                <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>Contacts</h1>
+              </div>
+              <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginTop: "4px" }}>
+                Your Google Contacts
+              </p>
+            </div>
+            {isConnected && (
+              <button
+                onClick={() => fetchContacts()}
+                disabled={loading}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 14px",
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                  color: "var(--foreground-muted)",
+                  border: "none",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  fontSize: "13px",
+                }}
+              >
+                <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
+                Refresh
+              </button>
+            )}
+          </div>
 
-        {/* Search Bar */}
+          {/* Search Bar */}
         {isConnected && (
           <form onSubmit={handleSearch} style={{ marginBottom: "20px" }}>
             <div
@@ -346,7 +351,8 @@ export default function ContactsPage() {
             </div>
           )}
         </div>
-      </div>
+        </div>
+      </main>
 
       <style jsx global>{`
         @keyframes spin {

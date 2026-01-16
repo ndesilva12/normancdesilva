@@ -9,6 +9,7 @@ import { FilesPreview } from "@/components/FilesPreview";
 import { EmailsPreview } from "@/components/EmailsPreview";
 import { NotesPreview } from "@/components/NotesPreview";
 import { StocksPreview } from "@/components/StocksPreview";
+import { NewsPreview } from "@/components/NewsPreview";
 import { LayoutEditor } from "@/components/LayoutEditor";
 import { DraggableWidget, useDragState } from "@/components/DraggableWidget";
 import { RemindersBanner } from "@/components/RemindersBanner";
@@ -89,6 +90,8 @@ function UnifiedWidgetsGrid({
           return <NotesPreview isMicrosoftConnected={isMicrosoftConnected} onConnectMicrosoft={onConnectMicrosoft} />;
         case "stocks":
           return <StocksPreview />;
+        case "news":
+          return <NewsPreview />;
         default:
           return null;
       }

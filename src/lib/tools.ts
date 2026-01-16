@@ -1,7 +1,6 @@
 import {
   Building2,
   Users,
-  Newspaper,
   Music,
   Search,
   TrendingUp,
@@ -39,15 +38,6 @@ export const tools: Tool[] = [
     category: "sports",
     status: "available",
     aiPowered: true,
-  },
-  {
-    id: "news",
-    name: "News",
-    description: "Browse the latest news articles from ZeroHedge, covering markets, politics, and current events.",
-    icon: Newspaper,
-    href: "/tools/news",
-    category: "news",
-    status: "available",
   },
   {
     id: "spotify",
