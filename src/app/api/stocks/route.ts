@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing symbols parameter" }, { status: 400 });
   }
 
-  const symbols = symbolsParam.split(",").map((s) => s.trim().toUpperCase()).slice(0, 10);
+  const symbols = symbolsParam.split(",").map((s) => s.trim()).slice(0, 30);
 
   try {
     // Use Yahoo Finance API through their chart/quote endpoint
@@ -85,38 +85,94 @@ export async function GET(request: NextRequest) {
 
 function getBasePriceForSymbol(symbol: string): number {
   const prices: Record<string, number> = {
-    SPY: 580,
-    QQQ: 500,
+    // Indices & ETFs
+    "^GSPC": 6964,
+    SPY: 692,
+    TLT: 88,
+    QQQ: 622,
+    IWM: 266,
+    "^VIX": 15.5,
+    DIA: 420,
+    XLE: 48,
+    GLD: 423,
+    SLV: 83,
+    // Commodities
+    "GC=F": 4603,
+    "SI=F": 91,
+    "CL=F": 59,
+    // Crypto & Forex
+    "BTC-USD": 95626,
+    "ETH-USD": 3900,
+    "JPY=X": 158,
+    "DX-Y.NYB": 99,
+    // Bonds
+    "^TNX": 4.17,
+    "^TYX": 4.81,
+    // Stocks
+    TSLA: 439,
+    BSX: 90,
+    GME: 21,
+    CVNA: 461,
+    KSS: 19,
+    RKT: 23,
+    HTZ: 5.6,
+    GRPN: 17,
+    BETR: 37,
+    OPEN: 6.3,
+    // Others
     AAPL: 185,
-    TSLA: 250,
     NVDA: 140,
     MSFT: 425,
     GOOGL: 175,
     AMZN: 200,
     META: 550,
-    "BTC-USD": 105000,
-    "ETH-USD": 3900,
-    DIA: 420,
-    IWM: 220,
   };
   return prices[symbol] || 100 + Math.random() * 200;
 }
 
 function getNameForSymbol(symbol: string): string {
   const names: Record<string, string> = {
+    // Indices & ETFs
+    "^GSPC": "S&P 500",
     SPY: "SPDR S&P 500 ETF",
+    TLT: "iShares 20+ Year Treasury",
     QQQ: "Invesco QQQ Trust",
-    AAPL: "Apple Inc.",
+    IWM: "iShares Russell 2000",
+    "^VIX": "CBOE Volatility Index",
+    DIA: "SPDR Dow Jones ETF",
+    XLE: "Energy Select Sector",
+    GLD: "SPDR Gold Trust",
+    SLV: "iShares Silver Trust",
+    // Commodities
+    "GC=F": "Gold Futures",
+    "SI=F": "Silver Futures",
+    "CL=F": "Crude Oil WTI",
+    // Crypto & Forex
+    "BTC-USD": "Bitcoin USD",
+    "ETH-USD": "Ethereum USD",
+    "JPY=X": "USD/JPY",
+    "DX-Y.NYB": "US Dollar Index",
+    // Bonds
+    "^TNX": "10-Year Treasury Yield",
+    "^TYX": "30-Year Treasury Yield",
+    // Stocks
     TSLA: "Tesla Inc.",
+    BSX: "Boston Scientific",
+    GME: "GameStop Corp.",
+    CVNA: "Carvana Co.",
+    KSS: "Kohl's Corp.",
+    RKT: "Rocket Companies",
+    HTZ: "Hertz Global",
+    GRPN: "Groupon Inc.",
+    BETR: "Better Home & Finance",
+    OPEN: "Opendoor Technologies",
+    // Others
+    AAPL: "Apple Inc.",
     NVDA: "NVIDIA Corporation",
     MSFT: "Microsoft Corporation",
     GOOGL: "Alphabet Inc.",
     AMZN: "Amazon.com Inc.",
     META: "Meta Platforms Inc.",
-    "BTC-USD": "Bitcoin USD",
-    "ETH-USD": "Ethereum USD",
-    DIA: "SPDR Dow Jones ETF",
-    IWM: "iShares Russell 2000",
   };
   return names[symbol] || symbol;
 }

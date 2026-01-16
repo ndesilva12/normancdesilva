@@ -17,7 +17,19 @@ interface StocksPreviewProps {
   defaultSymbols?: string[];
 }
 
-const DEFAULT_SYMBOLS = ["SPY", "QQQ", "AAPL", "TSLA", "BTC-USD"];
+// User's watchlist - mapped to Yahoo Finance symbols
+const DEFAULT_SYMBOLS = [
+  "^GSPC",    // US500 (S&P 500)
+  "SPY",      // SPY
+  "TLT",      // TLT
+  "QQQ",      // QQQ
+  "IWM",      // IWM
+  "^VIX",     // VIX
+  "GC=F",     // GOLD (futures)
+  "BTC-USD",  // BTCUSD
+  "TSLA",     // TSLA
+  "GLD",      // GLD
+];
 
 export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPreviewProps) {
   const [quotes, setQuotes] = useState<StockQuote[]>([]);
@@ -94,7 +106,7 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
 
   const handleAddSymbol = () => {
     const symbol = newSymbol.trim().toUpperCase();
-    if (symbol && !symbols.includes(symbol) && symbols.length < 10) {
+    if (symbol && !symbols.includes(symbol) && symbols.length < 30) {
       setSymbols([...symbols, symbol]);
       setNewSymbol("");
     }
@@ -204,7 +216,7 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
               />
               <button
                 onClick={handleAddSymbol}
-                disabled={!newSymbol.trim() || symbols.length >= 10}
+                disabled={!newSymbol.trim() || symbols.length >= 30}
                 style={{
                   padding: "8px 12px",
                   borderRadius: "6px",
@@ -214,7 +226,7 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
                   fontSize: "13px",
                   fontWeight: 500,
                   cursor: "pointer",
-                  opacity: !newSymbol.trim() || symbols.length >= 10 ? 0.5 : 1,
+                  opacity: !newSymbol.trim() || symbols.length >= 30 ? 0.5 : 1,
                 }}
               >
                 Add
@@ -223,7 +235,7 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
           </div>
 
           <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
-            Your Symbols ({symbols.length}/10)
+            Your Symbols ({symbols.length}/30)
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
             {symbols.map((symbol) => (
