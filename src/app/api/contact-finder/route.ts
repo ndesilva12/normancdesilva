@@ -21,36 +21,72 @@ function generateId(): string {
   return `cf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Query Grok API
+// Retry with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      const errorMsg = lastError.message.toLowerCase();
+
+      // Don't retry on auth errors or invalid requests
+      if (errorMsg.includes("401") || errorMsg.includes("403") || errorMsg.includes("not configured")) {
+        throw lastError;
+      }
+
+      // Check if it's a rate limit error (429) or server error (5xx)
+      if (errorMsg.includes("429") || errorMsg.includes("rate") || errorMsg.includes("5")) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        throw lastError;
+      }
+    }
+  }
+
+  throw lastError || new Error("Max retries exceeded");
+}
+
+// Query Grok API with retry
 async function queryGrok(prompt: string): Promise<string> {
   if (!XAI_API_KEY) throw new Error("Grok API key not configured");
 
-  const response = await fetch("https://api.x.ai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${XAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: AI_CONFIGS.grok.model,
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert OSINT researcher. Always respond with valid JSON.",
-        },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.7,
-    }),
+  return retryWithBackoff(async () => {
+    const response = await fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${XAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: AI_CONFIGS.grok.model,
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert OSINT researcher. Always respond with valid JSON.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Grok API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content || "";
   });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Grok API error: ${response.status} - ${error}`);
-  }
-
-  const data = await response.json();
-  return data.choices[0]?.message?.content || "";
 }
 
 // Query ChatGPT API
@@ -189,35 +225,72 @@ function parseAIResponse(response: string): { results: ContactResult[]; summary:
   }
 }
 
-// Main search function
+// Get fallback AI sources in priority order
+function getFallbackSources(primary: AISource): AISource[] {
+  const fallbacks: AISource[] = [];
+  const allSources: AISource[] = ["grok", "claude", "chatgpt", "gemini"];
+
+  // Add other sources as fallbacks, checking if API key is available
+  for (const source of allSources) {
+    if (source === primary) continue;
+    if (source === "grok" && XAI_API_KEY) fallbacks.push(source);
+    if (source === "claude" && ANTHROPIC_API_KEY) fallbacks.push(source);
+    if (source === "chatgpt" && OPENAI_API_KEY) fallbacks.push(source);
+    if (source === "gemini" && GEMINI_API_KEY) fallbacks.push(source);
+  }
+
+  return fallbacks;
+}
+
+// Main search function with fallback
 async function runSearch(
   query: string,
   searchType: SearchType,
   aiSource: AISource
-): Promise<{ results: ContactResult[]; summary: string }> {
+): Promise<{ results: ContactResult[]; summary: string; actualSource?: AISource }> {
   const prompt =
     searchType === "individual" ? getIndividualSearchPrompt(query) : getTargetSearchPrompt(query);
 
-  let response: string;
+  // Query function for a given source
+  const querySource = async (source: AISource): Promise<string> => {
+    switch (source) {
+      case "grok":
+        return await queryGrok(prompt);
+      case "chatgpt":
+        return await queryChatGPT(prompt);
+      case "claude":
+        return await queryClaude(prompt);
+      case "gemini":
+        return await queryGemini(prompt);
+      default:
+        throw new Error(`Unknown AI source: ${source}`);
+    }
+  };
 
-  switch (aiSource) {
-    case "grok":
-      response = await queryGrok(prompt);
-      break;
-    case "chatgpt":
-      response = await queryChatGPT(prompt);
-      break;
-    case "claude":
-      response = await queryClaude(prompt);
-      break;
-    case "gemini":
-      response = await queryGemini(prompt);
-      break;
-    default:
-      throw new Error(`Unknown AI source: ${aiSource}`);
+  // Try primary source first
+  try {
+    const response = await querySource(aiSource);
+    const parsed = parseAIResponse(response);
+    return { ...parsed, actualSource: aiSource };
+  } catch (primaryError) {
+    console.error(`Primary AI source ${aiSource} failed:`, primaryError);
+
+    // Try fallback sources
+    const fallbacks = getFallbackSources(aiSource);
+    for (const fallbackSource of fallbacks) {
+      try {
+        console.log(`Trying fallback AI source: ${fallbackSource}`);
+        const response = await querySource(fallbackSource);
+        const parsed = parseAIResponse(response);
+        return { ...parsed, actualSource: fallbackSource };
+      } catch (fallbackError) {
+        console.error(`Fallback AI source ${fallbackSource} failed:`, fallbackError);
+      }
+    }
+
+    // If all sources fail, throw the original error
+    throw primaryError;
   }
-
-  return parseAIResponse(response);
 }
 
 // POST - Run a new search
@@ -255,16 +328,18 @@ export async function POST(request: Request) {
     }
 
     // Run the search
-    const { results, summary } = await runSearch(query, searchType, aiSource);
+    const { results, summary, actualSource } = await runSearch(query, searchType, aiSource);
 
     // Create the search result object
     const searchResult: SearchResult = {
       id: generateId(),
       query,
       searchType,
-      aiSource,
+      aiSource: actualSource || aiSource, // Use the actual source that worked
       results,
-      summary,
+      summary: actualSource && actualSource !== aiSource
+        ? `${summary} (Note: Fallback to ${actualSource} was used due to ${aiSource} unavailability)`
+        : summary,
       disclaimer: CONTACT_FINDER_DISCLAIMER,
       createdAt: new Date().toISOString(),
       userId,

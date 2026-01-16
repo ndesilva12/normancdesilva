@@ -7,37 +7,94 @@ interface AIResponse {
   content: string;
 }
 
-async function callGrok(prompt: string): Promise<AIResponse> {
-  const response = await fetch("https://api.x.ai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${GROK_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "grok-3-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a research analyst specializing in corporate political analysis. You provide factual, balanced analysis based on publicly available information. Always respond with valid JSON.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: 0.3,
-    }),
-  });
+// Simple in-memory cache for AI responses (reduces API calls)
+const responseCache = new Map<string, { response: AIResponse; timestamp: number }>();
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour cache
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Grok API error response:", errorText);
-    throw new Error(`Grok API error: ${response.status} - ${errorText}`);
+function getCachedResponse(cacheKey: string): AIResponse | null {
+  const cached = responseCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.response;
+  }
+  return null;
+}
+
+function setCachedResponse(cacheKey: string, response: AIResponse): void {
+  responseCache.set(cacheKey, { response, timestamp: Date.now() });
+  // Clean old entries if cache gets too large
+  if (responseCache.size > 100) {
+    const oldestKey = responseCache.keys().next().value;
+    if (oldestKey) responseCache.delete(oldestKey);
+  }
+}
+
+// Retry with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      const errorMsg = lastError.message.toLowerCase();
+
+      // Don't retry on auth errors or invalid requests
+      if (errorMsg.includes("401") || errorMsg.includes("403") || errorMsg.includes("invalid")) {
+        throw lastError;
+      }
+
+      // Check if it's a rate limit error (429) or server error (5xx)
+      if (errorMsg.includes("429") || errorMsg.includes("rate") || errorMsg.includes("5")) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        throw lastError;
+      }
+    }
   }
 
-  const data = await response.json();
-  return { content: data.choices[0].message.content };
+  throw lastError || new Error("Max retries exceeded");
+}
+
+async function callGrok(prompt: string): Promise<AIResponse> {
+  return retryWithBackoff(async () => {
+    const response = await fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${GROK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "grok-3-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a research analyst specializing in corporate political analysis. You provide factual, balanced analysis based on publicly available information. Always respond with valid JSON.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Grok API error response:", errorText);
+      throw new Error(`Grok API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    return { content: data.choices[0].message.content };
+  });
 }
 
 async function callClaude(prompt: string): Promise<AIResponse> {
@@ -68,15 +125,42 @@ async function callClaude(prompt: string): Promise<AIResponse> {
   return { content: data.content[0].text };
 }
 
-async function callAI(prompt: string): Promise<AIResponse> {
-  // Prefer Grok, fallback to Claude
+async function callAI(prompt: string, cacheKey?: string): Promise<AIResponse> {
+  // Check cache first
+  if (cacheKey) {
+    const cached = getCachedResponse(cacheKey);
+    if (cached) {
+      console.log("Returning cached AI response");
+      return cached;
+    }
+  }
+
+  let response: AIResponse;
+
+  // Try Grok first, fallback to Claude if Grok fails
   if (GROK_API_KEY) {
-    return callGrok(prompt);
+    try {
+      response = await callGrok(prompt);
+    } catch (grokError) {
+      console.error("Grok failed, trying Claude fallback:", grokError);
+      if (ANTHROPIC_API_KEY) {
+        response = await callClaude(prompt);
+      } else {
+        throw grokError;
+      }
+    }
   } else if (ANTHROPIC_API_KEY) {
-    return callClaude(prompt);
+    response = await callClaude(prompt);
   } else {
     throw new Error("No AI API key configured");
   }
+
+  // Cache the response
+  if (cacheKey) {
+    setCachedResponse(cacheKey, response);
+  }
+
+  return response;
 }
 
 export async function analyzeCompany(companyName: string): Promise<CompanyAnalysis> {
@@ -134,7 +218,9 @@ IMPORTANT REQUIREMENTS:
 4. Be factual and cite real events where possible.
 5. If information is limited, indicate lower confidence score.`;
 
-  const response = await callAI(prompt);
+  // Use company name as cache key
+  const cacheKey = `company-analysis-${companyName.toLowerCase().replace(/\s+/g, "-")}`;
+  const response = await callAI(prompt, cacheKey);
 
   try {
     // Extract JSON from response (handle markdown code blocks)
@@ -168,7 +254,9 @@ Respond with a JSON array:
 
 Only include real, verifiable companies.`;
 
-  const response = await callAI(prompt);
+  // Use query as cache key
+  const cacheKey = `company-search-${query.toLowerCase().replace(/\s+/g, "-")}`;
+  const response = await callAI(prompt, cacheKey);
 
   try {
     let jsonStr = response.content;

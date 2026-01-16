@@ -80,24 +80,26 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching stock data:", error);
 
-    // Fallback: return mock data if Yahoo fails
-    const mockQuotes: StockQuote[] = symbols.map((symbol) => {
-      // Generate realistic mock data
+    // Return error status with static fallback prices (not random)
+    // This makes it clear the data may be stale
+    const fallbackQuotes: StockQuote[] = symbols.map((symbol) => {
       const basePrice = getBasePriceForSymbol(symbol);
-      const change = (Math.random() - 0.5) * basePrice * 0.05;
-      const changePercent = (change / basePrice) * 100;
 
       return {
         symbol,
         name: getNameForSymbol(symbol),
-        price: basePrice + change,
-        change,
-        changePercent,
+        price: basePrice,
+        change: 0, // No change data available
+        changePercent: 0, // No change data available
         currency: symbol.includes("-USD") ? "USD" : "USD",
       };
     });
 
-    return NextResponse.json({ quotes: mockQuotes, isMock: true });
+    return NextResponse.json({
+      quotes: fallbackQuotes,
+      isStale: true,
+      error: "Live data temporarily unavailable. Showing reference prices.",
+    });
   }
 }
 
