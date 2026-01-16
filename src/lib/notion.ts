@@ -192,15 +192,16 @@ export async function getNotionPages(limit = 20): Promise<NotionPage[]> {
       // Continue anyway to get the actual error from query
     }
 
-    // Use raw request to query database (bypassing SDK type issues)
-    const response = await notion.request<{
-      results: PageObjectResponse[];
-      has_more: boolean;
-      next_cursor: string | null;
-    }>({
-      path: `databases/${NOTION_DATABASE_ID!}/query`,
-      method: "post",
-      body: {
+    // Query database using direct HTTP request (SDK types are incomplete)
+    const queryUrl = `https://api.notion.com/v1/databases/${encodeURIComponent(NOTION_DATABASE_ID!)}/query`;
+    const queryResponse = await fetch(queryUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${NOTION_TOKEN}`,
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         page_size: limit,
         sorts: [
           {
@@ -208,8 +209,19 @@ export async function getNotionPages(limit = 20): Promise<NotionPage[]> {
             direction: "descending",
           },
         ],
-      },
+      }),
     });
+
+    if (!queryResponse.ok) {
+      const errorData = await queryResponse.json().catch(() => ({}));
+      throw new Error(`Notion API: ${(errorData as { message?: string }).message || queryResponse.statusText}`);
+    }
+
+    const response = await queryResponse.json() as {
+      results: PageObjectResponse[];
+      has_more: boolean;
+      next_cursor: string | null;
+    };
 
     console.log("Query successful, found", response.results.length, "pages");
 
