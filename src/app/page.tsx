@@ -16,6 +16,65 @@ import { RemindersBanner } from "@/components/RemindersBanner";
 import { useLayout, WidgetConfig } from "@/contexts/LayoutContext";
 import { tools } from "@/lib/tools";
 
+// Mobile Date/Time Banner Component
+function MobileDateTimeBanner() {
+  const [dateTime, setDateTime] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setDateTime(new Date());
+    const interval = setInterval(() => {
+      setDateTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formattedDate = dateTime?.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
+  const formattedTime = dateTime?.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (!dateTime) return null;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "12px",
+        padding: "16px 0",
+        marginBottom: "8px",
+      }}
+    >
+      <span
+        style={{
+          fontSize: "15px",
+          fontWeight: 600,
+          color: "var(--foreground)",
+        }}
+      >
+        {formattedDate}
+      </span>
+      <span
+        style={{
+          fontSize: "15px",
+          fontWeight: 400,
+          color: "var(--accent)",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {formattedTime}
+      </span>
+    </div>
+  );
+}
+
 // Widget title mapping
 const WIDGET_TITLES: Record<string, string> = {
   files: "Files",
@@ -208,6 +267,9 @@ function UnifiedWidgetsGrid({
           gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
           gap: "16px",
           gridAutoRows: "364px",
+          width: "100%",
+          maxWidth: "100%",
+          overflow: "hidden",
         }}
       >
         {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}
@@ -275,8 +337,13 @@ export default function Home() {
             maxWidth: "1200px",
             margin: "0 auto",
             padding: "24px 24px 100px 24px",
+            boxSizing: "border-box",
+            overflow: "hidden",
           }}
         >
+          {/* Mobile Date/Time Banner - Only shown on mobile */}
+          {isMobile && !isEditMode && <MobileDateTimeBanner />}
+
           {/* Reminders Banner - Hidden in edit mode */}
           {!isEditMode && (
             <motion.div

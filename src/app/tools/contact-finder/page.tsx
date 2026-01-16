@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -28,6 +28,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import {
@@ -470,27 +472,90 @@ export default function ContactFinderPage() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Load search history from localStorage
+  // Load search history from Firestore with real-time sync, fallback to localStorage
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setSearchHistory([]);
+      return;
+    }
+
     const storageKey = `contact-finder-history-${user.uid}`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      try {
-        setSearchHistory(JSON.parse(stored));
-      } catch {
-        setSearchHistory([]);
+
+    // If Firestore is available, use it with real-time sync
+    if (db) {
+      const userDocRef = doc(db, "users", user.uid);
+
+      const unsubscribe = onSnapshot(
+        userDocRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.contactFinderHistory) {
+              setSearchHistory(data.contactFinderHistory);
+              // Also update localStorage as backup
+              localStorage.setItem(storageKey, JSON.stringify(data.contactFinderHistory));
+            }
+          } else {
+            // Check localStorage for initial data to migrate
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+              try {
+                const localHistory = JSON.parse(stored);
+                setSearchHistory(localHistory);
+                // Migrate to Firestore
+                setDoc(userDocRef, { contactFinderHistory: localHistory }, { merge: true });
+              } catch {
+                setSearchHistory([]);
+              }
+            }
+          }
+        },
+        (error) => {
+          console.error("Firestore sync error:", error);
+          // Fallback to localStorage
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            try {
+              setSearchHistory(JSON.parse(stored));
+            } catch {
+              setSearchHistory([]);
+            }
+          }
+        }
+      );
+
+      return () => unsubscribe();
+    } else {
+      // Fallback to localStorage only
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        try {
+          setSearchHistory(JSON.parse(stored));
+        } catch {
+          setSearchHistory([]);
+        }
       }
     }
   }, [user]);
 
-  // Save search history to localStorage
-  const saveHistory = (history: SearchResult[]) => {
+  // Save search history to Firestore and localStorage
+  const saveHistory = useCallback(async (history: SearchResult[]) => {
     if (!user) return;
+
     const storageKey = `contact-finder-history-${user.uid}`;
     localStorage.setItem(storageKey, JSON.stringify(history));
     setSearchHistory(history);
-  };
+
+    // Save to Firestore for cross-device sync
+    if (db) {
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        await setDoc(userDocRef, { contactFinderHistory: history }, { merge: true });
+      } catch (error) {
+        console.error("Failed to save contact finder history to Firestore:", error);
+      }
+    }
+  }, [user]);
 
   // Run search
   const handleSearch = async () => {

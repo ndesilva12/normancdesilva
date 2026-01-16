@@ -33,7 +33,7 @@ export function NewsPreview() {
         throw new Error("Failed to fetch articles");
       }
       const data = await response.json();
-      setArticles(data.articles?.slice(0, 6) || []);
+      setArticles(data.articles?.slice(0, 12) || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load articles");
     } finally {
@@ -152,7 +152,7 @@ export function NewsPreview() {
       </div>
 
       {/* Content */}
-      <div style={{ padding: "8px 12px", flex: 1, minHeight: 0, overflow: "hidden" }}>
+      <div style={{ padding: "8px 12px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
         {loading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "30px 0" }}>
             <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />

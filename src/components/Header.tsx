@@ -123,42 +123,44 @@ export function Header({
           </span>
         </Link>
 
-        {/* Center: Date/Time */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            position: "absolute",
-            left: "50%",
-            transform: "translateX(-50%)",
-          }}
-        >
-          {dateTime && (
-            <>
-              <span
-                style={{
-                  fontSize: isMobile ? "14px" : "16px",
-                  fontWeight: 600,
-                  color: "var(--foreground)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {formattedDate}
-              </span>
-              <span
-                style={{
-                  fontSize: isMobile ? "14px" : "16px",
-                  fontWeight: 400,
-                  color: "var(--accent)",
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {formattedTime}
-              </span>
-            </>
-          )}
-        </div>
+        {/* Center: Date/Time - Hidden on mobile */}
+        {!isMobile && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              position: "absolute",
+              left: "50%",
+              transform: "translateX(-50%)",
+            }}
+          >
+            {dateTime && (
+              <>
+                <span
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: 600,
+                    color: "var(--foreground)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {formattedDate}
+                </span>
+                <span
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: 400,
+                    color: "var(--accent)",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {formattedTime}
+                </span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Right: Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>

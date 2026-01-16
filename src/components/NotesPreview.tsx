@@ -21,7 +21,7 @@ export function NotesPreview() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/notion?limit=5");
+      const response = await fetch("/api/notion?limit=10");
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to fetch notes");
@@ -117,7 +117,7 @@ export function NotesPreview() {
       </div>
 
       {/* Content */}
-      <div style={{ padding: "8px 12px", flex: 1, minHeight: "160px", overflow: "hidden" }}>
+      <div style={{ padding: "8px 12px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
         {loading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "30px 0" }}>
             <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />

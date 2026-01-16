@@ -277,7 +277,7 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
       )}
 
       {/* Content */}
-      <div style={{ padding: "8px 12px", flex: 1, minHeight: "160px" }}>
+      <div style={{ padding: "8px 12px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
         {loading && quotes.length === 0 ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "30px 0" }}>
             <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />

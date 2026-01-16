@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Sparkles, AlertCircle, Clock, TrendingUp, History, X as XIcon } from "lucide-react";
 import Link from "next/link";
@@ -9,6 +9,9 @@ import { RemindersBanner } from "@/components/RemindersBanner";
 import { CompanySearchBar } from "@/components/company/CompanySearchBar";
 import { CompanyReport } from "@/components/company/CompanyReport";
 import { CompanyAnalysis } from "@/types/company";
+import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
 
 const RECENT_SEARCHES_KEY = "company-politics-recent-searches";
 const MAX_RECENT_SEARCHES = 10;
@@ -19,6 +22,7 @@ interface TrendingCompanies {
 }
 
 export default function CompanyPoliticsPage() {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [report, setReport] = useState<CompanyAnalysis | null>(null);
   const [cached, setCached] = useState(false);
@@ -27,17 +31,71 @@ export default function CompanyPoliticsPage() {
   const [trending, setTrending] = useState<TrendingCompanies>({ google: [], x: [] });
   const [trendingLoading, setTrendingLoading] = useState(true);
 
-  // Load recent searches from localStorage
+  // Get user-specific storage key
+  const getStorageKey = useCallback(() => {
+    return user ? `${RECENT_SEARCHES_KEY}-${user.uid}` : RECENT_SEARCHES_KEY;
+  }, [user]);
+
+  // Load recent searches from Firestore with real-time sync, fallback to localStorage
   useEffect(() => {
-    const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
-    if (stored) {
-      try {
-        setRecentSearches(JSON.parse(stored));
-      } catch {
-        setRecentSearches([]);
+    const storageKey = getStorageKey();
+
+    // If user is logged in and Firestore is available, use it with real-time sync
+    if (user && db) {
+      const userDocRef = doc(db, "users", user.uid);
+
+      const unsubscribe = onSnapshot(
+        userDocRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.companySearchHistory) {
+              setRecentSearches(data.companySearchHistory);
+              // Also update localStorage as backup
+              localStorage.setItem(storageKey, JSON.stringify(data.companySearchHistory));
+            }
+          } else {
+            // Check localStorage for initial data to migrate
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+              try {
+                const localHistory = JSON.parse(stored);
+                setRecentSearches(localHistory);
+                // Migrate to Firestore
+                setDoc(userDocRef, { companySearchHistory: localHistory }, { merge: true });
+              } catch {
+                setRecentSearches([]);
+              }
+            }
+          }
+        },
+        (error) => {
+          console.error("Firestore sync error:", error);
+          // Fallback to localStorage
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            try {
+              setRecentSearches(JSON.parse(stored));
+            } catch {
+              setRecentSearches([]);
+            }
+          }
+        }
+      );
+
+      return () => unsubscribe();
+    } else {
+      // Fallback to localStorage only
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        try {
+          setRecentSearches(JSON.parse(stored));
+        } catch {
+          setRecentSearches([]);
+        }
       }
     }
-  }, []);
+  }, [user, getStorageKey]);
 
   // Fetch trending companies
   useEffect(() => {
@@ -57,18 +115,33 @@ export default function CompanyPoliticsPage() {
     fetchTrending();
   }, []);
 
-  const addToRecentSearches = (query: string) => {
+  // Save search history to Firestore and localStorage
+  const saveSearchHistory = useCallback(async (history: string[]) => {
+    const storageKey = getStorageKey();
+    localStorage.setItem(storageKey, JSON.stringify(history));
+    setRecentSearches(history);
+
+    // Save to Firestore for cross-device sync
+    if (user && db) {
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        await setDoc(userDocRef, { companySearchHistory: history }, { merge: true });
+      } catch (error) {
+        console.error("Failed to save company search history to Firestore:", error);
+      }
+    }
+  }, [user, getStorageKey]);
+
+  const addToRecentSearches = useCallback((query: string) => {
     const normalized = query.trim();
     const updated = [normalized, ...recentSearches.filter(s => s.toLowerCase() !== normalized.toLowerCase())].slice(0, MAX_RECENT_SEARCHES);
-    setRecentSearches(updated);
-    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
-  };
+    saveSearchHistory(updated);
+  }, [recentSearches, saveSearchHistory]);
 
-  const removeFromRecentSearches = (query: string) => {
+  const removeFromRecentSearches = useCallback((query: string) => {
     const updated = recentSearches.filter(s => s !== query);
-    setRecentSearches(updated);
-    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
-  };
+    saveSearchHistory(updated);
+  }, [recentSearches, saveSearchHistory]);
 
   const handleSearch = async (query: string) => {
     setIsLoading(true);

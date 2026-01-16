@@ -25,7 +25,7 @@ export function FilesPreview({ isGoogleConnected, onConnectGoogle }: FilesPrevie
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/drive?limit=5");
+      const response = await fetch("/api/drive?limit=10");
       if (!response.ok) {
         throw new Error("Failed to fetch files");
       }
@@ -75,7 +75,7 @@ export function FilesPreview({ isGoogleConnected, onConnectGoogle }: FilesPrevie
       </Link>
 
       {/* Content */}
-      <div style={{ padding: "12px 16px", flex: 1, minHeight: "160px" }}>
+      <div style={{ padding: "12px 16px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
         {!isGoogleConnected ? (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <p style={{ color: "var(--foreground-muted)", fontSize: "13px", marginBottom: "12px" }}>
