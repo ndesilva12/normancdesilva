@@ -280,7 +280,7 @@ export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed
     <div
       style={{
         position: "relative",
-        width: compact ? "36px" : "auto",
+        width: "auto",
         flexShrink: 0,
         zIndex: isExpanded ? 9999 : 1,
       }}
@@ -439,9 +439,9 @@ export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: compact ? "36px" : "auto",
+            minWidth: "36px",
             height: "36px",
-            padding: compact ? "0" : "0 10px",
+            padding: compact ? "0 8px" : "0 10px",
             background: "none",
             border: "none",
             cursor: "pointer",

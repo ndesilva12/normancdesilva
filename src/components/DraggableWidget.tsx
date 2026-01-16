@@ -274,6 +274,8 @@ export function DraggableWidget({
     <div
       style={{
         height: "100%",
+        minWidth: 0,
+        overflow: "hidden",
         ...getSizeStyles(),
         ...getGridStyles(),
         transition: "max-height 0.3s ease",

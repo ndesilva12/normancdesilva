@@ -333,7 +333,7 @@ export default function Home() {
       <Header isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />
       <LayoutEditor />
 
-      <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
+      <main style={{ flex: 1, width: "100%", paddingTop: "64px", overflow: "hidden" }}>
         <div
           style={{
             width: "100%",

@@ -4,6 +4,8 @@ import {
   getNotionPage,
   getNotionPageContent,
   createNotionPage,
+  createNotionSubpage,
+  getNotionSubpages,
   updateNotionPageTitle,
   appendToNotionPage,
   archiveNotionPage,
@@ -15,6 +17,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const pageId = searchParams.get("pageId");
   const content = searchParams.get("content");
+  const subpages = searchParams.get("subpages");
   const search = searchParams.get("search");
   const limit = parseInt(searchParams.get("limit") || "20", 10);
 
@@ -47,6 +50,12 @@ export async function GET(request: NextRequest) {
         getNotionPageContent(pageId),
       ]);
       return NextResponse.json({ page, blocks });
+    }
+
+    // Get subpages of a page
+    if (pageId && subpages === "true") {
+      const childPages = await getNotionSubpages(pageId);
+      return NextResponse.json({ subpages: childPages });
     }
 
     // Get specific page metadata
@@ -89,7 +98,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, pageId, title, content } = body;
+    const { action, pageId, parentPageId, title, content } = body;
 
     switch (action) {
       case "create": {
@@ -98,6 +107,14 @@ export async function POST(request: NextRequest) {
         }
         const page = await createNotionPage(title, content);
         return NextResponse.json({ page });
+      }
+
+      case "createSubpage": {
+        if (!parentPageId || !title) {
+          return NextResponse.json({ error: "Parent page ID and title are required" }, { status: 400 });
+        }
+        const subpage = await createNotionSubpage(parentPageId, title, content);
+        return NextResponse.json({ page: subpage });
       }
 
       case "updateTitle": {

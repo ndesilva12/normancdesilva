@@ -364,6 +364,81 @@ export async function createNotionPage(title: string, content?: string): Promise
   }
 }
 
+// Create a subpage (nested page inside another page)
+export async function createNotionSubpage(parentPageId: string, title: string, content?: string): Promise<NotionPage> {
+  try {
+    const children: Parameters<typeof notion.pages.create>[0]["children"] = [];
+
+    if (content) {
+      // Split content by newlines and create paragraph blocks
+      const lines = content.split("\n").filter(line => line.trim());
+      for (const line of lines) {
+        children.push({
+          object: "block",
+          type: "paragraph",
+          paragraph: {
+            rich_text: [{ type: "text", text: { content: line } }],
+          },
+        });
+      }
+    }
+
+    // Create page with parent as page_id instead of database_id
+    const page = (await notion.pages.create({
+      parent: { page_id: parentPageId },
+      properties: {
+        title: {
+          title: [{ type: "text", text: { content: title } }],
+        },
+      },
+      children: children.length > 0 ? children : undefined,
+    })) as PageObjectResponse;
+
+    return {
+      id: page.id,
+      title: getPageTitle(page),
+      icon: getPageIcon(page),
+      cover: getPageCover(page),
+      createdTime: page.created_time,
+      lastEditedTime: page.last_edited_time,
+      url: page.url,
+    };
+  } catch (error) {
+    console.error("Error creating Notion subpage:", error);
+    throw error;
+  }
+}
+
+// Get subpages (child pages) of a page
+export async function getNotionSubpages(parentPageId: string): Promise<NotionPage[]> {
+  try {
+    // Query children blocks and filter for child_page type
+    const response = await notion.blocks.children.list({
+      block_id: parentPageId,
+      page_size: 100,
+    });
+
+    const subpages: NotionPage[] = [];
+
+    for (const block of response.results) {
+      if ("type" in block && block.type === "child_page") {
+        // Fetch the full page details for each child page
+        try {
+          const page = await getNotionPage(block.id);
+          subpages.push(page);
+        } catch (error) {
+          console.error(`Error fetching subpage ${block.id}:`, error);
+        }
+      }
+    }
+
+    return subpages;
+  } catch (error) {
+    console.error("Error fetching Notion subpages:", error);
+    throw error;
+  }
+}
+
 // Update a page title
 export async function updateNotionPageTitle(pageId: string, title: string): Promise<NotionPage> {
   validateConfig();

@@ -51,6 +51,18 @@ function NotesContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
+  // Mobile state
+  const [isMobile, setIsMobile] = useState(false);
+  const [showNoteContent, setShowNoteContent] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   // Editing states
   const [editingTitle, setEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
@@ -69,6 +81,12 @@ function NotesContent() {
   const [addingContent, setAddingContent] = useState(false);
   const [newContent, setNewContent] = useState("");
   const [savingNewContent, setSavingNewContent] = useState(false);
+
+  // Subpages state
+  const [subpages, setSubpages] = useState<NotionPage[]>([]);
+  const [showNewSubpage, setShowNewSubpage] = useState(false);
+  const [newSubpageTitle, setNewSubpageTitle] = useState("");
+  const [creatingSubpage, setCreatingSubpage] = useState(false);
 
   const titleInputRef = useRef<HTMLInputElement>(null);
   const newContentRef = useRef<HTMLTextAreaElement>(null);
@@ -92,14 +110,17 @@ function NotesContent() {
 
   const fetchPageContent = useCallback(async (pageId: string) => {
     setContentLoading(true);
+    setSubpages([]);
     try {
-      const [pageResponse, contentResponse] = await Promise.all([
+      const [pageResponse, contentResponse, subpagesResponse] = await Promise.all([
         fetch(`/api/notion?pageId=${pageId}`),
         fetch(`/api/notion?pageId=${pageId}&content=true`),
+        fetch(`/api/notion?pageId=${pageId}&subpages=true`),
       ]);
 
       const pageData = await pageResponse.json();
       const contentData = await contentResponse.json();
+      const subpagesData = await subpagesResponse.json();
 
       if (pageResponse.ok && pageData.page) {
         setSelectedPage(pageData.page);
@@ -108,6 +129,10 @@ function NotesContent() {
 
       if (contentResponse.ok && contentData.blocks) {
         setPageContent(contentData.blocks);
+      }
+
+      if (subpagesResponse.ok && subpagesData.subpages) {
+        setSubpages(subpagesData.subpages);
       }
     } catch (err) {
       console.error("Error fetching page content:", err);
@@ -169,6 +194,14 @@ function NotesContent() {
     setEditingBlockId(null);
     setAddingContent(false);
     fetchPageContent(page.id);
+    // On mobile, show the note content view
+    if (isMobile) {
+      setShowNoteContent(true);
+    }
+  };
+
+  const handleBackToList = () => {
+    setShowNoteContent(false);
   };
 
   const handleSaveTitle = async () => {
@@ -326,6 +359,34 @@ function NotesContent() {
       console.error("Error adding content:", err);
     } finally {
       setSavingNewContent(false);
+    }
+  };
+
+  const handleCreateSubpage = async () => {
+    if (!selectedPage || !newSubpageTitle.trim()) return;
+
+    setCreatingSubpage(true);
+    try {
+      const response = await fetch("/api/notion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "createSubpage",
+          parentPageId: selectedPage.id,
+          title: newSubpageTitle.trim(),
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSubpages([...subpages, data.page]);
+        setNewSubpageTitle("");
+        setShowNewSubpage(false);
+      }
+    } catch (err) {
+      console.error("Error creating subpage:", err);
+    } finally {
+      setCreatingSubpage(false);
     }
   };
 
@@ -553,14 +614,14 @@ function NotesContent() {
             transition={{ delay: 0.1 }}
             style={{ display: "flex", gap: "20px", height: "calc(100% - 100px)" }}
           >
-            {/* Sidebar - Notes List */}
+            {/* Sidebar - Notes List (hidden on mobile when viewing note content) */}
             <div
               className="glass"
               style={{
-                width: "320px",
+                width: isMobile ? "100%" : "320px",
                 flexShrink: 0,
                 borderRadius: "12px",
-                display: "flex",
+                display: isMobile && showNoteContent ? "none" : "flex",
                 flexDirection: "column",
                 overflow: "hidden",
               }}
@@ -718,13 +779,13 @@ function NotesContent() {
               </div>
             </div>
 
-            {/* Content Area */}
+            {/* Content Area (hidden on mobile when showing list) */}
             <div
               className="glass"
               style={{
                 flex: 1,
                 borderRadius: "12px",
-                display: "flex",
+                display: isMobile && !showNoteContent ? "none" : "flex",
                 flexDirection: "column",
                 overflow: "hidden",
               }}
@@ -733,13 +794,34 @@ function NotesContent() {
                 <>
                   {/* Note Header */}
                   <div style={{
-                    padding: "20px 24px",
+                    padding: isMobile ? "16px" : "20px 24px",
                     borderBottom: "1px solid var(--glass-border)",
                     display: "flex",
                     alignItems: "center",
-                    gap: "16px",
+                    gap: isMobile ? "12px" : "16px",
                   }}>
-                    <span style={{ fontSize: "28px" }}>{selectedPage.icon || "📝"}</span>
+                    {/* Back button on mobile */}
+                    {isMobile && (
+                      <button
+                        onClick={handleBackToList}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "36px",
+                          height: "36px",
+                          borderRadius: "8px",
+                          backgroundColor: "rgba(255,255,255,0.05)",
+                          color: "var(--foreground-muted)",
+                          border: "none",
+                          cursor: "pointer",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <ArrowLeft style={{ width: "18px", height: "18px" }} />
+                      </button>
+                    )}
+                    <span style={{ fontSize: isMobile ? "24px" : "28px" }}>{selectedPage.icon || "📝"}</span>
                     <div style={{ flex: 1 }}>
                       {editingTitle ? (
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -955,6 +1037,141 @@ function NotesContent() {
                         Add Content
                       </button>
                     )}
+
+                    {/* Subpages Section */}
+                    <div style={{ marginTop: "32px", borderTop: "1px solid var(--glass-border)", paddingTop: "24px" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+                        <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)" }}>
+                          Subnotes
+                        </h3>
+                        <button
+                          onClick={() => setShowNewSubpage(true)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "6px 12px",
+                            borderRadius: "6px",
+                            backgroundColor: "rgba(255,255,255,0.05)",
+                            border: "none",
+                            color: "var(--foreground-muted)",
+                            fontSize: "13px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <Plus style={{ width: "14px", height: "14px" }} />
+                          Add Subnote
+                        </button>
+                      </div>
+
+                      {/* New Subpage Form */}
+                      {showNewSubpage && (
+                        <div style={{ marginBottom: "16px", padding: "12px", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
+                          <input
+                            type="text"
+                            value={newSubpageTitle}
+                            onChange={(e) => setNewSubpageTitle(e.target.value)}
+                            placeholder="Subnote title..."
+                            autoFocus
+                            style={{
+                              width: "100%",
+                              padding: "10px 12px",
+                              backgroundColor: "rgba(255,255,255,0.05)",
+                              border: "1px solid var(--glass-border)",
+                              borderRadius: "6px",
+                              color: "var(--foreground)",
+                              fontSize: "14px",
+                              marginBottom: "10px",
+                            }}
+                            onKeyDown={(e) => e.key === "Enter" && handleCreateSubpage()}
+                          />
+                          <div style={{ display: "flex", gap: "8px" }}>
+                            <button
+                              onClick={handleCreateSubpage}
+                              disabled={creatingSubpage || !newSubpageTitle.trim()}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                padding: "8px 14px",
+                                borderRadius: "6px",
+                                backgroundColor: "var(--accent)",
+                                color: "var(--background)",
+                                border: "none",
+                                cursor: creatingSubpage || !newSubpageTitle.trim() ? "not-allowed" : "pointer",
+                                fontSize: "13px",
+                                opacity: creatingSubpage || !newSubpageTitle.trim() ? 0.5 : 1,
+                              }}
+                            >
+                              {creatingSubpage ? <Loader2 style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite" }} /> : <Plus style={{ width: "14px", height: "14px" }} />}
+                              Create
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowNewSubpage(false);
+                                setNewSubpageTitle("");
+                              }}
+                              style={{
+                                padding: "8px 14px",
+                                borderRadius: "6px",
+                                backgroundColor: "rgba(255,255,255,0.1)",
+                                color: "var(--foreground-muted)",
+                                border: "none",
+                                cursor: "pointer",
+                                fontSize: "13px",
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Subpages List */}
+                      {subpages.length > 0 ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          {subpages.map((subpage) => (
+                            <button
+                              key={subpage.id}
+                              onClick={() => handleSelectPage(subpage)}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "10px",
+                                padding: "12px",
+                                borderRadius: "8px",
+                                backgroundColor: "rgba(255,255,255,0.03)",
+                                border: "1px solid var(--glass-border)",
+                                cursor: "pointer",
+                                textAlign: "left",
+                                transition: "background 0.15s",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)";
+                              }}
+                            >
+                              <span style={{ fontSize: "16px" }}>{subpage.icon || "📄"}</span>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>
+                                  {subpage.title || "Untitled"}
+                                </div>
+                                <div style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "2px" }}>
+                                  {formatDate(subpage.lastEditedTime)}
+                                </div>
+                              </div>
+                              <ChevronRight style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                            </button>
+                          ))}
+                        </div>
+                      ) : !showNewSubpage && (
+                        <p style={{ fontSize: "13px", color: "var(--foreground-muted)", textAlign: "center", padding: "20px" }}>
+                          No subnotes yet. Create one to organize your content.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (
