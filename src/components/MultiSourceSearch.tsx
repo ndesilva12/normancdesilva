@@ -446,91 +446,149 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             </button>
           </div>
 
-          <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))" }}>
-            {results.map((result) => {
-              const sourceConfig = SEARCH_SOURCES.find((s) => s.id === result.source);
-              return (
-                <div
-                  key={result.source}
-                  className="glass"
-                  style={{
-                    borderRadius: "12px",
-                    overflow: "hidden",
-                  }}
-                >
+          {/* Single AI source - full page display */}
+          {results.length === 1 && results[0].type === "ai" ? (
+            <div
+              className="glass"
+              style={{
+                borderRadius: "12px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "16px",
+                  borderBottom: "1px solid var(--glass-border)",
+                }}
+              >
+                <span style={{ fontSize: "20px" }}>
+                  {SEARCH_SOURCES.find((s) => s.id === results[0].source)?.icon}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 500, color: "var(--foreground)" }}>{results[0].sourceName}</div>
+                  <div style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>AI Response</div>
+                </div>
+                {results[0].status === "loading" && (
+                  <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+                )}
+              </div>
+              <div style={{ padding: "20px" }}>
+                {results[0].status === "loading" && (
+                  <div style={{ color: "var(--foreground-muted)", fontSize: "14px" }}>
+                    Generating response...
+                  </div>
+                )}
+                {results[0].status === "error" && (
+                  <div style={{ color: "#f87171", fontSize: "14px" }}>
+                    Error: {results[0].error}
+                  </div>
+                )}
+                {results[0].status === "success" && results[0].content && (
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      padding: "16px",
-                      borderBottom: result.type === "ai" ? "1px solid var(--glass-border)" : "none",
+                      fontSize: "15px",
+                      lineHeight: 1.8,
+                      color: "var(--foreground)",
+                      whiteSpace: "pre-wrap",
                     }}
                   >
-                    <span style={{ fontSize: "20px" }}>{sourceConfig?.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 500, color: "var(--foreground)" }}>{result.sourceName}</div>
-                      <div style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                        {result.type === "web" ? "Web Search" : "AI Response"}
-                      </div>
-                    </div>
-                    {result.type === "web" && result.url && (
-                      <a
-                        href={result.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          padding: "8px 14px",
-                          borderRadius: "6px",
-                          backgroundColor: "var(--accent)",
-                          color: "var(--background)",
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          textDecoration: "none",
-                        }}
-                      >
-                        Open
-                        <ExternalLink style={{ width: "14px", height: "14px" }} />
-                      </a>
-                    )}
-                    {result.status === "loading" && (
-                      <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
-                    )}
+                    {results[0].content}
                   </div>
-
-                  {result.type === "ai" && (
-                    <div style={{ padding: "16px", maxHeight: "300px", overflowY: "auto" }}>
-                      {result.status === "loading" && (
-                        <div style={{ color: "var(--foreground-muted)", fontSize: "14px" }}>
-                          Generating response...
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Multiple results or web sources - grid display */
+            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: results.length === 1 ? "1fr" : "repeat(auto-fill, minmax(350px, 1fr))" }}>
+              {results.map((result) => {
+                const sourceConfig = SEARCH_SOURCES.find((s) => s.id === result.source);
+                const isSingleResult = results.length === 1;
+                return (
+                  <div
+                    key={result.source}
+                    className="glass"
+                    style={{
+                      borderRadius: "12px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        padding: "16px",
+                        borderBottom: result.type === "ai" ? "1px solid var(--glass-border)" : "none",
+                      }}
+                    >
+                      <span style={{ fontSize: "20px" }}>{sourceConfig?.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 500, color: "var(--foreground)" }}>{result.sourceName}</div>
+                        <div style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                          {result.type === "web" ? "Web Search" : "AI Response"}
                         </div>
-                      )}
-                      {result.status === "error" && (
-                        <div style={{ color: "#f87171", fontSize: "14px" }}>
-                          Error: {result.error}
-                        </div>
-                      )}
-                      {result.status === "success" && result.content && (
-                        <div
+                      </div>
+                      {result.type === "web" && result.url && (
+                        <a
+                          href={result.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           style={{
-                            fontSize: "14px",
-                            lineHeight: 1.7,
-                            color: "var(--foreground)",
-                            whiteSpace: "pre-wrap",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "8px 14px",
+                            borderRadius: "6px",
+                            backgroundColor: "var(--accent)",
+                            color: "var(--background)",
+                            fontSize: "13px",
+                            fontWeight: 500,
+                            textDecoration: "none",
                           }}
                         >
-                          {result.content}
-                        </div>
+                          Open
+                          <ExternalLink style={{ width: "14px", height: "14px" }} />
+                        </a>
+                      )}
+                      {result.status === "loading" && (
+                        <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
                       )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+
+                    {result.type === "ai" && (
+                      <div style={{ padding: "16px", maxHeight: isSingleResult ? "none" : "300px", overflowY: isSingleResult ? "visible" : "auto" }}>
+                        {result.status === "loading" && (
+                          <div style={{ color: "var(--foreground-muted)", fontSize: "14px" }}>
+                            Generating response...
+                          </div>
+                        )}
+                        {result.status === "error" && (
+                          <div style={{ color: "#f87171", fontSize: "14px" }}>
+                            Error: {result.error}
+                          </div>
+                        )}
+                        {result.status === "success" && result.content && (
+                          <div
+                            style={{
+                              fontSize: "14px",
+                              lineHeight: 1.7,
+                              color: "var(--foreground)",
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {result.content}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

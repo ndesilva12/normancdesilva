@@ -12,8 +12,9 @@ import {
   AlertCircle,
   ChevronDown,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-export interface ActionItem {
+export interface ReminderItem {
   id: string;
   label: string;
   date?: string; // YYYY-MM-DD
@@ -24,10 +25,20 @@ export interface ActionItem {
   alarmTriggered: boolean;
 }
 
+// Legacy export for backwards compatibility
+export type ActionItem = ReminderItem;
+
+const REMINDERS_STORAGE_KEY_PREFIX = "dashboard-reminders-";
+// Legacy key for backwards compatibility
 export const ACTIONS_STORAGE_KEY = "dashboard-actions";
 
+// Helper to get user-specific storage key
+function getStorageKey(userId: string | undefined): string {
+  return userId ? `${REMINDERS_STORAGE_KEY_PREFIX}${userId}` : "";
+}
+
 // For internal use
-type Action = ActionItem;
+type Reminder = ReminderItem;
 
 // Generate alarm sound using Web Audio API
 function playAlarmSound(audioContext: AudioContext, duration: number = 3000) {
@@ -57,15 +68,17 @@ function playAlarmSound(audioContext: AudioContext, duration: number = 3000) {
   return oscillator;
 }
 
-interface ActionsProps {
+interface RemindersProps {
   isGoogleConnected: boolean;
   onConnectGoogle: () => void;
   defaultCollapsed?: boolean;
   onExpandChange?: (expanded: boolean) => void;
 }
 
-export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed = false, onExpandChange }: ActionsProps) {
-  const [actions, setActions] = useState<Action[]>([]);
+// Export as both Reminders and Actions for backwards compatibility
+export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed = false, onExpandChange }: RemindersProps) {
+  const { user } = useAuth();
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [isExpanded, setIsExpanded] = useState(!defaultCollapsed);
 
   // Notify parent of expand state changes
@@ -78,28 +91,35 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
   const [newWebAlarm, setNewWebAlarm] = useState(false);
   const [addToCalendar, setAddToCalendar] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const [activeAlarm, setActiveAlarm] = useState<Action | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<Action | null>(null);
+  const [activeAlarm, setActiveAlarm] = useState<Reminder | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<Reminder | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
 
-  // Load actions from localStorage
+  // Load reminders from localStorage (user-specific)
   useEffect(() => {
-    const stored = localStorage.getItem(ACTIONS_STORAGE_KEY);
+    if (!user) {
+      setReminders([]);
+      return;
+    }
+    const storageKey = getStorageKey(user.uid);
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
       try {
-        setActions(JSON.parse(stored));
+        setReminders(JSON.parse(stored));
       } catch {
-        setActions([]);
+        setReminders([]);
       }
     }
-  }, []);
+  }, [user]);
 
-  const saveActions = useCallback((updated: Action[]) => {
-    setActions(updated);
-    localStorage.setItem(ACTIONS_STORAGE_KEY, JSON.stringify(updated));
-  }, []);
+  const saveReminders = useCallback((updated: Reminder[]) => {
+    if (!user) return;
+    setReminders(updated);
+    const storageKey = getStorageKey(user.uid);
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+  }, [user]);
 
   // Check for web alarms
   useEffect(() => {
@@ -108,34 +128,34 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
       const currentDate = now.toISOString().split("T")[0];
       const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 
-      actions.forEach((action) => {
+      reminders.forEach((reminder) => {
         if (
-          action.webAlarm &&
-          !action.alarmTriggered &&
-          !action.completed &&
-          action.date === currentDate &&
-          action.time === currentTime
+          reminder.webAlarm &&
+          !reminder.alarmTriggered &&
+          !reminder.completed &&
+          reminder.date === currentDate &&
+          reminder.time === currentTime
         ) {
-          setActiveAlarm(action);
+          setActiveAlarm(reminder);
 
           if (!audioContextRef.current) {
             audioContextRef.current = new AudioContext();
           }
           oscillatorRef.current = playAlarmSound(audioContextRef.current, 5000);
 
-          const updated = actions.map((a) =>
-            a.id === action.id ? { ...a, alarmTriggered: true } : a
+          const updated = reminders.map((r) =>
+            r.id === reminder.id ? { ...r, alarmTriggered: true } : r
           );
-          saveActions(updated);
+          saveReminders(updated);
         }
       });
     };
 
     const interval = setInterval(checkAlarms, 1000);
     return () => clearInterval(interval);
-  }, [actions, saveActions]);
+  }, [reminders, saveReminders]);
 
-  const addAction = async () => {
+  const addReminder = async () => {
     if (!newLabel.trim()) return;
 
     // If adding to calendar, date and time are required
@@ -146,7 +166,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
 
     setIsAdding(true);
 
-    const action: Action = {
+    const reminder: Reminder = {
       id: Date.now().toString(),
       label: newLabel.trim(),
       date: newDate || undefined,
@@ -163,16 +183,16 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            summary: action.label,
-            date: action.date,
-            time: action.time,
+            summary: reminder.label,
+            date: reminder.date,
+            time: reminder.time,
             reminderMinutes: 10, // Default 10 min reminder
           }),
         });
 
         if (response.ok) {
           const data = await response.json();
-          action.calendarEventId = data.event.id;
+          reminder.calendarEventId = data.event.id;
         } else {
           const error = await response.json();
           console.error("Failed to add to calendar:", error);
@@ -183,7 +203,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
       }
     }
 
-    saveActions([...actions, action]);
+    saveReminders([...reminders, reminder]);
     setNewLabel("");
     setNewDate("");
     setNewTime("");
@@ -192,20 +212,20 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
     setIsAdding(false);
   };
 
-  const initiateDelete = (action: Action) => {
-    if (action.calendarEventId) {
-      setDeleteConfirm(action);
+  const initiateDelete = (reminder: Reminder) => {
+    if (reminder.calendarEventId) {
+      setDeleteConfirm(reminder);
     } else {
-      removeAction(action, false);
+      removeReminder(reminder, false);
     }
   };
 
-  const removeAction = async (action: Action, removeFromCalendar: boolean) => {
+  const removeReminder = async (reminder: Reminder, removeFromCalendar: boolean) => {
     setIsDeleting(true);
 
-    if (removeFromCalendar && action.calendarEventId) {
+    if (removeFromCalendar && reminder.calendarEventId) {
       try {
-        await fetch(`/api/calendar?eventId=${action.calendarEventId}`, {
+        await fetch(`/api/calendar?eventId=${reminder.calendarEventId}`, {
           method: "DELETE",
         });
       } catch (error) {
@@ -213,15 +233,15 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
       }
     }
 
-    saveActions(actions.filter((a) => a.id !== action.id));
+    saveReminders(reminders.filter((r) => r.id !== reminder.id));
     setDeleteConfirm(null);
     setIsDeleting(false);
   };
 
   const toggleComplete = (id: string) => {
-    saveActions(
-      actions.map((a) =>
-        a.id === id ? { ...a, completed: !a.completed } : a
+    saveReminders(
+      reminders.map((r) =>
+        r.id === id ? { ...r, completed: !r.completed } : r
       )
     );
   };
@@ -237,8 +257,8 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
     setActiveAlarm(null);
   };
 
-  // Sort actions: incomplete first, then by date/time
-  const sortedActions = [...actions].sort((a, b) => {
+  // Sort reminders: incomplete first, then by date/time
+  const sortedReminders = [...reminders].sort((a, b) => {
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
     if (a.date && b.date) {
       const dateCompare = a.date.localeCompare(b.date);
@@ -248,7 +268,12 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
     return 0;
   });
 
-  const incompleteCount = actions.filter((a) => !a.completed).length;
+  const incompleteCount = reminders.filter((r) => !r.completed).length;
+
+  // Don't render if user is not logged in
+  if (!user) {
+    return null;
+  }
 
   return (
     <div
@@ -359,7 +384,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
             </p>
             <div style={{ display: "flex", gap: "12px" }}>
               <button
-                onClick={() => removeAction(deleteConfirm, true)}
+                onClick={() => removeReminder(deleteConfirm, true)}
                 disabled={isDeleting}
                 style={{
                   flex: 1,
@@ -377,7 +402,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
                 {isDeleting ? "Removing..." : "Yes, remove from both"}
               </button>
               <button
-                onClick={() => removeAction(deleteConfirm, false)}
+                onClick={() => removeReminder(deleteConfirm, false)}
                 disabled={isDeleting}
                 style={{
                   flex: 1,
@@ -421,9 +446,9 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <CheckSquare style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
+            <Bell style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
             <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)" }}>
-              Actions
+              Reminders
             </span>
             {incompleteCount > 0 && (
               <span
@@ -497,10 +522,10 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
             <div style={{ marginBottom: "16px" }}>
               <input
                 type="text"
-                placeholder="New action..."
+                placeholder="New reminder..."
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addAction()}
+                onKeyDown={(e) => e.key === "Enter" && addReminder()}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -580,7 +605,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
               </div>
 
               <button
-                onClick={addAction}
+                onClick={addReminder}
                 disabled={!newLabel.trim() || isAdding || (addToCalendar && (!newDate || !newTime))}
                 style={{
                   display: "flex",
@@ -604,36 +629,36 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
                 ) : (
                   <Plus style={{ width: "16px", height: "16px" }} />
                 )}
-                {isAdding ? "Adding..." : "Add Action"}
+                {isAdding ? "Adding..." : "Add Reminder"}
               </button>
             </div>
 
-            {/* Actions list */}
-            {sortedActions.length > 0 ? (
+            {/* Reminders list */}
+            {sortedReminders.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "300px", overflowY: "auto" }}>
-                {sortedActions.map((action) => (
+                {sortedReminders.map((reminder) => (
                   <div
-                    key={action.id}
+                    key={reminder.id}
                     style={{
                       display: "flex",
                       alignItems: "flex-start",
                       gap: "10px",
                       padding: "10px 12px",
                       borderRadius: "8px",
-                      backgroundColor: action.completed
+                      backgroundColor: reminder.completed
                         ? "rgba(100, 100, 100, 0.1)"
                         : "rgba(255, 255, 255, 0.05)",
-                      opacity: action.completed ? 0.6 : 1,
+                      opacity: reminder.completed ? 0.6 : 1,
                     }}
                   >
                     <button
-                      onClick={() => toggleComplete(action.id)}
+                      onClick={() => toggleComplete(reminder.id)}
                       style={{
                         width: "18px",
                         height: "18px",
                         borderRadius: "4px",
-                        border: `2px solid ${action.completed ? "var(--accent)" : "var(--glass-border)"}`,
-                        backgroundColor: action.completed ? "var(--accent)" : "transparent",
+                        border: `2px solid ${reminder.completed ? "var(--accent)" : "var(--glass-border)"}`,
+                        backgroundColor: reminder.completed ? "var(--accent)" : "transparent",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
@@ -642,7 +667,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
                         marginTop: "2px",
                       }}
                     >
-                      {action.completed && (
+                      {reminder.completed && (
                         <span style={{ color: "var(--background)", fontSize: "10px", fontWeight: 700 }}>✓</span>
                       )}
                     </button>
@@ -652,25 +677,25 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
                           fontSize: "13px",
                           fontWeight: 500,
                           color: "var(--foreground)",
-                          textDecoration: action.completed ? "line-through" : "none",
+                          textDecoration: reminder.completed ? "line-through" : "none",
                           wordBreak: "break-word",
                         }}
                       >
-                        {action.label}
+                        {reminder.label}
                       </div>
-                      {(action.date || action.time) && (
+                      {(reminder.date || reminder.time) && (
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", fontSize: "11px", color: "var(--foreground-muted)" }}>
-                          {action.date && <span>{action.date}</span>}
-                          {action.time && <span>{action.time}</span>}
-                          {action.webAlarm && <Bell style={{ width: "10px", height: "10px" }} />}
-                          {action.calendarEventId && (
+                          {reminder.date && <span>{reminder.date}</span>}
+                          {reminder.time && <span>{reminder.time}</span>}
+                          {reminder.webAlarm && <Bell style={{ width: "10px", height: "10px" }} />}
+                          {reminder.calendarEventId && (
                             <Calendar style={{ width: "10px", height: "10px", color: "#4285f4" }} />
                           )}
                         </div>
                       )}
                     </div>
                     <button
-                      onClick={() => initiateDelete(action)}
+                      onClick={() => initiateDelete(reminder)}
                       style={{
                         background: "none",
                         border: "none",
@@ -696,7 +721,7 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
                   fontSize: "13px",
                 }}
               >
-                No actions yet. Add one above.
+                No reminders yet. Add one above.
               </div>
             )}
         </div>
@@ -720,3 +745,6 @@ export function Actions({ isGoogleConnected, onConnectGoogle, defaultCollapsed =
     </div>
   );
 }
+
+// Alias for backwards compatibility
+export const Actions = Reminders;

@@ -56,6 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
+      // Clear Google Calendar tokens on sign out
+      try {
+        await fetch("/api/auth/google/status", { method: "POST" });
+      } catch {
+        // Ignore errors clearing Google tokens
+      }
       await firebaseSignOut(auth);
     } catch (error) {
       console.error("Error signing out:", error);

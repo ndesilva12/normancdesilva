@@ -7,7 +7,8 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { ToolCard } from "@/components/ToolCard";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
-import { Actions, ACTIONS_STORAGE_KEY, type ActionItem } from "@/components/Actions";
+import { Reminders, type ReminderItem } from "@/components/Actions";
+import { useAuth } from "@/contexts/AuthContext";
 import { tools } from "@/lib/tools";
 
 // Calendar Button - Simple icon button that opens calendar page
@@ -31,46 +32,44 @@ function CalendarButton() {
   );
 }
 
-// Actions Row - displays action items as plain text (only when tool is collapsed)
-function ActionsRow({ isToolExpanded }: { isToolExpanded: boolean }) {
-  const [actions, setActions] = useState<ActionItem[]>([]);
+// Reminders Row - displays reminder items as plain text (only when tool is collapsed)
+function RemindersRow({ isToolExpanded }: { isToolExpanded: boolean }) {
+  const { user } = useAuth();
+  const [reminders, setReminders] = useState<ReminderItem[]>([]);
 
   useEffect(() => {
-    // Load from localStorage
-    const loadActions = () => {
-      const stored = localStorage.getItem(ACTIONS_STORAGE_KEY);
+    if (!user) {
+      setReminders([]);
+      return;
+    }
+
+    // Load from localStorage (user-specific)
+    const loadReminders = () => {
+      const storageKey = `dashboard-reminders-${user.uid}`;
+      const stored = localStorage.getItem(storageKey);
       if (stored) {
         try {
-          setActions(JSON.parse(stored));
+          setReminders(JSON.parse(stored));
         } catch {
-          setActions([]);
+          setReminders([]);
         }
       }
     };
 
-    loadActions();
-
-    // Listen for storage changes (when Actions component updates)
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === ACTIONS_STORAGE_KEY) {
-        loadActions();
-      }
-    };
+    loadReminders();
 
     // Also poll for changes since storage events don't fire in same tab
-    const interval = setInterval(loadActions, 1000);
+    const interval = setInterval(loadReminders, 1000);
 
-    window.addEventListener("storage", handleStorage);
     return () => {
-      window.removeEventListener("storage", handleStorage);
       clearInterval(interval);
     };
-  }, []);
+  }, [user]);
 
-  // Only show incomplete actions, and only when tool is collapsed
-  const visibleActions = actions.filter((a) => !a.completed);
+  // Only show incomplete reminders, and only when tool is collapsed
+  const visibleReminders = reminders.filter((r) => !r.completed);
 
-  if (visibleActions.length === 0 || isToolExpanded) return null;
+  if (visibleReminders.length === 0 || isToolExpanded || !user) return null;
 
   return (
     <div
@@ -84,21 +83,21 @@ function ActionsRow({ isToolExpanded }: { isToolExpanded: boolean }) {
         padding: "4px 16px",
       }}
     >
-      {visibleActions.map((action, index) => (
+      {visibleReminders.map((reminder, index) => (
         <span
-          key={action.id}
+          key={reminder.id}
           style={{
             fontSize: "13px",
             color: "var(--foreground-muted)",
           }}
         >
-          {action.label}
-          {action.time && (
+          {reminder.label}
+          {reminder.time && (
             <span style={{ color: "var(--foreground-muted)", opacity: 0.6, marginLeft: "4px" }}>
-              ({action.time})
+              ({reminder.time})
             </span>
           )}
-          {index < visibleActions.length - 1 && (
+          {index < visibleReminders.length - 1 && (
             <span style={{ color: "var(--foreground-muted)", opacity: 0.3, marginLeft: "8px" }}>•</span>
           )}
         </span>
@@ -115,7 +114,7 @@ function LiveDateTime({
   onConnectGoogle: () => void;
 }) {
   const [dateTime, setDateTime] = useState<Date | null>(null);
-  const [isActionsExpanded, setIsActionsExpanded] = useState(false);
+  const [isRemindersExpanded, setIsRemindersExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -183,17 +182,17 @@ function LiveDateTime({
           {formattedTime}
         </p>
         <div style={{ width: "160px", flexShrink: 0 }}>
-          <Actions
+          <Reminders
             isGoogleConnected={isGoogleConnected}
             onConnectGoogle={onConnectGoogle}
             defaultCollapsed={true}
-            onExpandChange={setIsActionsExpanded}
+            onExpandChange={setIsRemindersExpanded}
           />
         </div>
       </div>
 
-      {/* Actions Row - visible items (only when tool is collapsed) */}
-      <ActionsRow isToolExpanded={isActionsExpanded} />
+      {/* Reminders Row - visible items (only when tool is collapsed) */}
+      <RemindersRow isToolExpanded={isRemindersExpanded} />
     </div>
   );
 }
