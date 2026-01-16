@@ -113,7 +113,7 @@ export function RaindropPreview() {
   const visibleCollections = collections.slice(0, 5);
 
   return (
-    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
+    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}>
       {/* Header with Collection Pills */}
       <div
         style={{

@@ -230,7 +230,7 @@ function UnifiedWidgetsGrid({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
               gap: "12px",
               position: "relative",
               zIndex: 50,
@@ -267,7 +267,7 @@ function UnifiedWidgetsGrid({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
           gap: "16px",
           gridAutoRows: "364px",
           width: "100%",
