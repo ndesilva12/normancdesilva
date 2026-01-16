@@ -73,10 +73,11 @@ interface RemindersProps {
   onConnectGoogle: () => void;
   defaultCollapsed?: boolean;
   onExpandChange?: (expanded: boolean) => void;
+  compact?: boolean;
 }
 
 // Export as both Reminders and Actions for backwards compatibility
-export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed = false, onExpandChange }: RemindersProps) {
+export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed = false, onExpandChange, compact = false }: RemindersProps) {
   const { user } = useAuth();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [isExpanded, setIsExpanded] = useState(!defaultCollapsed);

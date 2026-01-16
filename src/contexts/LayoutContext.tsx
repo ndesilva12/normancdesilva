@@ -27,6 +27,7 @@ const DEFAULT_PREVIEW_WIDGETS: WidgetConfig[] = [
   { id: "emails", size: "default", visible: true, order: 1 },
   { id: "notes", size: "default", visible: true, order: 2 },
   { id: "contacts", size: "default", visible: true, order: 3 },
+  { id: "stocks", size: "default", visible: true, order: 4 },
 ];
 
 const DEFAULT_TOOL_CARDS: WidgetConfig[] = [
@@ -35,6 +36,7 @@ const DEFAULT_TOOL_CARDS: WidgetConfig[] = [
   { id: "visual-rosters", size: "default", visible: true, order: 2 },
   { id: "news", size: "default", visible: true, order: 3 },
   { id: "spotify", size: "default", visible: true, order: 4 },
+  { id: "trending", size: "default", visible: true, order: 5 },
 ];
 
 const DEFAULT_LAYOUT: LayoutConfig = {

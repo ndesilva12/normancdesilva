@@ -143,8 +143,29 @@ export async function refreshMicrosoftAccessToken(refreshToken: string): Promise
   };
 }
 
-// Get recent OneNote pages
+// Get all sections across all notebooks
+export async function getAllOneNoteSections(accessToken: string): Promise<OneNoteSection[]> {
+  const response = await fetch(
+    "https://graph.microsoft.com/v1.0/me/onenote/sections?$orderby=lastModifiedDateTime desc&$top=20",
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get sections: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.value || [];
+}
+
+// Get recent OneNote pages - with fallback for accounts with many sections
 export async function getRecentOneNotePages(accessToken: string, limit: number = 10): Promise<OneNotePage[]> {
+  // First try the direct API
   const response = await fetch(
     `https://graph.microsoft.com/v1.0/me/onenote/pages?$orderby=lastModifiedDateTime desc&$top=${limit}&$expand=parentSection($select=id,displayName)`,
     {
@@ -154,20 +175,73 @@ export async function getRecentOneNotePages(accessToken: string, limit: number =
     }
   );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    let errorMessage = `Failed to get OneNote pages (${response.status})`;
-    try {
-      const errorData = JSON.parse(errorText);
-      errorMessage = errorData.error?.message || errorData.error?.code || errorMessage;
-    } catch {
-      // Use default error message
-    }
-    throw new Error(errorMessage);
+  if (response.ok) {
+    const data = await response.json();
+    return data.value || [];
   }
 
-  const data = await response.json();
-  return data.value || [];
+  // Check if it's the "too many sections" error
+  const errorText = await response.text();
+  if (errorText.includes("maximum sections") || errorText.includes("MaximumSectionsExceeded")) {
+    // Fallback: fetch pages from recent sections
+    return getRecentOneNotePagesBySections(accessToken, limit);
+  }
+
+  // Parse and throw other errors
+  let errorMessage = `Failed to get OneNote pages (${response.status})`;
+  try {
+    const errorData = JSON.parse(errorText);
+    errorMessage = errorData.error?.message || errorData.error?.code || errorMessage;
+  } catch {
+    // Use default error message
+  }
+  throw new Error(errorMessage);
+}
+
+// Fallback method: Get recent pages by iterating through sections
+async function getRecentOneNotePagesBySections(accessToken: string, limit: number): Promise<OneNotePage[]> {
+  // Get recent sections
+  const sections = await getAllOneNoteSections(accessToken);
+
+  if (sections.length === 0) {
+    return [];
+  }
+
+  // Fetch pages from the most recent sections (limit to first 5 sections to avoid too many requests)
+  const sectionsToCheck = sections.slice(0, 5);
+  const allPages: OneNotePage[] = [];
+
+  for (const section of sectionsToCheck) {
+    try {
+      const response = await fetch(
+        `https://graph.microsoft.com/v1.0/me/onenote/sections/${section.id}/pages?$orderby=lastModifiedDateTime desc&$top=5`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const pages = (data.value || []).map((page: OneNotePage) => ({
+          ...page,
+          parentSection: {
+            id: section.id,
+            displayName: section.displayName,
+          },
+        }));
+        allPages.push(...pages);
+      }
+    } catch {
+      // Skip failed sections
+    }
+  }
+
+  // Sort by lastModifiedDateTime and limit
+  return allPages
+    .sort((a, b) => new Date(b.lastModifiedDateTime).getTime() - new Date(a.lastModifiedDateTime).getTime())
+    .slice(0, limit);
 }
 
 // Get all notebooks

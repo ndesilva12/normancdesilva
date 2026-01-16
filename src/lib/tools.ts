@@ -4,6 +4,7 @@ import {
   Newspaper,
   Music,
   Search,
+  TrendingUp,
 } from "lucide-react";
 import { Tool } from "@/types/tool";
 
@@ -54,6 +55,15 @@ export const tools: Tool[] = [
     icon: Music,
     href: "/tools/spotify",
     category: "media",
+    status: "available",
+  },
+  {
+    id: "trending",
+    name: "Trending",
+    description: "See what's trending on X (Twitter) and Google Trends in real-time.",
+    icon: TrendingUp,
+    href: "/tools/trending",
+    category: "news",
     status: "available",
   },
 ];

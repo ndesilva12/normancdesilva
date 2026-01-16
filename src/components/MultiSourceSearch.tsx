@@ -14,6 +14,7 @@ import {
 interface TrendingSearch {
   title: string;
   searchUrl: string;
+  source: "google" | "x";
 }
 
 interface MultiSourceSearchProps {
@@ -38,15 +39,41 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Fetch Google Trends on mount
+  // Fetch both Google Trends and X trending, then mix them
   const fetchTrends = useCallback(async () => {
     setTrendsLoading(true);
     try {
-      const response = await fetch("/api/google-trends");
-      const data = await response.json();
-      if (data.trends && data.trends.length > 0) {
-        setTrends(data.trends.slice(0, 10));
+      // Fetch both sources in parallel
+      const [googleResponse, xResponse] = await Promise.all([
+        fetch("/api/google-trends"),
+        fetch("/api/x-trending"),
+      ]);
+
+      const googleData = await googleResponse.json();
+      const xData = await xResponse.json();
+
+      const googleTrends: TrendingSearch[] = (googleData.trends || []).slice(0, 6).map((t: { title: string; searchUrl: string }) => ({
+        title: t.title,
+        searchUrl: t.searchUrl,
+        source: "google" as const,
+      }));
+
+      const xTrends: TrendingSearch[] = (xData.topics || []).slice(0, 6).map((t: { topic: string; searchUrl: string }) => ({
+        title: t.topic,
+        searchUrl: t.searchUrl,
+        source: "x" as const,
+      }));
+
+      // Interleave the trends from both sources
+      const mixed: TrendingSearch[] = [];
+      const maxLength = Math.max(googleTrends.length, xTrends.length);
+      for (let i = 0; i < maxLength; i++) {
+        if (i < googleTrends.length) mixed.push(googleTrends[i]);
+        if (i < xTrends.length) mixed.push(xTrends[i]);
       }
+
+      // Take top 10 mixed trends
+      setTrends(mixed.slice(0, 10));
     } catch (error) {
       console.error("Error fetching trends:", error);
     } finally {
