@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Users, Loader2, ExternalLink } from "lucide-react";
+import { Users, Loader2, ExternalLink, RefreshCw } from "lucide-react";
 import { GoogleContact } from "@/lib/google-services";
 
 interface ContactsPreviewProps {
@@ -36,6 +36,11 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReconnect = async () => {
+    await fetch("/api/auth/google/status", { method: "POST" });
+    onConnectGoogle();
   };
 
   const getContactName = (contact: GoogleContact): string => {
@@ -113,8 +118,27 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
             <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
           </div>
         ) : error ? (
-          <div style={{ color: "#f87171", fontSize: "13px", textAlign: "center", padding: "20px 0" }}>
-            {error}
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <p style={{ color: "#f87171", fontSize: "13px", marginBottom: "12px" }}>{error}</p>
+            <button
+              onClick={handleReconnect}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 16px",
+                borderRadius: "6px",
+                backgroundColor: "var(--accent)",
+                color: "var(--background)",
+                border: "none",
+                fontSize: "13px",
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              <RefreshCw style={{ width: "14px", height: "14px" }} />
+              Reconnect Google
+            </button>
           </div>
         ) : contacts.length === 0 ? (
           <div style={{ color: "var(--foreground-muted)", fontSize: "13px", textAlign: "center", padding: "20px 0" }}>
