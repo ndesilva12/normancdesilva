@@ -5,21 +5,34 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const error = searchParams.get("error");
+  const state = searchParams.get("state");
+
+  // Decode return URL from state parameter
+  const returnUrl = state ? decodeURIComponent(state) : "/";
 
   if (error) {
-    // Redirect back to home with error
-    return NextResponse.redirect(new URL("/?auth_error=" + error, request.url));
+    // Redirect back with error
+    const errorUrl = returnUrl.includes("?")
+      ? `${returnUrl}&auth_error=${error}`
+      : `${returnUrl}?auth_error=${error}`;
+    return NextResponse.redirect(new URL(errorUrl, request.url));
   }
 
   if (!code) {
-    return NextResponse.redirect(new URL("/?auth_error=no_code", request.url));
+    const errorUrl = returnUrl.includes("?")
+      ? `${returnUrl}&auth_error=no_code`
+      : `${returnUrl}?auth_error=no_code`;
+    return NextResponse.redirect(new URL(errorUrl, request.url));
   }
 
   try {
     const tokens = await exchangeCodeForTokens(code);
 
-    // Create response that redirects to home
-    const response = NextResponse.redirect(new URL("/?auth_success=true", request.url));
+    // Redirect back to the original page or home
+    const successUrl = returnUrl.includes("?")
+      ? `${returnUrl}&auth_success=true`
+      : `${returnUrl}?auth_success=true`;
+    const response = NextResponse.redirect(new URL(successUrl, request.url));
 
     // Store tokens in a secure HTTP-only cookie
     response.cookies.set("google_tokens", JSON.stringify(tokens), {
@@ -33,8 +46,9 @@ export async function GET(request: Request) {
     return response;
   } catch (err) {
     console.error("OAuth callback error:", err);
-    return NextResponse.redirect(
-      new URL("/?auth_error=token_exchange_failed", request.url)
-    );
+    const errorUrl = returnUrl.includes("?")
+      ? `${returnUrl}&auth_error=token_exchange_failed`
+      : `${returnUrl}?auth_error=token_exchange_failed`;
+    return NextResponse.redirect(new URL(errorUrl, request.url));
   }
 }

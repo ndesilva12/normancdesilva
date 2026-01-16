@@ -54,7 +54,8 @@ export default function ContactsPage() {
 
   const handleConnect = async () => {
     try {
-      const response = await fetch("/api/auth/google");
+      const returnUrl = encodeURIComponent("/tools/contacts");
+      const response = await fetch(`/api/auth/google?returnUrl=${returnUrl}`);
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;

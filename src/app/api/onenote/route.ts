@@ -53,8 +53,28 @@ export async function GET(request: Request) {
     return response;
   } catch (error) {
     console.error("Error fetching OneNote data:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to fetch notes";
+    // Check for common Microsoft Graph API errors
+    if (errorMessage.includes("401") || errorMessage.includes("InvalidAuthenticationToken")) {
+      return NextResponse.json(
+        { error: "Microsoft session expired. Please reconnect." },
+        { status: 401 }
+      );
+    }
+    if (errorMessage.includes("403") || errorMessage.includes("Forbidden")) {
+      return NextResponse.json(
+        { error: "OneNote access not granted. Please reconnect and approve permissions." },
+        { status: 403 }
+      );
+    }
+    if (errorMessage.includes("404") || errorMessage.includes("NotFound")) {
+      return NextResponse.json(
+        { error: "No OneNote notebooks found. Create a notebook in OneNote first." },
+        { status: 404 }
+      );
+    }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch notes" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

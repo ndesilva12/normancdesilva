@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { StickyNote, Loader2, ExternalLink } from "lucide-react";
+import { StickyNote, Loader2, ExternalLink, RefreshCw } from "lucide-react";
 import { OneNotePage } from "@/lib/microsoft-graph";
 
 interface NotesPreviewProps {
@@ -26,16 +26,22 @@ export function NotesPreview({ isMicrosoftConnected, onConnectMicrosoft }: Notes
     setError(null);
     try {
       const response = await fetch("/api/onenote?limit=5&type=pages");
-      if (!response.ok) {
-        throw new Error("Failed to fetch notes");
-      }
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch notes");
+      }
       setPages(data.pages || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load notes");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReconnect = async () => {
+    // Clear Microsoft tokens and reconnect
+    await fetch("/api/auth/microsoft/status", { method: "POST" });
+    onConnectMicrosoft();
   };
 
   const formatDate = (dateString: string) => {
@@ -98,8 +104,27 @@ export function NotesPreview({ isMicrosoftConnected, onConnectMicrosoft }: Notes
             <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
           </div>
         ) : error ? (
-          <div style={{ color: "#f87171", fontSize: "13px", textAlign: "center", padding: "20px 0" }}>
-            {error}
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <p style={{ color: "#f87171", fontSize: "13px", marginBottom: "12px" }}>{error}</p>
+            <button
+              onClick={handleReconnect}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 16px",
+                borderRadius: "6px",
+                backgroundColor: "var(--accent)",
+                color: "var(--background)",
+                border: "none",
+                fontSize: "13px",
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              <RefreshCw style={{ width: "14px", height: "14px" }} />
+              Reconnect Microsoft
+            </button>
           </div>
         ) : pages.length === 0 ? (
           <div style={{ color: "var(--foreground-muted)", fontSize: "13px", textAlign: "center", padding: "20px 0" }}>

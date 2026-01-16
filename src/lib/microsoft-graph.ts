@@ -155,8 +155,15 @@ export async function getRecentOneNotePages(accessToken: string, limit: number =
   );
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to get OneNote pages: ${error}`);
+    const errorText = await response.text();
+    let errorMessage = `Failed to get OneNote pages (${response.status})`;
+    try {
+      const errorData = JSON.parse(errorText);
+      errorMessage = errorData.error?.message || errorData.error?.code || errorMessage;
+    } catch {
+      // Use default error message
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();

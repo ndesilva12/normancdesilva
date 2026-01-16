@@ -39,7 +39,7 @@ export interface CalendarEvent {
 }
 
 // Generate OAuth URL for user authorization
-export function getGoogleAuthUrl(): string {
+export function getGoogleAuthUrl(returnUrl?: string): string {
   if (!GOOGLE_CLIENT_ID) {
     throw new Error("Google Client ID not configured");
   }
@@ -52,6 +52,11 @@ export function getGoogleAuthUrl(): string {
     access_type: "offline",
     prompt: "consent",
   });
+
+  // Encode return URL in state parameter
+  if (returnUrl) {
+    params.set("state", encodeURIComponent(returnUrl));
+  }
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }

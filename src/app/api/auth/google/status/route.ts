@@ -7,7 +7,7 @@ export async function GET() {
   const tokensCookie = cookieStore.get("google_tokens");
 
   if (!tokensCookie) {
-    return NextResponse.json({ authenticated: false });
+    return NextResponse.json({ connected: false, authenticated: false });
   }
 
   try {
@@ -16,7 +16,7 @@ export async function GET() {
     // Check if token is expired
     if (tokens.expires_at < Date.now() + 5 * 60 * 1000) {
       if (!tokens.refresh_token) {
-        return NextResponse.json({ authenticated: false, reason: "token_expired" });
+        return NextResponse.json({ connected: false, authenticated: false, reason: "token_expired" });
       }
 
       // Try to refresh
@@ -24,7 +24,7 @@ export async function GET() {
         const newTokens = await refreshAccessToken(tokens.refresh_token);
 
         // Update cookie
-        const response = NextResponse.json({ authenticated: true });
+        const response = NextResponse.json({ connected: true, authenticated: true });
         response.cookies.set("google_tokens", JSON.stringify(newTokens), {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
@@ -34,13 +34,13 @@ export async function GET() {
         });
         return response;
       } catch {
-        return NextResponse.json({ authenticated: false, reason: "refresh_failed" });
+        return NextResponse.json({ connected: false, authenticated: false, reason: "refresh_failed" });
       }
     }
 
-    return NextResponse.json({ authenticated: true });
+    return NextResponse.json({ connected: true, authenticated: true });
   } catch {
-    return NextResponse.json({ authenticated: false, reason: "invalid_token" });
+    return NextResponse.json({ connected: false, authenticated: false, reason: "invalid_token" });
   }
 }
 
