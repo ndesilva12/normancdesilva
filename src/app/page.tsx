@@ -24,6 +24,7 @@ const WIDGET_TITLES: Record<string, string> = {
   emails: "Emails",
   notes: "Notes",
   contacts: "Contacts",
+  "contact-finder": "Contact Finder",
   "company-politics": "Company Info",
   "visual-rosters": "Visual Rosters",
   news: "News",

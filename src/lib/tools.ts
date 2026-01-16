@@ -3,10 +3,21 @@ import {
   Users,
   Newspaper,
   Music,
+  Search,
 } from "lucide-react";
 import { Tool } from "@/types/tool";
 
 export const tools: Tool[] = [
+  {
+    id: "contact-finder",
+    name: "Contact Finder",
+    description: "Find publicly available contact information for individuals or organizations using AI-powered OSINT research.",
+    icon: Search,
+    href: "/tools/contact-finder",
+    category: "ai",
+    status: "available",
+    aiPowered: true,
+  },
   {
     id: "company-politics",
     name: "Company Info",

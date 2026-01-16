@@ -30,10 +30,11 @@ const DEFAULT_PREVIEW_WIDGETS: WidgetConfig[] = [
 ];
 
 const DEFAULT_TOOL_CARDS: WidgetConfig[] = [
-  { id: "company-politics", size: "default", visible: true, order: 0 },
-  { id: "visual-rosters", size: "default", visible: true, order: 1 },
-  { id: "news", size: "default", visible: true, order: 2 },
-  { id: "spotify", size: "default", visible: true, order: 3 },
+  { id: "contact-finder", size: "default", visible: true, order: 0 },
+  { id: "company-politics", size: "default", visible: true, order: 1 },
+  { id: "visual-rosters", size: "default", visible: true, order: 2 },
+  { id: "news", size: "default", visible: true, order: 3 },
+  { id: "spotify", size: "default", visible: true, order: 4 },
 ];
 
 const DEFAULT_LAYOUT: LayoutConfig = {
