@@ -39,8 +39,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ content, source });
   } catch (error) {
     console.error(`Search error for ${source}:`, error);
+    const errorMessage = error instanceof Error ? error.message : "Search failed";
+
+    // Check for API key related errors and return user-friendly message
+    const isApiKeyError = errorMessage.includes("API key") ||
+                          errorMessage.includes("invalid argument") ||
+                          errorMessage.includes("Incorrect API key") ||
+                          errorMessage.includes("not configured");
+
+    if (isApiKeyError) {
+      const sourceName = source === "grok" ? "Grok" : source === "gemini" ? "Gemini" : "Claude";
+      return NextResponse.json(
+        { error: `${sourceName} API key not configured`, isConfigError: true },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Search failed" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

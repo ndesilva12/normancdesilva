@@ -303,8 +303,22 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
           )}
 
           {result.status === "error" && (
-            <div style={{ color: "#f87171", fontSize: "14px", textAlign: "center", padding: "40px" }}>
-              Error: {result.error}
+            <div style={{ textAlign: "center", padding: "40px" }}>
+              {result.error?.includes("not configured") ? (
+                <>
+                  <div style={{ fontSize: "32px", marginBottom: "12px" }}>🔑</div>
+                  <div style={{ color: "var(--foreground-muted)", fontSize: "14px", marginBottom: "8px" }}>
+                    {result.error}
+                  </div>
+                  <div style={{ color: "var(--foreground-muted)", fontSize: "13px", opacity: 0.7 }}>
+                    This AI source requires an API key to be configured.
+                  </div>
+                </>
+              ) : (
+                <div style={{ color: "#f87171", fontSize: "14px" }}>
+                  Error: {result.error}
+                </div>
+              )}
             </div>
           )}
 
@@ -421,8 +435,19 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
           )}
 
           {result.status === "error" && (
-            <div style={{ color: "#f87171", fontSize: "13px" }}>
-              Error: {result.error}
+            <div>
+              {result.error?.includes("not configured") ? (
+                <div style={{ textAlign: "center", padding: "20px 0" }}>
+                  <div style={{ fontSize: "24px", marginBottom: "8px" }}>🔑</div>
+                  <div style={{ color: "var(--foreground-muted)", fontSize: "13px" }}>
+                    API key not configured
+                  </div>
+                </div>
+              ) : (
+                <div style={{ color: "#f87171", fontSize: "13px" }}>
+                  Error: {result.error}
+                </div>
+              )}
             </div>
           )}
 
