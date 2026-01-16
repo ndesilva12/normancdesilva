@@ -104,9 +104,7 @@ function UnifiedWidgetsGrid({
         isDragging={previewDragState.isDragging}
         dragOverIndex={previewDragState.dragOverIndex}
       >
-        <div style={{ height: "260px" }}>
-          {widgetContent}
-        </div>
+        {widgetContent}
       </DraggableWidget>
     );
   };

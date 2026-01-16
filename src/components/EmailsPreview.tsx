@@ -55,7 +55,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
   };
 
   return (
-    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden" }}>
+    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header - clickable to navigate to full page */}
       <Link
         href="/tools/emails"
@@ -78,7 +78,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
       </Link>
 
       {/* Content */}
-      <div style={{ padding: "12px 16px", minHeight: "120px" }}>
+      <div style={{ padding: "12px 16px", flex: 1, minHeight: 0, overflow: "hidden" }}>
         {!isGoogleConnected ? (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <p style={{ color: "var(--foreground-muted)", fontSize: "13px", marginBottom: "12px" }}>
