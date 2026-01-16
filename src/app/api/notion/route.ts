@@ -8,6 +8,7 @@ import {
   appendToNotionPage,
   archiveNotionPage,
   searchNotionPages,
+  NOTION_DATABASE_ID,
 } from "@/lib/notion";
 
 export async function GET(request: NextRequest) {
@@ -16,6 +17,21 @@ export async function GET(request: NextRequest) {
   const content = searchParams.get("content");
   const search = searchParams.get("search");
   const limit = parseInt(searchParams.get("limit") || "20", 10);
+
+  // Check configuration before making any requests
+  if (!process.env.NOTION_API_KEY) {
+    return NextResponse.json(
+      { error: "NOTION_API_KEY environment variable is not set. Please add it to your Vercel environment variables." },
+      { status: 500 }
+    );
+  }
+
+  if (!NOTION_DATABASE_ID && !pageId && !search) {
+    return NextResponse.json(
+      { error: "NOTION_DATABASE_ID environment variable is not set. Please add it to your Vercel environment variables." },
+      { status: 500 }
+    );
+  }
 
   try {
     // Search for pages
@@ -44,8 +60,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ pages });
   } catch (error) {
     console.error("Notion API error:", error);
+
+    // Provide more specific error messages
+    const errorMessage = error instanceof Error ? error.message : "Failed to fetch from Notion";
+
+    // Check for common Notion API errors
+    if (errorMessage.includes("Could not find database") || errorMessage.includes("object_not_found")) {
+      return NextResponse.json(
+        { error: `Database not found. Make sure NOTION_DATABASE_ID is correct and the integration has access to it. Current ID: ${NOTION_DATABASE_ID?.slice(0, 8)}...` },
+        { status: 500 }
+      );
+    }
+
+    if (errorMessage.includes("unauthorized") || errorMessage.includes("invalid_token")) {
+      return NextResponse.json(
+        { error: "Invalid Notion API key. Please check your NOTION_API_KEY environment variable." },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch from Notion" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
