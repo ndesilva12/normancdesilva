@@ -110,7 +110,7 @@ function UnifiedWidgetsGrid({
         <div
           style={{
             gridColumn: !isMobile && size === "expanded" ? "span 2" : "span 1",
-            minHeight: "220px",
+            height: "260px",
           }}
         >
           {widgetContent}
@@ -306,7 +306,7 @@ export default function Home() {
       <Header isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />
       <LayoutEditor />
 
-      <main style={{ flex: 1, width: "100%", paddingTop: isEditMode ? "0" : undefined }}>
+      <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div
           style={{
             width: "100%",

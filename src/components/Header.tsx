@@ -68,8 +68,10 @@ export function Header({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       style={{
-        position: "sticky",
+        position: "fixed",
         top: 0,
+        left: 0,
+        right: 0,
         zIndex: 100,
         width: "100%",
         backdropFilter: "blur(20px)",

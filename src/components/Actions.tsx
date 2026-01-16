@@ -280,7 +280,7 @@ export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed
     <div
       style={{
         position: "relative",
-        width: "160px",
+        width: compact ? "36px" : "auto",
         flexShrink: 0,
         zIndex: isExpanded ? 9999 : 1,
       }}
@@ -439,12 +439,13 @@ export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: "100%",
-            padding: "10px 14px",
+            width: compact ? "36px" : "auto",
+            height: "36px",
+            padding: compact ? "0" : "0 10px",
             background: "none",
             border: "none",
             cursor: "pointer",
-            gap: "6px",
+            gap: "4px",
           }}
         >
           <Bell style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
@@ -462,15 +463,17 @@ export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed
               {incompleteCount}
             </span>
           )}
-          <ChevronDown
-            style={{
-              width: "14px",
-              height: "14px",
-              color: "var(--foreground-muted)",
-              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 0.2s",
-            }}
-          />
+          {!compact && (
+            <ChevronDown
+              style={{
+                width: "14px",
+                height: "14px",
+                color: "var(--foreground-muted)",
+                transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.2s",
+              }}
+            />
+          )}
         </button>
       </div>
 

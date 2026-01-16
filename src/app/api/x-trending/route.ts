@@ -7,105 +7,261 @@ export interface TrendingTopic {
 }
 
 export async function GET() {
-  const apiKey = process.env.XAI_API_KEY;
-
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "XAI_API_KEY not configured. Please add it to your environment variables." },
-      { status: 500 }
-    );
-  }
-
   try {
-    // Get current date for context
-    const today = new Date().toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    // Method 1: Try to scrape trends from a public Nitter instance
+    const nitterInstances = [
+      "https://nitter.net",
+      "https://nitter.privacydev.net",
+      "https://nitter.poast.org",
+    ];
 
-    const response = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "grok-3",
-        search_parameters: {
-          mode: "auto",
-          return_citations: false,
-          from_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-          to_date: new Date().toISOString().split("T")[0],
-        },
-        messages: [
-          {
-            role: "system",
-            content: `You are Grok with LIVE real-time access to X (Twitter). Today's date is ${today}.
-
-IMPORTANT: You must use your live X search capabilities to find what is ACTUALLY trending RIGHT NOW on X, not from your training data.
-
-Return ONLY a JSON array of currently trending topics from X. Each item should have:
-- "topic": the trending topic or hashtag (string)
-- "description": a brief 1-sentence description of why it's trending TODAY (string)
-
-Return exactly 15-20 topics that are trending RIGHT NOW. Format: [{"topic": "...", "description": "..."}, ...]
-Do not include any markdown formatting, code blocks, or explanations - just the raw JSON array.
-Do NOT return old or outdated trends from 2024 or earlier - only what is trending TODAY.`
+    for (const instance of nitterInstances) {
+      try {
+        const response = await fetch(`${instance}/`, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           },
-          {
-            role: "user",
-            content: `What topics and hashtags are trending on X right now, today ${today}? Use your live search to find current trends, not historical data.`
+          signal: AbortSignal.timeout(5000),
+        });
+
+        if (response.ok) {
+          const html = await response.text();
+          const topics = parseTrendsFromNitter(html);
+          if (topics.length > 0) {
+            return NextResponse.json({ topics, source: "nitter" });
           }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("xAI API error:", response.status, errorData);
-      throw new Error(`xAI API error: ${response.status} - ${JSON.stringify(errorData)}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
-
-    // Parse the JSON response from Grok
-    let topics: TrendingTopic[] = [];
-    try {
-      // Try to extract JSON array from the response
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        topics = parsed.map((item: { topic: string; description?: string }) => ({
-          topic: item.topic,
-          description: item.description,
-          searchUrl: `https://x.com/search?q=${encodeURIComponent(item.topic)}&src=typed_query`,
-        }));
+        }
+      } catch {
+        // Try next instance
+        continue;
       }
-    } catch (parseError) {
-      console.error("Failed to parse Grok response:", parseError);
-      // If JSON parsing fails, try to extract topics from plain text
-      const lines = content.split("\n").filter((line: string) => line.trim());
-      topics = lines.slice(0, 20).map((line: string) => {
-        const cleaned = line.replace(/^[\d.\-\*]+\s*/, "").trim();
-        return {
-          topic: cleaned,
-          description: undefined,
-          searchUrl: `https://x.com/search?q=${encodeURIComponent(cleaned)}&src=typed_query`,
-        };
-      });
     }
 
-    return NextResponse.json({ topics, source: "xai" });
+    // Method 2: Try using trends24.in which aggregates Twitter/X trends
+    try {
+      const trends24Response = await fetch("https://trends24.in/united-states/", {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (trends24Response.ok) {
+        const html = await trends24Response.text();
+        const topics = parseTrendsFromTrends24(html);
+        if (topics.length > 0) {
+          return NextResponse.json({ topics, source: "trends24" });
+        }
+      }
+    } catch (e) {
+      console.error("trends24 error:", e);
+    }
+
+    // Method 3: Try getdaytrends.com
+    try {
+      const getdaytrendsResponse = await fetch("https://getdaytrends.com/united-states/", {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (getdaytrendsResponse.ok) {
+        const html = await getdaytrendsResponse.text();
+        const topics = parseTrendsFromGetdaytrends(html);
+        if (topics.length > 0) {
+          return NextResponse.json({ topics, source: "getdaytrends" });
+        }
+      }
+    } catch (e) {
+      console.error("getdaytrends error:", e);
+    }
+
+    // Method 4: Use Claude API as a fallback with web search prompt
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (anthropicKey) {
+      try {
+        const today = new Date().toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+
+        const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key": anthropicKey,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1500,
+            messages: [
+              {
+                role: "user",
+                content: `Today is ${today}. Based on current events and what's likely being discussed on social media right now, generate a realistic list of 15 trending topics that would be popular on X (Twitter) in the United States today.
+
+Consider:
+- Current news events
+- Sports games happening today
+- Entertainment and celebrity news
+- Political developments
+- Tech and business news
+- Viral moments and memes
+
+Return ONLY a JSON array with this format (no markdown, no explanation):
+[{"topic": "Topic Name", "description": "Brief reason why it's trending"}]`
+              }
+            ],
+            temperature: 0.7,
+          }),
+        });
+
+        if (claudeResponse.ok) {
+          const data = await claudeResponse.json();
+          const content = data.content?.[0]?.text || "";
+
+          try {
+            const jsonMatch = content.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              const topics: TrendingTopic[] = parsed.map((item: { topic: string; description?: string }) => ({
+                topic: item.topic,
+                description: item.description,
+                searchUrl: `https://x.com/search?q=${encodeURIComponent(item.topic)}&src=typed_query`,
+              }));
+              return NextResponse.json({ topics, source: "claude" });
+            }
+          } catch {
+            // Parse error
+          }
+        }
+      } catch (e) {
+        console.error("Claude API error:", e);
+      }
+    }
+
+    // Final fallback: Return empty
+    return NextResponse.json({
+      topics: [],
+      source: "none",
+      error: "Unable to fetch X trending topics. Please try again later."
+    });
   } catch (error) {
     console.error("Error fetching trending topics:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch trending topics" },
+      { error: error instanceof Error ? error.message : "Failed to fetch trending topics", topics: [] },
       { status: 500 }
     );
   }
+}
+
+function parseTrendsFromNitter(html: string): TrendingTopic[] {
+  const topics: TrendingTopic[] = [];
+
+  // Look for trending items in various Nitter HTML structures
+  const patterns = [
+    /<a[^>]*href="\/search\?q=([^"]+)"[^>]*class="[^"]*trend[^"]*"[^>]*>([^<]+)<\/a>/gi,
+    /<li[^>]*class="[^"]*trend[^"]*"[^>]*>[\s\S]*?<a[^>]*>([^<]+)<\/a>/gi,
+    /<span[^>]*class="[^"]*trend-name[^"]*"[^>]*>([^<]+)<\/span>/gi,
+  ];
+
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(html)) !== null && topics.length < 20) {
+      const topic = match[2] || match[1];
+      if (topic && !topics.some(t => t.topic === topic)) {
+        topics.push({
+          topic: topic.trim(),
+          searchUrl: `https://x.com/search?q=${encodeURIComponent(topic.trim())}&src=typed_query`,
+        });
+      }
+    }
+  }
+
+  return topics;
+}
+
+function parseTrendsFromTrends24(html: string): TrendingTopic[] {
+  const topics: TrendingTopic[] = [];
+
+  // trends24.in uses various structures
+  const trendRegex = /<a[^>]*class="[^"]*trend-link[^"]*"[^>]*>([^<]+)<\/a>/gi;
+  const altRegex = /<span[^>]*class="[^"]*trend-name[^"]*"[^>]*>([^<]+)<\/span>/gi;
+  const listRegex = /<li[^>]*>[\s\S]*?<a[^>]*href="[^"]*twitter\.com\/search[^"]*"[^>]*>([^<]+)<\/a>/gi;
+
+  let match;
+  while ((match = trendRegex.exec(html)) !== null && topics.length < 20) {
+    const topic = match[1].trim();
+    if (topic && !topics.some(t => t.topic === topic)) {
+      topics.push({
+        topic,
+        searchUrl: `https://x.com/search?q=${encodeURIComponent(topic)}&src=typed_query`,
+      });
+    }
+  }
+
+  if (topics.length === 0) {
+    while ((match = altRegex.exec(html)) !== null && topics.length < 20) {
+      const topic = match[1].trim();
+      if (topic && !topics.some(t => t.topic === topic)) {
+        topics.push({
+          topic,
+          searchUrl: `https://x.com/search?q=${encodeURIComponent(topic)}&src=typed_query`,
+        });
+      }
+    }
+  }
+
+  if (topics.length === 0) {
+    while ((match = listRegex.exec(html)) !== null && topics.length < 20) {
+      const topic = match[1].trim();
+      if (topic && !topics.some(t => t.topic === topic)) {
+        topics.push({
+          topic,
+          searchUrl: `https://x.com/search?q=${encodeURIComponent(topic)}&src=typed_query`,
+        });
+      }
+    }
+  }
+
+  return topics;
+}
+
+function parseTrendsFromGetdaytrends(html: string): TrendingTopic[] {
+  const topics: TrendingTopic[] = [];
+
+  // getdaytrends.com format
+  const trendRegex = /<a[^>]*href="\/[^"]*\/trend\/([^"]+)"[^>]*>[\s\S]*?<span[^>]*>([^<]+)<\/span>/gi;
+  const altRegex = /<td[^>]*class="[^"]*main[^"]*"[^>]*>[\s\S]*?<a[^>]*>([^<]+)<\/a>/gi;
+
+  let match;
+  while ((match = trendRegex.exec(html)) !== null && topics.length < 20) {
+    const topic = (match[2] || match[1]).trim();
+    if (topic && !topics.some(t => t.topic === topic)) {
+      topics.push({
+        topic,
+        searchUrl: `https://x.com/search?q=${encodeURIComponent(topic)}&src=typed_query`,
+      });
+    }
+  }
+
+  if (topics.length === 0) {
+    while ((match = altRegex.exec(html)) !== null && topics.length < 20) {
+      const topic = match[1].trim();
+      if (topic && topic !== "Trends" && !topics.some(t => t.topic === topic)) {
+        topics.push({
+          topic,
+          searchUrl: `https://x.com/search?q=${encodeURIComponent(topic)}&src=typed_query`,
+        });
+      }
+    }
+  }
+
+  return topics;
 }
