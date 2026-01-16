@@ -1,6 +1,6 @@
 import { CompanyAnalysis, CompanySearchResult } from "@/types/company";
 
-const GROK_API_KEY = process.env.GROK_API_KEY;
+const XAI_API_KEY = process.env.XAI_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 interface AIResponse {
@@ -68,7 +68,7 @@ async function callGrok(prompt: string): Promise<AIResponse> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${GROK_API_KEY}`,
+        "Authorization": `Bearer ${XAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "grok-2-latest",
@@ -138,7 +138,7 @@ async function callAI(prompt: string, cacheKey?: string): Promise<AIResponse> {
   let response: AIResponse;
 
   // Try Grok first, fallback to Claude if Grok fails
-  if (GROK_API_KEY) {
+  if (XAI_API_KEY) {
     try {
       response = await callGrok(prompt);
     } catch (grokError) {

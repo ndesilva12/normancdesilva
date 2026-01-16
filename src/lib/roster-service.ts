@@ -2,7 +2,7 @@ import { League, TeamRoster, Player, LEAGUES } from "@/types/roster";
 import { getCached, setCache, generateCacheKey, getRosterTTL, recordCacheAccess } from "./firestore-cache";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GROK_API_KEY = process.env.GROK_API_KEY;
+const XAI_API_KEY = process.env.XAI_API_KEY;
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
 interface GeminiResponse {
@@ -25,7 +25,7 @@ interface GrokResponse {
 
 // Call Grok API for player history parsing (better at structured extraction)
 async function callGrok(prompt: string): Promise<string> {
-  if (!GROK_API_KEY) {
+  if (!XAI_API_KEY) {
     throw new Error("Grok API key not configured");
   }
 
@@ -33,7 +33,7 @@ async function callGrok(prompt: string): Promise<string> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${GROK_API_KEY}`,
+      "Authorization": `Bearer ${XAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: "grok-2-latest",
@@ -311,7 +311,7 @@ Rules:
     // Try Grok first, fall back to Gemini
     let response: string;
     try {
-      if (GROK_API_KEY) {
+      if (XAI_API_KEY) {
         response = await callGrok(prompt);
       } else {
         response = await callGemini(prompt, false);

@@ -88,19 +88,19 @@ export function getSearchUrl(source: SearchSource, query: string): string {
 }
 
 // AI source handlers (called server-side)
-const GROK_API_KEY = process.env.GROK_API_KEY;
+const XAI_API_KEY = process.env.XAI_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export async function queryGrok(query: string): Promise<string> {
-  if (!GROK_API_KEY) throw new Error("Grok API key not configured");
+  if (!XAI_API_KEY) throw new Error("Grok API key not configured");
 
   const response = await fetch("https://api.x.ai/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${GROK_API_KEY}`,
+      "Authorization": `Bearer ${XAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: "grok-2-latest",
@@ -223,7 +223,7 @@ export async function queryChatGPT(query: string): Promise<string> {
 
 // Get trending companies using Grok
 export async function getTrendingCompanies(): Promise<{ google: string[]; x: string[] }> {
-  if (!GROK_API_KEY) {
+  if (!XAI_API_KEY) {
     return { google: [], x: [] };
   }
 
@@ -232,7 +232,7 @@ export async function getTrendingCompanies(): Promise<{ google: string[]; x: str
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${GROK_API_KEY}`,
+        "Authorization": `Bearer ${XAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "grok-2-latest",

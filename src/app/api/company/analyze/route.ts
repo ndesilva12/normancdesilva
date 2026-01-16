@@ -14,14 +14,14 @@ export async function GET(request: NextRequest) {
   }
 
   // Check if API keys are configured
-  const hasGrokKey = !!process.env.GROK_API_KEY;
+  const hasGrokKey = !!process.env.XAI_API_KEY;
   const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
 
   if (!hasGrokKey && !hasAnthropicKey) {
     return NextResponse.json(
       {
         error: "AI API not configured",
-        details: "No AI API key (GROK_API_KEY or ANTHROPIC_API_KEY) is configured in environment variables"
+        details: "No AI API key (XAI_API_KEY or ANTHROPIC_API_KEY) is configured in environment variables"
       },
       { status: 503 }
     );
