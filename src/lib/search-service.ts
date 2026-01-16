@@ -103,7 +103,7 @@ export async function queryGrok(query: string): Promise<string> {
       "Authorization": `Bearer ${GROK_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "grok-3-mini-beta",
+      model: "grok-2-latest",
       messages: [
         {
           role: "system",
@@ -235,7 +235,7 @@ export async function getTrendingCompanies(): Promise<{ google: string[]; x: str
         "Authorization": `Bearer ${GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "grok-3-mini-beta",
+        model: "grok-2-latest",
         messages: [
           {
             role: "system",

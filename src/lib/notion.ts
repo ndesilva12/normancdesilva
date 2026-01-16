@@ -12,12 +12,34 @@ if (!NOTION_TOKEN) {
   console.error("NOTION_API_KEY environment variable is not set");
 }
 
+// Helper to normalize database ID (add dashes if missing)
+function normalizeDatabaseId(id: string | undefined): string | undefined {
+  if (!id) return undefined;
+
+  // Remove any existing dashes and spaces
+  const cleanId = id.replace(/[-\s]/g, "");
+
+  // If it's 32 characters, add dashes in UUID format
+  if (cleanId.length === 32) {
+    return `${cleanId.slice(0, 8)}-${cleanId.slice(8, 12)}-${cleanId.slice(12, 16)}-${cleanId.slice(16, 20)}-${cleanId.slice(20)}`;
+  }
+
+  // Return as-is if already formatted or different length
+  return id;
+}
+
 // Initialize Notion client
 const notion = new Client({
   auth: NOTION_TOKEN,
 });
 
-export const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
+// Normalize the database ID
+export const NOTION_DATABASE_ID = normalizeDatabaseId(process.env.NOTION_DATABASE_ID);
+
+// Log for debugging (will show in Vercel logs)
+if (NOTION_DATABASE_ID) {
+  console.log("Notion Database ID (normalized):", NOTION_DATABASE_ID);
+}
 
 // Validation helper
 function validateConfig() {
@@ -151,6 +173,25 @@ function convertBlock(block: BlockObjectResponse): NotionBlock {
 export async function getNotionPages(limit = 20): Promise<NotionPage[]> {
   validateConfig();
   try {
+    console.log("Fetching pages from database:", NOTION_DATABASE_ID);
+
+    // First, try to get database info to verify access
+    try {
+      const dbInfo = await notion.databases.retrieve({
+        database_id: NOTION_DATABASE_ID!,
+      });
+      // Log database info for debugging
+      const props = (dbInfo as { properties?: Record<string, unknown> }).properties;
+      if (props) {
+        console.log("Database found:", dbInfo.id, "Title properties:", Object.keys(props));
+      } else {
+        console.log("Database found:", dbInfo.id);
+      }
+    } catch (dbError) {
+      console.error("Database retrieve error:", dbError);
+      // Continue anyway to get the actual error from query
+    }
+
     // Use raw request to query database (bypassing SDK type issues)
     const response = await notion.request<{
       results: PageObjectResponse[];
@@ -170,6 +211,8 @@ export async function getNotionPages(limit = 20): Promise<NotionPage[]> {
       },
     });
 
+    console.log("Query successful, found", response.results.length, "pages");
+
     return response.results
       .filter((page): page is PageObjectResponse => "properties" in page)
       .map((page) => ({
@@ -183,7 +226,22 @@ export async function getNotionPages(limit = 20): Promise<NotionPage[]> {
         properties: page.properties,
       }));
   } catch (error) {
-    console.error("Error fetching Notion pages:", error);
+    // Enhanced error logging
+    if (error instanceof Error) {
+      console.error("Error fetching Notion pages:", {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        databaseId: NOTION_DATABASE_ID,
+      });
+
+      // Check for specific Notion API errors
+      const errorBody = (error as { body?: { message?: string; code?: string } }).body;
+      if (errorBody) {
+        console.error("Notion API error body:", errorBody);
+        throw new Error(`Notion API: ${errorBody.message || errorBody.code || error.message}`);
+      }
+    }
     throw error;
   }
 }

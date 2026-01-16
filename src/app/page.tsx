@@ -10,6 +10,7 @@ import { EmailsPreview } from "@/components/EmailsPreview";
 import { NotesPreview } from "@/components/NotesPreview";
 import { StocksPreview } from "@/components/StocksPreview";
 import { NewsPreview } from "@/components/NewsPreview";
+import { RaindropPreview } from "@/components/RaindropPreview";
 import { LayoutEditor } from "@/components/LayoutEditor";
 import { DraggableWidget, useDragState } from "@/components/DraggableWidget";
 import { RemindersBanner } from "@/components/RemindersBanner";
@@ -87,6 +88,7 @@ const WIDGET_TITLES: Record<string, string> = {
   spotify: "Spotify",
   trending: "Trending",
   contacts: "Contacts",
+  raindrop: "Reading List",
 };
 
 // Unified widgets grid - combines preview widgets and tool cards into a single grid
@@ -144,6 +146,8 @@ function UnifiedWidgetsGrid({
           return <StocksPreview />;
         case "news":
           return <NewsPreview />;
+        case "raindrop":
+          return <RaindropPreview />;
         default:
           return null;
       }

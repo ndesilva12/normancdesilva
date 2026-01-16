@@ -173,7 +173,7 @@ Think strategically about the best path to achieve the user's goal. Provide mult
 export const AI_CONFIGS: Record<AISource, { name: string; model: string; apiKeyEnv: string }> = {
   grok: {
     name: "Grok",
-    model: "grok-3-mini-beta",
+    model: "grok-2-latest", // Updated to stable model name
     apiKeyEnv: "XAI_API_KEY",
   },
   chatgpt: {
