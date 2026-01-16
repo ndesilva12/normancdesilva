@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { LayoutDashboard, LogIn, LogOut, LayoutGrid, Calendar, TrendingUp, Bell, ChevronDown } from "lucide-react";
+import { LayoutDashboard, LogIn, LogOut, LayoutGrid, Calendar, TrendingUp, Bell, ChevronDown, Settings } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { Reminders } from "@/components/Actions";
 
 export function Header({
@@ -18,6 +19,7 @@ export function Header({
 }) {
   const { user, loading, signInWithGoogle, signOut } = useAuth();
   const { enterEditMode, isEditMode } = useLayout();
+  const { openSettings, formatTime, formatDate } = useSettings();
   const [menuOpen, setMenuOpen] = useState(false);
   const [dateTime, setDateTime] = useState<Date | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -51,16 +53,13 @@ export function Header({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const formattedDate = dateTime?.toLocaleDateString("en-US", {
+  const formattedDateStr = dateTime ? formatDate(dateTime, {
     weekday: isMobile ? "short" : "long",
     month: isMobile ? "short" : "long",
     day: "numeric",
-  });
+  }) : "";
 
-  const formattedTime = dateTime?.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const formattedTimeStr = dateTime ? formatTime(dateTime) : "";
 
   return (
     <motion.header
@@ -145,7 +144,7 @@ export function Header({
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {formattedDate}
+                  {formattedDateStr}
                 </span>
                 <span
                   style={{
@@ -155,7 +154,7 @@ export function Header({
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  {formattedTime}
+                  {formattedTimeStr}
                 </span>
               </>
             )}
@@ -345,6 +344,37 @@ export function Header({
                   >
                     <LayoutGrid style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
                     <span>Customize Layout</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      openSettings();
+                      setMenuOpen(false);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      width: "100%",
+                      padding: "12px",
+                      borderRadius: "8px",
+                      backgroundColor: "transparent",
+                      border: "none",
+                      color: "var(--foreground)",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <Settings style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
+                    <span>Settings</span>
                   </button>
 
                   <div style={{ height: "1px", backgroundColor: "rgba(255, 255, 255, 0.1)", margin: "8px 0" }} />

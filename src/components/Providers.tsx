@@ -4,6 +4,8 @@ import { ReactNode } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LayoutProvider } from "@/contexts/LayoutContext";
 import { RemindersProvider } from "@/contexts/RemindersContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import { SettingsPopup } from "@/components/SettingsPopup";
 
 interface ProvidersProps {
   children: ReactNode;
@@ -12,9 +14,14 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <AuthProvider>
-      <RemindersProvider>
-        <LayoutProvider>{children}</LayoutProvider>
-      </RemindersProvider>
+      <SettingsProvider>
+        <RemindersProvider>
+          <LayoutProvider>
+            {children}
+            <SettingsPopup />
+          </LayoutProvider>
+        </RemindersProvider>
+      </SettingsProvider>
     </AuthProvider>
   );
 }

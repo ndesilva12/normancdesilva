@@ -14,10 +14,12 @@ import { LayoutEditor } from "@/components/LayoutEditor";
 import { DraggableWidget, useDragState } from "@/components/DraggableWidget";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { useLayout, WidgetConfig } from "@/contexts/LayoutContext";
+import { useSettings } from "@/contexts/SettingsContext";
 import { tools } from "@/lib/tools";
 
 // Mobile Date/Time Banner Component
 function MobileDateTimeBanner() {
+  const { formatTime, formatDate } = useSettings();
   const [dateTime, setDateTime] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -28,18 +30,15 @@ function MobileDateTimeBanner() {
     return () => clearInterval(interval);
   }, []);
 
-  const formattedDate = dateTime?.toLocaleDateString("en-US", {
+  if (!dateTime) return null;
+
+  const formattedDateStr = formatDate(dateTime, {
     weekday: "long",
     month: "long",
     day: "numeric",
   });
 
-  const formattedTime = dateTime?.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  if (!dateTime) return null;
+  const formattedTimeStr = formatTime(dateTime);
 
   return (
     <div
@@ -59,7 +58,7 @@ function MobileDateTimeBanner() {
           color: "var(--foreground)",
         }}
       >
-        {formattedDate}
+        {formattedDateStr}
       </span>
       <span
         style={{
@@ -69,7 +68,7 @@ function MobileDateTimeBanner() {
           fontVariantNumeric: "tabular-nums",
         }}
       >
-        {formattedTime}
+        {formattedTimeStr}
       </span>
     </div>
   );

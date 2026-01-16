@@ -302,7 +302,8 @@ export function RemindersBanner() {
       <div
         style={{
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "center",
+          justifyContent: "center",
           gap: "10px",
           marginBottom: "20px",
           flexWrap: "wrap",

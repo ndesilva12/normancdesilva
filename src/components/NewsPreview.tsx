@@ -72,58 +72,41 @@ export function NewsPreview() {
 
   return (
     <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
-      {/* Header */}
+      {/* Header with Source Pills */}
       <div
         style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
           padding: "14px 16px",
           borderBottom: "1px solid var(--glass-border)",
           flexShrink: 0,
         }}
       >
-        {/* Title row */}
-        <div
+        <Link
+          href="/tools/news"
           style={{
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            marginBottom: "10px",
+            textDecoration: "none",
+            flexShrink: 0,
           }}
         >
-          <Link
-            href="/tools/news"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              textDecoration: "none",
-              flex: 1,
-            }}
-          >
-            <Newspaper style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
-            <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)" }}>
-              News
-            </span>
-          </Link>
+          <Newspaper style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
+          <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)" }}>
+            News
+          </span>
+        </Link>
 
-          <Link
-            href="/tools/news"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              textDecoration: "none",
-            }}
-          >
-            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-          </Link>
-        </div>
-
-        {/* Source Pills */}
+        {/* Source Pills - inline with title */}
         <div
           style={{
             display: "flex",
             flexWrap: "wrap",
-            gap: "6px",
+            gap: "4px",
+            flex: 1,
+            justifyContent: "flex-end",
           }}
         >
           {NEWS_SOURCES.map((source) => (
@@ -134,12 +117,12 @@ export function NewsPreview() {
                 handleSourceChange(source.id);
               }}
               style={{
-                padding: "4px 10px",
-                borderRadius: "12px",
+                padding: "3px 8px",
+                borderRadius: "10px",
                 border: "none",
                 backgroundColor: selectedSource === source.id ? "var(--accent)" : "rgba(255, 255, 255, 0.08)",
                 color: selectedSource === source.id ? "var(--background)" : "var(--foreground-muted)",
-                fontSize: "11px",
+                fontSize: "10px",
                 fontWeight: 500,
                 cursor: "pointer",
                 transition: "all 0.15s",
@@ -149,6 +132,19 @@ export function NewsPreview() {
             </button>
           ))}
         </div>
+
+        <Link
+          href="/tools/news"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textDecoration: "none",
+            flexShrink: 0,
+          }}
+        >
+          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+        </Link>
       </div>
 
       {/* Content */}
