@@ -7,6 +7,7 @@ import {
   SEARCH_SOURCES,
   getSearchUrl,
   SearchResult,
+  WebSearchResultItem,
 } from "@/lib/search-service";
 
 interface TrendingSearch {
@@ -59,7 +60,6 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
   const toggleSource = (source: SearchSource) => {
     setSelectedSources((prev) => {
       if (prev.includes(source)) {
-        // Don't allow deselecting the last source
         if (prev.length === 1) return prev;
         return prev.filter((s) => s !== source);
       }
@@ -76,76 +76,95 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
     if (!query.trim() || selectedSources.length === 0) return;
 
     setIsSearching(true);
-    const newResults: SearchResult[] = [];
 
-    // Process each selected source
-    for (const sourceId of selectedSources) {
+    // Initialize all results as loading
+    const initialResults: SearchResult[] = selectedSources.map((sourceId) => {
       const sourceConfig = SEARCH_SOURCES.find((s) => s.id === sourceId);
-      if (!sourceConfig) continue;
-
-      if (sourceConfig.type === "web") {
-        // Web sources just get a URL
-        const url = getSearchUrl(sourceId, query.trim());
-        newResults.push({
-          source: sourceId,
-          sourceName: sourceConfig.name,
-          type: "web",
-          status: "success",
-          url,
-        });
-      } else {
-        // AI sources need an API call
-        newResults.push({
-          source: sourceId,
-          sourceName: sourceConfig.name,
-          type: "ai",
-          status: "loading",
-        });
-      }
-    }
-
-    setResults([...newResults]);
-    if (onResultsChange) onResultsChange([...newResults]);
-
-    // Now fetch AI results
-    const aiSources = selectedSources.filter((s) => {
-      const config = SEARCH_SOURCES.find((c) => c.id === s);
-      return config?.type === "ai";
+      return {
+        source: sourceId,
+        sourceName: sourceConfig?.name || sourceId,
+        type: sourceConfig?.type || "web",
+        status: "loading" as const,
+        url: getSearchUrl(sourceId, query.trim()),
+      };
     });
 
-    // Fetch AI results in parallel
-    const aiPromises = aiSources.map(async (sourceId) => {
-      try {
-        const response = await fetch(
-          `/api/search?q=${encodeURIComponent(query.trim())}&source=${sourceId}`
-        );
-        const data = await response.json();
+    setResults([...initialResults]);
+    if (onResultsChange) onResultsChange([...initialResults]);
 
-        if (!response.ok) {
-          throw new Error(data.error || "Search failed");
+    // Fetch all results in parallel
+    const fetchPromises = selectedSources.map(async (sourceId) => {
+      const sourceConfig = SEARCH_SOURCES.find((s) => s.id === sourceId);
+
+      if (sourceConfig?.type === "ai") {
+        // AI sources
+        try {
+          const response = await fetch(
+            `/api/search?q=${encodeURIComponent(query.trim())}&source=${sourceId}`
+          );
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "Search failed");
+          }
+
+          return {
+            source: sourceId,
+            content: data.content,
+            status: "success" as const,
+            type: "ai" as const,
+          };
+        } catch (error) {
+          return {
+            source: sourceId,
+            error: error instanceof Error ? error.message : "Search failed",
+            status: "error" as const,
+            type: "ai" as const,
+          };
         }
+      } else {
+        // Web sources - fetch from our API
+        try {
+          const response = await fetch(
+            `/api/web-search?q=${encodeURIComponent(query.trim())}&source=${sourceId}`
+          );
+          const data = await response.json();
 
-        return { source: sourceId, content: data.content, status: "success" as const };
-      } catch (error) {
-        return {
-          source: sourceId,
-          error: error instanceof Error ? error.message : "Search failed",
-          status: "error" as const,
-        };
+          if (!response.ok) {
+            throw new Error(data.error || "Search failed");
+          }
+
+          return {
+            source: sourceId,
+            webResults: data.results as WebSearchResultItem[],
+            instantAnswer: data.instant_answer,
+            status: "success" as const,
+            type: "web" as const,
+          };
+        } catch (error) {
+          return {
+            source: sourceId,
+            error: error instanceof Error ? error.message : "Search failed",
+            status: "error" as const,
+            type: "web" as const,
+          };
+        }
       }
     });
 
-    const aiResults = await Promise.all(aiPromises);
+    const fetchedResults = await Promise.all(fetchPromises);
 
-    // Update results with AI responses
-    const finalResults = newResults.map((result) => {
-      const aiResult = aiResults.find((r) => r.source === result.source);
-      if (aiResult) {
+    // Merge fetched results with initial results
+    const finalResults = initialResults.map((result) => {
+      const fetched = fetchedResults.find((r) => r.source === result.source);
+      if (fetched) {
         return {
           ...result,
-          status: aiResult.status,
-          content: aiResult.status === "success" ? aiResult.content : undefined,
-          error: aiResult.status === "error" ? aiResult.error : undefined,
+          status: fetched.status,
+          content: fetched.type === "ai" && fetched.status === "success" ? fetched.content : undefined,
+          webResults: fetched.type === "web" && fetched.status === "success" ? fetched.webResults : undefined,
+          instantAnswer: fetched.type === "web" && fetched.status === "success" ? fetched.instantAnswer : undefined,
+          error: fetched.status === "error" ? fetched.error : undefined,
         };
       }
       return result;
@@ -159,6 +178,298 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
   const clearResults = () => {
     setResults([]);
     if (onResultsChange) onResultsChange([]);
+  };
+
+  const isSingleSource = selectedSources.length === 1;
+
+  // Render a single web result item
+  const renderWebResultItem = (item: WebSearchResultItem, index: number, isFullView: boolean) => (
+    <a
+      key={index}
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: "block",
+        padding: isFullView ? "16px 0" : "12px 0",
+        borderBottom: "1px solid var(--glass-border)",
+        textDecoration: "none",
+        transition: "opacity 0.15s",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+    >
+      <div
+        style={{
+          fontSize: isFullView ? "16px" : "14px",
+          fontWeight: 500,
+          color: "var(--accent)",
+          marginBottom: "4px",
+        }}
+      >
+        {item.title}
+      </div>
+      <div
+        style={{
+          fontSize: isFullView ? "13px" : "11px",
+          color: "var(--foreground-muted)",
+          marginBottom: "6px",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {item.url}
+      </div>
+      <div
+        style={{
+          fontSize: isFullView ? "14px" : "13px",
+          color: "var(--foreground)",
+          lineHeight: 1.5,
+          display: "-webkit-box",
+          WebkitLineClamp: isFullView ? 4 : 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}
+      >
+        {item.snippet}
+      </div>
+    </a>
+  );
+
+  // Render full-page single source results
+  const renderSingleSourceResults = (result: SearchResult) => {
+    const sourceConfig = SEARCH_SOURCES.find((s) => s.id === result.source);
+
+    return (
+      <div
+        className="glass"
+        style={{
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--glass-border)",
+          }}
+        >
+          <span style={{ fontSize: "24px" }}>{sourceConfig?.icon}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: "18px", color: "var(--foreground)" }}>
+              {result.sourceName}
+            </div>
+            <div style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
+              {result.type === "web" ? "Search Results" : "AI Response"}
+            </div>
+          </div>
+          {result.status === "loading" && (
+            <Loader2 style={{ width: "24px", height: "24px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+          )}
+          {result.type === "web" && result.url && (
+            <a
+              href={result.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 14px",
+                borderRadius: "6px",
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                color: "var(--foreground-muted)",
+                fontSize: "13px",
+                textDecoration: "none",
+              }}
+            >
+              Open in {result.sourceName}
+              <ExternalLink style={{ width: "14px", height: "14px" }} />
+            </a>
+          )}
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: "20px" }}>
+          {result.status === "loading" && (
+            <div style={{ color: "var(--foreground-muted)", fontSize: "14px", textAlign: "center", padding: "40px" }}>
+              Fetching results...
+            </div>
+          )}
+
+          {result.status === "error" && (
+            <div style={{ color: "#f87171", fontSize: "14px", textAlign: "center", padding: "40px" }}>
+              Error: {result.error}
+            </div>
+          )}
+
+          {result.status === "success" && result.type === "ai" && result.content && (
+            <div
+              style={{
+                fontSize: "15px",
+                lineHeight: 1.8,
+                color: "var(--foreground)",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {result.content}
+            </div>
+          )}
+
+          {result.status === "success" && result.type === "web" && (
+            <>
+              {result.instantAnswer && (
+                <div
+                  style={{
+                    padding: "16px",
+                    marginBottom: "20px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(6, 182, 212, 0.1)",
+                    borderLeft: "4px solid var(--accent)",
+                  }}
+                >
+                  <div style={{ fontSize: "15px", lineHeight: 1.6, color: "var(--foreground)" }}>
+                    {result.instantAnswer}
+                  </div>
+                </div>
+              )}
+              {result.webResults && result.webResults.length > 0 ? (
+                <div>
+                  {result.webResults.map((item, index) => renderWebResultItem(item, index, true))}
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: "40px", color: "var(--foreground-muted)" }}>
+                  No results found. Try searching directly on {result.sourceName}.
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Render multi-source result card with preview
+  const renderResultCard = (result: SearchResult) => {
+    const sourceConfig = SEARCH_SOURCES.find((s) => s.id === result.source);
+
+    return (
+      <div
+        key={result.source}
+        className="glass"
+        style={{
+          borderRadius: "12px",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "14px 16px",
+            borderBottom: "1px solid var(--glass-border)",
+          }}
+        >
+          <span style={{ fontSize: "18px" }}>{sourceConfig?.icon}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 500, fontSize: "14px", color: "var(--foreground)" }}>
+              {result.sourceName}
+            </div>
+          </div>
+          {result.status === "loading" && (
+            <Loader2 style={{ width: "16px", height: "16px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+          )}
+          {result.type === "web" && result.url && result.status === "success" && (
+            <a
+              href={result.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "6px 10px",
+                borderRadius: "6px",
+                backgroundColor: "var(--accent)",
+                color: "var(--background)",
+                fontSize: "12px",
+                fontWeight: 500,
+                textDecoration: "none",
+              }}
+            >
+              Open
+              <ExternalLink style={{ width: "12px", height: "12px" }} />
+            </a>
+          )}
+        </div>
+
+        {/* Content Preview */}
+        <div style={{ padding: "14px 16px", flex: 1, maxHeight: "280px", overflowY: "auto" }}>
+          {result.status === "loading" && (
+            <div style={{ color: "var(--foreground-muted)", fontSize: "13px" }}>
+              Fetching results...
+            </div>
+          )}
+
+          {result.status === "error" && (
+            <div style={{ color: "#f87171", fontSize: "13px" }}>
+              Error: {result.error}
+            </div>
+          )}
+
+          {result.status === "success" && result.type === "ai" && result.content && (
+            <div
+              style={{
+                fontSize: "13px",
+                lineHeight: 1.6,
+                color: "var(--foreground)",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {result.content}
+            </div>
+          )}
+
+          {result.status === "success" && result.type === "web" && (
+            <>
+              {result.instantAnswer && (
+                <div
+                  style={{
+                    padding: "10px",
+                    marginBottom: "12px",
+                    borderRadius: "6px",
+                    backgroundColor: "rgba(6, 182, 212, 0.1)",
+                    fontSize: "13px",
+                    lineHeight: 1.5,
+                    color: "var(--foreground)",
+                  }}
+                >
+                  {result.instantAnswer}
+                </div>
+              )}
+              {result.webResults && result.webResults.length > 0 ? (
+                <div>
+                  {result.webResults.slice(0, 4).map((item, index) => renderWebResultItem(item, index, false))}
+                </div>
+              ) : (
+                <div style={{ color: "var(--foreground-muted)", fontSize: "13px" }}>
+                  Click "Open" to view results on {result.sourceName}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -286,10 +597,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             {isSearching ? (
               <Loader2 style={{ width: "16px", height: "16px", animation: "spin 1s linear infinite" }} />
             ) : (
-              <>
-                <span>Search</span>
-                <ExternalLink style={{ width: "14px", height: "14px" }} />
-              </>
+              <span>Search</span>
             )}
           </button>
         </div>
@@ -424,7 +732,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
         <div style={{ marginTop: "24px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
             <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)" }}>
-              Results ({results.length})
+              Results {isSingleSource ? "" : `(${results.length} sources)`}
             </h3>
             <button
               onClick={clearResults}
@@ -446,151 +754,30 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             </button>
           </div>
 
-          {/* Single AI source - full page display */}
-          {results.length === 1 && results[0].type === "ai" ? (
+          {/* Single source - full page display */}
+          {isSingleSource && results.length === 1 ? (
+            renderSingleSourceResults(results[0])
+          ) : (
+            /* Multiple sources - grid of preview cards */
             <div
-              className="glass"
               style={{
-                borderRadius: "12px",
-                overflow: "hidden",
+                display: "grid",
+                gap: "16px",
+                gridTemplateColumns: results.length === 2 ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(320px, 1fr))",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "16px",
-                  borderBottom: "1px solid var(--glass-border)",
-                }}
-              >
-                <span style={{ fontSize: "20px" }}>
-                  {SEARCH_SOURCES.find((s) => s.id === results[0].source)?.icon}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 500, color: "var(--foreground)" }}>{results[0].sourceName}</div>
-                  <div style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>AI Response</div>
-                </div>
-                {results[0].status === "loading" && (
-                  <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
-                )}
-              </div>
-              <div style={{ padding: "20px" }}>
-                {results[0].status === "loading" && (
-                  <div style={{ color: "var(--foreground-muted)", fontSize: "14px" }}>
-                    Generating response...
-                  </div>
-                )}
-                {results[0].status === "error" && (
-                  <div style={{ color: "#f87171", fontSize: "14px" }}>
-                    Error: {results[0].error}
-                  </div>
-                )}
-                {results[0].status === "success" && results[0].content && (
-                  <div
-                    style={{
-                      fontSize: "15px",
-                      lineHeight: 1.8,
-                      color: "var(--foreground)",
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {results[0].content}
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            /* Multiple results or web sources - grid display */
-            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: results.length === 1 ? "1fr" : "repeat(auto-fill, minmax(350px, 1fr))" }}>
-              {results.map((result) => {
-                const sourceConfig = SEARCH_SOURCES.find((s) => s.id === result.source);
-                const isSingleResult = results.length === 1;
-                return (
-                  <div
-                    key={result.source}
-                    className="glass"
-                    style={{
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        padding: "16px",
-                        borderBottom: result.type === "ai" ? "1px solid var(--glass-border)" : "none",
-                      }}
-                    >
-                      <span style={{ fontSize: "20px" }}>{sourceConfig?.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 500, color: "var(--foreground)" }}>{result.sourceName}</div>
-                        <div style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                          {result.type === "web" ? "Web Search" : "AI Response"}
-                        </div>
-                      </div>
-                      {result.type === "web" && result.url && (
-                        <a
-                          href={result.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "8px 14px",
-                            borderRadius: "6px",
-                            backgroundColor: "var(--accent)",
-                            color: "var(--background)",
-                            fontSize: "13px",
-                            fontWeight: 500,
-                            textDecoration: "none",
-                          }}
-                        >
-                          Open
-                          <ExternalLink style={{ width: "14px", height: "14px" }} />
-                        </a>
-                      )}
-                      {result.status === "loading" && (
-                        <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
-                      )}
-                    </div>
-
-                    {result.type === "ai" && (
-                      <div style={{ padding: "16px", maxHeight: isSingleResult ? "none" : "300px", overflowY: isSingleResult ? "visible" : "auto" }}>
-                        {result.status === "loading" && (
-                          <div style={{ color: "var(--foreground-muted)", fontSize: "14px" }}>
-                            Generating response...
-                          </div>
-                        )}
-                        {result.status === "error" && (
-                          <div style={{ color: "#f87171", fontSize: "14px" }}>
-                            Error: {result.error}
-                          </div>
-                        )}
-                        {result.status === "success" && result.content && (
-                          <div
-                            style={{
-                              fontSize: "14px",
-                              lineHeight: 1.7,
-                              color: "var(--foreground)",
-                              whiteSpace: "pre-wrap",
-                            }}
-                          >
-                            {result.content}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {results.map((result) => renderResultCard(result))}
             </div>
           )}
         </div>
       )}
+
+      <style jsx global>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

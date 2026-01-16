@@ -35,6 +35,13 @@ export const SEARCH_SOURCES: SearchSourceConfig[] = [
   { id: "claude", name: "Claude", description: "Anthropic Claude", icon: "🔮", type: "ai" },
 ];
 
+export interface WebSearchResultItem {
+  title: string;
+  url: string;
+  snippet: string;
+  source?: string;
+}
+
 export interface SearchResult {
   source: SearchSource;
   sourceName: string;
@@ -43,6 +50,8 @@ export interface SearchResult {
   error?: string;
   // For web sources
   url?: string;
+  webResults?: WebSearchResultItem[];
+  instantAnswer?: string;
   // For AI sources
   content?: string;
 }
