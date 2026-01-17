@@ -36,13 +36,14 @@ const DEFAULT_PREVIEW_WIDGETS: WidgetConfig[] = [
 const DEFAULT_TOOL_CARDS: WidgetConfig[] = [
   { id: "contact-finder", size: "default", visible: true, order: 0 },
   { id: "company-politics", size: "default", visible: true, order: 1 },
-  { id: "visual-rosters", size: "default", visible: true, order: 2 },
-  { id: "spotify", size: "default", visible: true, order: 3 },
-  { id: "contacts", size: "default", visible: true, order: 4 },
-  { id: "image-lookup", size: "default", visible: true, order: 5 },
-  { id: "visuals", size: "default", visible: true, order: 6 },
-  { id: "deep-search", size: "default", visible: true, order: 7 },
-  { id: "dark-search", size: "default", visible: true, order: 8 },
+  { id: "business-info", size: "default", visible: true, order: 2 },
+  { id: "visual-rosters", size: "default", visible: true, order: 3 },
+  { id: "spotify", size: "default", visible: true, order: 4 },
+  { id: "contacts", size: "default", visible: true, order: 5 },
+  { id: "image-lookup", size: "default", visible: true, order: 6 },
+  { id: "visuals", size: "default", visible: true, order: 7 },
+  { id: "deep-search", size: "default", visible: true, order: 8 },
+  { id: "dark-search", size: "default", visible: true, order: 9 },
 ];
 
 const DEFAULT_LAYOUT: LayoutConfig = {

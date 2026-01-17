@@ -204,14 +204,7 @@ export function Header({
           </Link>
 
           {/* Reminders */}
-          {user && (
-            <Reminders
-              isGoogleConnected={isGoogleConnected}
-              onConnectGoogle={onConnectGoogle}
-              defaultCollapsed={true}
-              compact={isMobile}
-            />
-          )}
+          {user && <Reminders />}
 
           {/* User Menu */}
           {loading ? (
