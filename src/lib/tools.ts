@@ -5,6 +5,10 @@ import {
   Search,
   TrendingUp,
   Contact2,
+  ScanSearch,
+  Sparkles,
+  Radar,
+  Moon,
 } from "lucide-react";
 import { Tool } from "@/types/tool";
 
@@ -65,6 +69,46 @@ export const tools: Tool[] = [
     href: "/tools/contacts",
     category: "productivity",
     status: "available",
+  },
+  {
+    id: "image-lookup",
+    name: "Image Lookup",
+    description: "Reverse image search using Google Lens and Bing Visual Search to find image sources and similar images.",
+    icon: ScanSearch,
+    href: "/tools/image-lookup",
+    category: "ai",
+    status: "available",
+    aiPowered: true,
+  },
+  {
+    id: "visuals",
+    name: "Visuals",
+    description: "AI-powered image search and generation. Find existing images or create new ones with data visualizations or imagination.",
+    icon: Sparkles,
+    href: "/tools/visuals",
+    category: "ai",
+    status: "available",
+    aiPowered: true,
+  },
+  {
+    id: "deep-search",
+    name: "Deep Search",
+    description: "Advanced multi-source deep web search for comprehensive research and investigation.",
+    icon: Radar,
+    href: "/tools/deep-search",
+    category: "ai",
+    status: "coming-soon",
+    aiPowered: true,
+  },
+  {
+    id: "dark-search",
+    name: "Dark Search",
+    description: "Explore indexed dark web content for research and security intelligence.",
+    icon: Moon,
+    href: "/tools/dark-search",
+    category: "ai",
+    status: "coming-soon",
+    aiPowered: true,
   },
 ];
 

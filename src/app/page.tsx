@@ -90,6 +90,10 @@ const WIDGET_TITLES: Record<string, string> = {
   trending: "Trending",
   contacts: "Contacts",
   raindrop: "Reading List",
+  "image-lookup": "Image Lookup",
+  visuals: "Visuals",
+  "deep-search": "Deep Search",
+  "dark-search": "Dark Search",
 };
 
 // Unified widgets grid - combines preview widgets and tool cards into a single grid
