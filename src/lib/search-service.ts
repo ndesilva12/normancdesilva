@@ -103,7 +103,7 @@ export async function queryGrok(query: string): Promise<string> {
       "Authorization": `Bearer ${XAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "grok-2-latest",
+      model: "grok-2",
       messages: [
         {
           role: "system",
@@ -235,7 +235,7 @@ export async function getTrendingCompanies(): Promise<{ google: string[]; x: str
         "Authorization": `Bearer ${XAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "grok-2-latest",
+        model: "grok-2",
         messages: [
           {
             role: "system",
