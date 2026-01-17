@@ -15,6 +15,7 @@ import {
   UserPlus,
   Trash2,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { useSettings, THEME_COLORS, TIMEZONES, ThemeMode, TimeFormat } from "@/contexts/SettingsContext";
 
@@ -78,6 +79,19 @@ export function SettingsPopup() {
       }
     } catch (err) {
       console.error("Failed to remove account:", err);
+    }
+  };
+
+  const handleReauthorize = async () => {
+    try {
+      const returnUrl = encodeURIComponent(window.location.pathname);
+      const response = await fetch(`/api/auth/google?returnUrl=${returnUrl}&reauthorize=true`);
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("Failed to reauthorize:", err);
     }
   };
 
@@ -456,27 +470,52 @@ export function SettingsPopup() {
                     )}
 
                     {/* Add account button */}
-                    <button
-                      onClick={handleAddGoogleAccount}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                        width: "100%",
-                        padding: "12px 16px",
-                        borderRadius: "10px",
-                        backgroundColor: "var(--accent)",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "var(--background)",
-                        fontSize: "14px",
-                        fontWeight: 500,
-                      }}
-                    >
-                      <UserPlus style={{ width: "16px", height: "16px" }} />
-                      {googleAccounts.length > 0 ? "Add Another Google Account" : "Connect Google Account"}
-                    </button>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        onClick={handleAddGoogleAccount}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          flex: 1,
+                          padding: "12px 16px",
+                          borderRadius: "10px",
+                          backgroundColor: "var(--accent)",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "var(--background)",
+                          fontSize: "14px",
+                          fontWeight: 500,
+                        }}
+                      >
+                        <UserPlus style={{ width: "16px", height: "16px" }} />
+                        {googleAccounts.length > 0 ? "Add Account" : "Connect Google"}
+                      </button>
+                      {googleAccounts.length > 0 && (
+                        <button
+                          onClick={handleReauthorize}
+                          title="Refresh permissions to enable new features like sending emails"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            padding: "12px 16px",
+                            borderRadius: "10px",
+                            backgroundColor: "rgba(255, 255, 255, 0.05)",
+                            border: "1px solid var(--glass-border)",
+                            cursor: "pointer",
+                            color: "var(--foreground)",
+                            fontSize: "14px",
+                            fontWeight: 500,
+                          }}
+                        >
+                          <RefreshCw style={{ width: "16px", height: "16px" }} />
+                          Refresh Permissions
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Other integrations info */}
