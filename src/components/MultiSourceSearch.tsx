@@ -87,34 +87,37 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const toggleSource = (source: SearchSource) => {
-    setSelectedSources((prev) => {
-      if (prev.includes(source)) {
-        if (prev.length === 1) return prev;
-        return prev.filter((s) => s !== source);
-      }
-      return [...prev, source];
-    });
+  // Single-select: clicking a source selects only that source (deselects all others)
+  const selectSource = (source: SearchSource) => {
+    setSelectedSources([source]);
   };
 
   // Check if all AI sources are selected
-  const allAISelected = AI_SOURCES.every((s) => selectedSources.includes(s));
+  const allAISelected = AI_SOURCES.every((s) => selectedSources.includes(s)) && selectedSources.length === AI_SOURCES.length;
 
-  // Toggle all AI sources
+  // Check if multiple non-AI sources selected (multi-mode)
+  const isMultiMode = selectedSources.length > 1 && !allAISelected;
+
+  // Toggle all AI sources (replaces current selection with all AI)
   const toggleAllAI = () => {
     if (allAISelected) {
-      // Deselect all AI sources (keep at least one source selected)
-      const nonAISources = selectedSources.filter((s) => !AI_SOURCES.includes(s));
-      if (nonAISources.length > 0) {
-        setSelectedSources(nonAISources);
-      } else {
-        // If only AI sources were selected, keep the first one
-        setSelectedSources([AI_SOURCES[0]]);
-      }
+      // If AI is already selected, switch to first web source
+      setSelectedSources(["duck"]);
     } else {
-      // Select all AI sources (add to existing selection)
-      const newSources = [...new Set([...selectedSources, ...AI_SOURCES])];
-      setSelectedSources(newSources);
+      // Select all AI sources only
+      setSelectedSources([...AI_SOURCES]);
+    }
+  };
+
+  // Enable multi-select mode with web sources
+  const WEB_SOURCES: SearchSource[] = ["duck", "google", "wikipedia", "grokipedia", "x", "youtube", "rumble", "trends"];
+  const allWebSelected = WEB_SOURCES.every((s) => selectedSources.includes(s)) && selectedSources.length === WEB_SOURCES.length;
+
+  const toggleAllWeb = () => {
+    if (allWebSelected) {
+      setSelectedSources(["duck"]);
+    } else {
+      setSelectedSources([...WEB_SOURCES]);
     }
   };
 
@@ -818,9 +821,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
                   <button
                     key={source.id}
                     type="button"
-                    onClick={() => {
-                      toggleSource(source.id);
-                    }}
+                    onClick={() => selectSource(source.id)}
                     style={{
                       width: "100%",
                       display: "flex",
@@ -883,11 +884,35 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             >
               AI
             </button>
+            {/* All Web Button */}
+            <button
+              type="button"
+              onClick={toggleAllWeb}
+              className={!allWebSelected ? "glass" : ""}
+              style={{
+                whiteSpace: "nowrap",
+                borderRadius: "9999px",
+                padding: "5px 12px",
+                fontSize: "12px",
+                fontWeight: 600,
+                border: "none",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                backgroundColor: allWebSelected
+                  ? "var(--accent)"
+                  : "transparent",
+                color: allWebSelected
+                  ? "var(--background)"
+                  : "var(--foreground-muted)",
+              }}
+            >
+              Web
+            </button>
             {SEARCH_SOURCES.map((source) => (
               <button
                 key={source.id}
                 type="button"
-                onClick={() => toggleSource(source.id)}
+                onClick={() => selectSource(source.id)}
                 className={!selectedSources.includes(source.id) ? "glass" : ""}
                 style={{
                   whiteSpace: "nowrap",
@@ -898,10 +923,10 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
                   border: "none",
                   cursor: "pointer",
                   transition: "all 0.2s",
-                  backgroundColor: selectedSources.includes(source.id)
+                  backgroundColor: selectedSources.includes(source.id) && selectedSources.length === 1
                     ? "var(--accent)"
                     : "transparent",
-                  color: selectedSources.includes(source.id)
+                  color: selectedSources.includes(source.id) && selectedSources.length === 1
                     ? "var(--background)"
                     : "var(--foreground-muted)",
                 }}
