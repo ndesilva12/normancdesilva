@@ -142,6 +142,19 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
     e.preventDefault();
     if (!query.trim() || selectedSources.length === 0) return;
 
+    // Single source handling - open directly for web sources
+    if (selectedSources.length === 1) {
+      const sourceId = selectedSources[0];
+      const sourceConfig = SEARCH_SOURCES.find((s) => s.id === sourceId);
+
+      // For web sources (non-AI), open the URL directly
+      if (sourceConfig?.type === "web") {
+        const searchUrl = getSearchUrl(sourceId, query.trim());
+        window.open(searchUrl, "_blank");
+        return;
+      }
+    }
+
     setIsSearching(true);
 
     // Initialize all results as loading

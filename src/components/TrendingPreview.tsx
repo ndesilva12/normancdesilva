@@ -29,13 +29,13 @@ export function TrendingPreview() {
       const googleData = await googleRes.json();
       const xData = await xRes.json();
 
-      const googleTopics: TrendingTopic[] = (googleData.trends || []).slice(0, 5).map((t: { title: string; searchUrl: string }) => ({
+      const googleTopics: TrendingTopic[] = (googleData.trends || []).slice(0, 10).map((t: { title: string; searchUrl: string }) => ({
         topic: t.title,
         searchUrl: t.searchUrl,
         source: "google" as const,
       }));
 
-      const xTopics: TrendingTopic[] = (xData.topics || []).slice(0, 5).map((t: { topic: string; searchUrl: string }) => ({
+      const xTopics: TrendingTopic[] = (xData.topics || []).slice(0, 10).map((t: { topic: string; searchUrl: string }) => ({
         topic: t.topic,
         searchUrl: t.searchUrl,
         source: "x" as const,
@@ -49,7 +49,7 @@ export function TrendingPreview() {
         if (i < xTopics.length) mixed.push(xTopics[i]);
       }
 
-      setTopics(mixed.slice(0, 8));
+      setTopics(mixed.slice(0, 16));
     } catch (err) {
       setError("Failed to load trends");
     } finally {
