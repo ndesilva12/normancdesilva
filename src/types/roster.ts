@@ -1,30 +1,45 @@
-export type League =
-  | "nba"
-  | "ncaa-basketball"
-  | "nfl"
-  | "ncaa-football"
-  | "mlb"
-  | "nhl"
-  | "soccer"
-  | "euroleague";
+// Simplified roster types for basketball only
+export type League = "nba" | "college" | "international";
 
 export interface LeagueOption {
   id: League;
   name: string;
-  sportsRefPath: string;
-  baseUrl: string;
+  description: string;
 }
 
 export const LEAGUES: LeagueOption[] = [
-  { id: "nba", name: "NBA", sportsRefPath: "teams", baseUrl: "https://www.basketball-reference.com" },
-  { id: "ncaa-basketball", name: "NCAA Basketball", sportsRefPath: "cbb/schools", baseUrl: "https://www.sports-reference.com" },
-  { id: "nfl", name: "NFL", sportsRefPath: "teams", baseUrl: "https://www.pro-football-reference.com" },
-  { id: "ncaa-football", name: "NCAA Football", sportsRefPath: "cfb/schools", baseUrl: "https://www.sports-reference.com" },
-  { id: "mlb", name: "MLB", sportsRefPath: "teams", baseUrl: "https://www.baseball-reference.com" },
-  { id: "nhl", name: "NHL", sportsRefPath: "teams", baseUrl: "https://www.hockey-reference.com" },
-  { id: "soccer", name: "Soccer", sportsRefPath: "squads", baseUrl: "https://fbref.com" },
-  { id: "euroleague", name: "Euroleague Basketball", sportsRefPath: "teams", baseUrl: "https://www.eurobasket.com" },
+  {
+    id: "nba",
+    name: "NBA",
+    description: "National Basketball Association"
+  },
+  {
+    id: "college",
+    name: "College Basketball",
+    description: "NCAA Men's Basketball"
+  },
+  {
+    id: "international",
+    name: "International Basketball",
+    description: "EuroLeague, FIBA, and other international leagues"
+  },
 ];
+
+// Basic player stats (3-5 key stats)
+export interface PlayerStats {
+  gamesPlayed: number;
+  pointsPerGame: number;
+  reboundsPerGame: number;
+  assistsPerGame: number;
+  minutesPerGame?: number;
+}
+
+// Prior team history
+export interface TeamHistory {
+  team: string;
+  league: string;
+  years: string; // e.g., "2022-2024"
+}
 
 export interface Player {
   number: string;
@@ -34,33 +49,25 @@ export interface Player {
   weight: string;
   age: string;
   hometown: string;
-  highSchool: string;
-  previousSchools: string[];
-  // Last 5 seasons: team name or null if not playing
-  seasons: {
-    year: string;
-    team: string | null;
-  }[];
+  country?: string;
+  // Current season stats
+  stats: PlayerStats;
+  // Prior team history
+  priorTeams: TeamHistory[];
   // For mapping
   coordinates?: {
     lat: number;
     lng: number;
   };
-  // Link to player's sports-reference page
-  playerUrl?: string;
 }
 
 export interface TeamRoster {
   teamName: string;
   league: League;
-  logoUrl?: string;
+  leagueName: string; // e.g., "NBA", "Big Ten", "EuroLeague"
+  conference?: string;
   primaryColor: string;
   secondaryColor: string;
   players: Player[];
   season: string;
-}
-
-export interface RosterSearchResult {
-  roster: TeamRoster;
-  cached?: boolean;
 }

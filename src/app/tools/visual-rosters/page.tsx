@@ -2,62 +2,69 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Search, Users, MapPin, Loader2, ChevronDown } from "lucide-react";
+import { ArrowLeft, Search, Users, MapPin, Loader2, ChevronDown, Trophy, History } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { League, LEAGUES, TeamRoster, Player } from "@/types/roster";
+
+// Dark map styles
+const DARK_MAP_STYLES = [
+  { elementType: "geometry", stylers: [{ color: "#0d1117" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0d1117" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
+  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#21262d" }] },
+  { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#0d1117" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#161b22" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#010409" }] },
+];
 
 // Roster Table Component
 function RosterTable({
   roster,
   highlightedPlayer,
   onPlayerHover,
-  teamIndex,
 }: {
   roster: TeamRoster;
   highlightedPlayer: string | null;
   onPlayerHover: (playerName: string | null) => void;
-  teamIndex: number;
 }) {
-  const seasonYears = roster.players[0]?.seasons?.map((s) => s.year) || [];
+  const [expandedPlayer, setExpandedPlayer] = useState<string | null>(null);
 
   return (
     <div className="glass rounded-2xl overflow-hidden">
       {/* Team Header */}
       <div
         style={{
-          padding: "16px 20px",
+          padding: "20px 24px",
           borderBottom: "1px solid var(--glass-border)",
           display: "flex",
           alignItems: "center",
-          gap: "12px",
+          gap: "16px",
         }}
       >
         <div
           style={{
-            width: "12px",
-            height: "12px",
-            borderRadius: "50%",
+            width: "48px",
+            height: "48px",
+            borderRadius: "12px",
             backgroundColor: roster.primaryColor,
-            border: `2px solid ${roster.secondaryColor}`,
-          }}
-        />
-        <h3 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)" }}>
-          {roster.teamName}
-        </h3>
-        <span style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-          {roster.season} Season
-        </span>
-        <span
-          style={{
-            marginLeft: "auto",
-            fontSize: "13px",
-            color: "var(--foreground-muted)",
+            border: `3px solid ${roster.secondaryColor}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          {roster.players.length} players
-        </span>
+          <Trophy style={{ width: "24px", height: "24px", color: roster.secondaryColor }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ fontSize: "20px", fontWeight: 700, color: "var(--foreground)" }}>
+            {roster.teamName}
+          </h3>
+          <p style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
+            {roster.leagueName} • {roster.season} Season • {roster.players.length} players
+          </p>
+        </div>
       </div>
 
       {/* Table */}
@@ -66,101 +73,112 @@ function RosterTable({
           <thead>
             <tr style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
               <th style={thStyle}>#</th>
-              <th style={{ ...thStyle, textAlign: "left" }}>Name</th>
+              <th style={{ ...thStyle, textAlign: "left" }}>Player</th>
               <th style={thStyle}>Pos</th>
               <th style={thStyle}>Ht</th>
-              <th style={thStyle}>Wt</th>
               <th style={thStyle}>Age</th>
               <th style={{ ...thStyle, textAlign: "left" }}>Hometown</th>
-              <th style={{ ...thStyle, textAlign: "left" }}>High School</th>
-              <th style={{ ...thStyle, textAlign: "left" }}>Prev School</th>
-              {seasonYears.map((year) => (
-                <th key={year} style={thStyle}>
-                  {year}
-                </th>
-              ))}
+              <th style={thStyle}>PPG</th>
+              <th style={thStyle}>RPG</th>
+              <th style={thStyle}>APG</th>
+              <th style={thStyle}>GP</th>
             </tr>
           </thead>
           <tbody>
             {roster.players.map((player, index) => (
-              <tr
-                key={`${player.name}-${index}`}
-                onMouseEnter={() => onPlayerHover(player.name)}
-                onMouseLeave={() => onPlayerHover(null)}
-                style={{
-                  backgroundColor:
-                    highlightedPlayer === player.name
-                      ? `${roster.primaryColor}22`
-                      : index % 2 === 0
-                      ? "transparent"
-                      : "rgba(255,255,255,0.02)",
-                  cursor: "pointer",
-                  transition: "background-color 0.15s",
-                }}
-              >
-                <td style={tdStyle}>{player.number}</td>
-                <td style={{ ...tdStyle, fontWeight: 500, textAlign: "left" }}>
-                  {player.playerUrl ? (
-                    <a
-                      href={player.playerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        color: "var(--foreground)",
-                        textDecoration: "none",
-                        borderBottom: "1px dashed var(--foreground-muted)",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = roster.primaryColor)}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground)")}
-                    >
-                      {player.name}
-                    </a>
-                  ) : (
-                    player.name
-                  )}
-                </td>
-                <td style={tdStyle}>{player.position}</td>
-                <td style={tdStyle}>{player.height}</td>
-                <td style={tdStyle}>{player.weight}</td>
-                <td style={tdStyle}>{player.age}</td>
-                <td style={{ ...tdStyle, textAlign: "left" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    {player.coordinates && (
-                      <MapPin
-                        style={{
-                          width: "12px",
-                          height: "12px",
-                          color: roster.primaryColor,
-                          flexShrink: 0,
-                        }}
-                      />
-                    )}
-                    <span>{player.hometown || "N/A"}</span>
-                  </div>
-                </td>
-                <td style={{ ...tdStyle, textAlign: "left", maxWidth: "150px" }}>
-                  <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
-                    {player.highSchool || "N/A"}
-                  </span>
-                </td>
-                <td style={{ ...tdStyle, textAlign: "left" }}>
-                  {player.previousSchools?.join(", ") || "N/A"}
-                </td>
-                {player.seasons?.map((season, idx) => (
-                  <td key={idx} style={{ ...tdStyle, fontSize: "11px", maxWidth: "80px" }}>
-                    <span
-                      style={{
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        display: "block",
-                      }}
-                    >
-                      {season.team || "-"}
-                    </span>
+              <>
+                <tr
+                  key={`${player.name}-${index}`}
+                  onMouseEnter={() => onPlayerHover(player.name)}
+                  onMouseLeave={() => onPlayerHover(null)}
+                  onClick={() => setExpandedPlayer(expandedPlayer === player.name ? null : player.name)}
+                  style={{
+                    backgroundColor:
+                      highlightedPlayer === player.name
+                        ? `${roster.primaryColor}22`
+                        : index % 2 === 0
+                        ? "transparent"
+                        : "rgba(255,255,255,0.02)",
+                    cursor: "pointer",
+                    transition: "background-color 0.15s",
+                  }}
+                >
+                  <td style={tdStyle}>{player.number || "-"}</td>
+                  <td style={{ ...tdStyle, fontWeight: 600, textAlign: "left" }}>
+                    {player.name}
                   </td>
-                ))}
-              </tr>
+                  <td style={tdStyle}>{player.position}</td>
+                  <td style={tdStyle}>{player.height}</td>
+                  <td style={tdStyle}>{player.age}</td>
+                  <td style={{ ...tdStyle, textAlign: "left" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {player.coordinates && (
+                        <MapPin
+                          style={{
+                            width: "12px",
+                            height: "12px",
+                            color: roster.primaryColor,
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      <span style={{ fontSize: "12px" }}>{player.hometown || "N/A"}</span>
+                    </div>
+                  </td>
+                  <td style={{ ...tdStyle, fontWeight: 600, color: "var(--accent)" }}>
+                    {player.stats?.pointsPerGame?.toFixed(1) || "0.0"}
+                  </td>
+                  <td style={tdStyle}>
+                    {player.stats?.reboundsPerGame?.toFixed(1) || "0.0"}
+                  </td>
+                  <td style={tdStyle}>
+                    {player.stats?.assistsPerGame?.toFixed(1) || "0.0"}
+                  </td>
+                  <td style={tdStyle}>{player.stats?.gamesPlayed || 0}</td>
+                </tr>
+
+                {/* Expanded row for prior teams */}
+                {expandedPlayer === player.name && player.priorTeams && player.priorTeams.length > 0 && (
+                  <tr key={`${player.name}-history`}>
+                    <td colSpan={10} style={{ padding: 0 }}>
+                      <div
+                        style={{
+                          padding: "12px 20px",
+                          backgroundColor: "rgba(var(--accent-rgb), 0.05)",
+                          borderBottom: "1px solid var(--glass-border)",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                          <History style={{ width: "14px", height: "14px", color: "var(--accent)" }} />
+                          <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground)" }}>
+                            Prior Team History
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                          {player.priorTeams.map((team, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: "6px 12px",
+                                backgroundColor: "rgba(255,255,255,0.05)",
+                                borderRadius: "6px",
+                                fontSize: "12px",
+                              }}
+                            >
+                              <span style={{ fontWeight: 600, color: "var(--foreground)" }}>
+                                {team.team}
+                              </span>
+                              <span style={{ color: "var(--foreground-muted)", marginLeft: "6px" }}>
+                                {team.league} • {team.years}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
           </tbody>
         </table>
@@ -170,67 +188,41 @@ function RosterTable({
 }
 
 const thStyle: React.CSSProperties = {
-  padding: "10px 8px",
+  padding: "12px 8px",
   textAlign: "center",
   fontWeight: 600,
   color: "var(--foreground-muted)",
   borderBottom: "1px solid var(--glass-border)",
   whiteSpace: "nowrap",
+  fontSize: "12px",
+  textTransform: "uppercase",
+  letterSpacing: "0.5px",
 };
 
 const tdStyle: React.CSSProperties = {
-  padding: "10px 8px",
+  padding: "12px 8px",
   textAlign: "center",
   color: "var(--foreground)",
   borderBottom: "1px solid var(--glass-border)",
 };
 
-// Dark map styles for a sleek look
-const DARK_MAP_STYLES = [
-  { elementType: "geometry", stylers: [{ color: "#0d1117" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#0d1117" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
-  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#21262d" }] },
-  { featureType: "administrative.land_parcel", elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
-  { featureType: "administrative.province", elementType: "geometry.stroke", stylers: [{ color: "#21262d" }] },
-  { featureType: "landscape.man_made", elementType: "geometry.stroke", stylers: [{ color: "#21262d" }] },
-  { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#0d1117" }] },
-  { featureType: "landscape.natural.terrain", elementType: "geometry", stylers: [{ color: "#161b22" }] },
-  { featureType: "poi", elementType: "geometry", stylers: [{ color: "#161b22" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
-  { featureType: "poi.park", elementType: "geometry.fill", stylers: [{ color: "#0d1117" }] },
-  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#3d4f5f" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#161b22" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#21262d" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#21262d" }] },
-  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#30363d" }] },
-  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#8b949e" }] },
-  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#161b22" }] },
-  { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#010409" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#3d4f5f" }] },
-];
-
 // Map Component
 function PlayerMap({
-  rosters,
+  roster,
   highlightedPlayer,
   onPlayerHover,
 }: {
-  rosters: TeamRoster[];
+  roster: TeamRoster;
   highlightedPlayer: string | null;
   onPlayerHover: (playerName: string | null) => void;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
-  const hasInitializedRef = useRef(false);
-  const lastRosterSignatureRef = useRef<string>("");
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
-  // Load Google Maps script
+  // Load Google Maps
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.google?.maps) {
@@ -240,7 +232,7 @@ function PlayerMap({
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
-      setMapError("Google Maps API key not configured. Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.");
+      setMapError("Google Maps API key not configured");
       return;
     }
 
@@ -251,37 +243,22 @@ function PlayerMap({
     script.onload = () => setMapLoaded(true);
     script.onerror = () => setMapError("Failed to load Google Maps");
     document.head.appendChild(script);
-
-    return () => {
-      // Cleanup is handled by browser
-    };
   }, []);
 
-  // Initialize map and markers (only when rosters change, NOT when highlightedPlayer changes)
+  // Initialize map and markers
   useEffect(() => {
-    if (!mapLoaded || !mapRef.current || rosters.length === 0) return;
+    if (!mapLoaded || !mapRef.current || roster.players.length === 0) return;
 
-    // Collect all players with coordinates
-    const allPlayers: { player: Player; roster: TeamRoster }[] = [];
-    rosters.forEach((roster) => {
-      roster.players.forEach((player) => {
-        if (player.coordinates) {
-          allPlayers.push({ player, roster });
-        }
-      });
-    });
+    const playersWithCoords = roster.players.filter((p) => p.coordinates);
+    if (playersWithCoords.length === 0) return;
 
-    if (allPlayers.length === 0) return;
-
-    // Calculate bounds
     const bounds = new google.maps.LatLngBounds();
-    allPlayers.forEach(({ player }) => {
+    playersWithCoords.forEach((player) => {
       if (player.coordinates) {
         bounds.extend(new google.maps.LatLng(player.coordinates.lat, player.coordinates.lng));
       }
     });
 
-    // Create map if not exists
     if (!mapInstanceRef.current) {
       mapInstanceRef.current = new google.maps.Map(mapRef.current, {
         mapId: "roster-map",
@@ -300,8 +277,8 @@ function PlayerMap({
     markersRef.current.forEach((marker) => (marker.map = null));
     markersRef.current = [];
 
-    // Create markers for each player
-    allPlayers.forEach(({ player, roster }) => {
+    // Create markers
+    playersWithCoords.forEach((player) => {
       if (!player.coordinates) return;
 
       const markerContent = document.createElement("div");
@@ -313,7 +290,6 @@ function PlayerMap({
           border: 2px solid ${roster.secondaryColor};
           border-radius: 50%;
           box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-          transition: all 0.2s;
           cursor: pointer;
         "></div>
       `;
@@ -325,19 +301,17 @@ function PlayerMap({
         title: player.name,
       });
 
-      // Add hover events
       markerContent.addEventListener("mouseenter", () => onPlayerHover(player.name));
       markerContent.addEventListener("mouseleave", () => onPlayerHover(null));
       markerContent.addEventListener("click", () => {
-        // Show info window on click
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div style="padding: 8px; color: #1a1a2e;">
               <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${player.name}</div>
               <div style="font-size: 12px; color: #666;">
-                #${player.number} | ${player.position}<br/>
-                ${player.height} | ${player.weight} lbs<br/>
-                ${player.hometown}
+                #${player.number || "-"} | ${player.position}<br/>
+                ${player.height} | ${player.hometown}<br/>
+                ${player.stats?.pointsPerGame?.toFixed(1) || 0} PPG
               </div>
             </div>
           `,
@@ -348,29 +322,15 @@ function PlayerMap({
       markersRef.current.push(marker);
     });
 
-    // Create a signature of current rosters to detect when teams change
-    const rosterSignature = rosters.map(r => r.teamName).join("|");
+    mapInstanceRef.current.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+  }, [mapLoaded, roster, onPlayerHover]);
 
-    // Reset initialization if rosters changed (new team loaded)
-    if (lastRosterSignatureRef.current !== rosterSignature) {
-      hasInitializedRef.current = false;
-      lastRosterSignatureRef.current = rosterSignature;
-    }
-
-    // Only fit bounds on initial load or when new team is loaded (not on hover)
-    if (!hasInitializedRef.current) {
-      mapInstanceRef.current.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
-      hasInitializedRef.current = true;
-    }
-  }, [mapLoaded, rosters, onPlayerHover]); // Removed highlightedPlayer from dependencies
-
-  // Update marker styles when highlighted player changes (without re-fitting bounds)
+  // Update marker styles on highlight
   useEffect(() => {
     if (!mapLoaded) return;
 
     markersRef.current.forEach((marker) => {
-      const title = marker.title;
-      const isHighlighted = highlightedPlayer === title;
+      const isHighlighted = highlightedPlayer === marker.title;
       const content = marker.content as HTMLElement;
       if (content) {
         const dot = content.querySelector("div") as HTMLElement;
@@ -378,7 +338,6 @@ function PlayerMap({
           dot.style.width = isHighlighted ? "20px" : "14px";
           dot.style.height = isHighlighted ? "20px" : "14px";
           dot.style.borderColor = isHighlighted ? "#fff" : "";
-          dot.style.zIndex = isHighlighted ? "1000" : "1";
         }
       }
     });
@@ -388,10 +347,7 @@ function PlayerMap({
     return (
       <div className="glass rounded-2xl p-8 text-center">
         <MapPin style={{ width: "48px", height: "48px", color: "var(--foreground-muted)", margin: "0 auto 16px" }} />
-        <p style={{ color: "var(--foreground-muted)", marginBottom: "8px" }}>{mapError}</p>
-        <p style={{ color: "var(--foreground-muted)", fontSize: "13px" }}>
-          To enable the map, add your Google Maps API key to your environment variables.
-        </p>
+        <p style={{ color: "var(--foreground-muted)" }}>{mapError}</p>
       </div>
     );
   }
@@ -411,52 +367,21 @@ function PlayerMap({
         <h3 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)" }}>
           Player Hometowns
         </h3>
-        {rosters.length > 1 && (
-          <div style={{ marginLeft: "auto", display: "flex", gap: "16px" }}>
-            {rosters.map((roster, idx) => (
-              <div key={idx} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <div
-                  style={{
-                    width: "10px",
-                    height: "10px",
-                    borderRadius: "50%",
-                    backgroundColor: roster.primaryColor,
-                  }}
-                />
-                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                  {roster.teamName}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        <span style={{ marginLeft: "auto", fontSize: "13px", color: "var(--foreground-muted)" }}>
+          {roster.players.filter((p) => p.coordinates).length} locations mapped
+        </span>
       </div>
       <div
         ref={mapRef}
         style={{
           width: "100%",
-          height: "650px",
+          height: "500px",
           backgroundColor: "#0d1117",
         }}
       >
         {!mapLoaded && (
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Loader2
-              style={{
-                width: "32px",
-                height: "32px",
-                color: "var(--accent)",
-                animation: "spin 1s linear infinite",
-              }}
-            />
+          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
           </div>
         )}
       </div>
@@ -464,160 +389,44 @@ function PlayerMap({
   );
 }
 
-// Team Search Component
-function TeamSearch({
-  index,
-  league,
-  onSearch,
-  isLoading,
-}: {
-  index: number;
-  league: League | null;
-  onSearch: (team: string) => void;
-  isLoading: boolean;
-}) {
-  const [query, setQuery] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.trim() && league) {
-      onSearch(query.trim());
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} style={{ width: "100%" }}>
-      <div
-        className="glass"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          borderRadius: "12px",
-          padding: "8px 12px",
-        }}
-      >
-        <Search
-          style={{
-            width: "18px",
-            height: "18px",
-            flexShrink: 0,
-            color: "var(--foreground-muted)",
-          }}
-        />
-        <input
-          type="text"
-          placeholder={`Search Team ${index + 1}...`}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          disabled={!league || isLoading}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            fontSize: "14px",
-            color: "var(--foreground)",
-            padding: "8px 0",
-            opacity: !league ? 0.5 : 1,
-          }}
-        />
-        <button
-          type="submit"
-          disabled={!league || !query.trim() || isLoading}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            flexShrink: 0,
-            borderRadius: "8px",
-            backgroundColor: "var(--accent)",
-            padding: "8px 16px",
-            fontSize: "13px",
-            fontWeight: 500,
-            color: "var(--background)",
-            border: "none",
-            cursor: !league || !query.trim() || isLoading ? "not-allowed" : "pointer",
-            opacity: !league || !query.trim() || isLoading ? 0.5 : 1,
-          }}
-        >
-          {isLoading ? (
-            <Loader2 style={{ width: "16px", height: "16px", animation: "spin 1s linear infinite" }} />
-          ) : (
-            "Search"
-          )}
-        </button>
-      </div>
-    </form>
-  );
-}
-
 // Main Page Component
 export default function VisualRostersPage() {
   const [league, setLeague] = useState<League | null>(null);
-  const [teamCount, setTeamCount] = useState<1 | 2>(1);
-  const [rosters, setRosters] = useState<(TeamRoster | null)[]>([null, null]);
-  const [loading, setLoading] = useState<boolean[]>([false, false]);
-  const [errors, setErrors] = useState<(string | null)[]>([null, null]);
+  const [teamInput, setTeamInput] = useState("");
+  const [roster, setRoster] = useState<TeamRoster | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [highlightedPlayer, setHighlightedPlayer] = useState<string | null>(null);
 
-  const searchTeam = useCallback(
-    async (teamIndex: number, teamName: string) => {
-      if (!league) return;
+  const searchTeam = useCallback(async () => {
+    if (!league || !teamInput.trim()) return;
 
-      setLoading((prev) => {
-        const newLoading = [...prev];
-        newLoading[teamIndex] = true;
-        return newLoading;
-      });
-      setErrors((prev) => {
-        const newErrors = [...prev];
-        newErrors[teamIndex] = null;
-        return newErrors;
-      });
+    setLoading(true);
+    setError(null);
+    setRoster(null);
 
-      try {
-        const response = await fetch(
-          `/api/roster?league=${encodeURIComponent(league)}&team=${encodeURIComponent(teamName)}`
-        );
-        const data = await response.json();
+    try {
+      const response = await fetch(
+        `/api/roster?league=${encodeURIComponent(league)}&team=${encodeURIComponent(teamInput.trim())}`
+      );
+      const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error(data.details || data.error || "Failed to fetch roster");
-        }
-
-        setRosters((prev) => {
-          const newRosters = [...prev];
-          newRosters[teamIndex] = data.data;
-          return newRosters;
-        });
-      } catch (err) {
-        setErrors((prev) => {
-          const newErrors = [...prev];
-          newErrors[teamIndex] = err instanceof Error ? err.message : "An error occurred";
-          return newErrors;
-        });
-      } finally {
-        setLoading((prev) => {
-          const newLoading = [...prev];
-          newLoading[teamIndex] = false;
-          return newLoading;
-        });
+      if (!response.ok) {
+        throw new Error(data.details || data.error || "Failed to fetch roster");
       }
-    },
-    [league]
-  );
 
-  // Clear second roster when switching to single team mode
-  useEffect(() => {
-    if (teamCount === 1) {
-      setRosters((prev) => [prev[0], null]);
-      setErrors((prev) => [prev[0], null]);
+      setRoster(data.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
     }
-  }, [teamCount]);
+  }, [league, teamInput]);
 
-  const activeRosters = rosters.filter((r): r is TeamRoster => r !== null);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    searchTeam();
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
@@ -627,12 +436,13 @@ export default function VisualRostersPage() {
         <div
           style={{
             width: "100%",
-            maxWidth: "1400px",
+            maxWidth: "1200px",
             margin: "0 auto",
             padding: "32px 24px 100px 24px",
           }}
         >
           <RemindersBanner />
+
           {/* Back Link */}
           <Link
             href="/"
@@ -675,28 +485,21 @@ export default function VisualRostersPage() {
                   Visual Rosters
                 </h1>
                 <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-                  View team rosters with player details and hometown mapping
+                  Basketball team rosters with stats and hometown mapping
                 </p>
               </div>
             </div>
           </motion.div>
 
-          {/* Controls */}
+          {/* Search Form */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
             style={{ marginTop: "24px" }}
           >
-            <div className="glass rounded-2xl p-6">
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                  gap: "16px",
-                  marginBottom: "20px",
-                }}
-              >
+            <form onSubmit={handleSubmit} className="glass rounded-2xl p-6">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "16px", alignItems: "end" }}>
                 {/* League Selection */}
                 <div>
                   <label
@@ -716,11 +519,11 @@ export default function VisualRostersPage() {
                       onChange={(e) => setLeague(e.target.value as League)}
                       style={{
                         width: "100%",
-                        padding: "10px 36px 10px 12px",
+                        padding: "12px 36px 12px 14px",
                         fontSize: "14px",
                         backgroundColor: "rgba(255,255,255,0.05)",
                         border: "1px solid var(--glass-border)",
-                        borderRadius: "8px",
+                        borderRadius: "10px",
                         color: "var(--foreground)",
                         appearance: "none",
                         cursor: "pointer",
@@ -750,7 +553,7 @@ export default function VisualRostersPage() {
                   </div>
                 </div>
 
-                {/* Team Count Selection */}
+                {/* Team Input */}
                 <div>
                   <label
                     style={{
@@ -761,119 +564,115 @@ export default function VisualRostersPage() {
                       marginBottom: "8px",
                     }}
                   >
-                    Number of Teams
+                    Team Name
                   </label>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    {[1, 2].map((count) => (
-                      <button
-                        key={count}
-                        onClick={() => setTeamCount(count as 1 | 2)}
-                        className={teamCount !== count ? "glass" : ""}
-                        style={{
-                          flex: 1,
-                          padding: "10px 16px",
-                          fontSize: "14px",
-                          fontWeight: 500,
-                          border: "none",
-                          borderRadius: "8px",
-                          cursor: "pointer",
-                          backgroundColor: teamCount === count ? "var(--accent)" : "transparent",
-                          color: teamCount === count ? "var(--background)" : "var(--foreground)",
-                          transition: "all 0.2s",
-                        }}
-                      >
-                        {count} Team{count > 1 ? "s" : ""}
-                      </button>
-                    ))}
+                  <div style={{ position: "relative" }}>
+                    <Search
+                      style={{
+                        position: "absolute",
+                        left: "14px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        width: "18px",
+                        height: "18px",
+                        color: "var(--foreground-muted)",
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder={
+                        league === "nba"
+                          ? "e.g., Lakers, Celtics, Warriors..."
+                          : league === "college"
+                          ? "e.g., Duke, Kentucky, Gonzaga..."
+                          : league === "international"
+                          ? "e.g., Real Madrid, Olympiacos..."
+                          : "Enter team name..."
+                      }
+                      value={teamInput}
+                      onChange={(e) => setTeamInput(e.target.value)}
+                      disabled={!league}
+                      style={{
+                        width: "100%",
+                        padding: "12px 14px 12px 44px",
+                        fontSize: "14px",
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                        border: "1px solid var(--glass-border)",
+                        borderRadius: "10px",
+                        color: "var(--foreground)",
+                        opacity: !league ? 0.5 : 1,
+                      }}
+                    />
                   </div>
                 </div>
+
+                {/* Search Button */}
+                <button
+                  type="submit"
+                  disabled={!league || !teamInput.trim() || loading}
+                  style={{
+                    padding: "12px 28px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    backgroundColor: "var(--accent)",
+                    color: "var(--background)",
+                    border: "none",
+                    borderRadius: "10px",
+                    cursor: !league || !teamInput.trim() || loading ? "not-allowed" : "pointer",
+                    opacity: !league || !teamInput.trim() || loading ? 0.5 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 style={{ width: "18px", height: "18px", animation: "spin 1s linear infinite" }} />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Search style={{ width: "18px", height: "18px" }} />
+                      Search
+                    </>
+                  )}
+                </button>
               </div>
 
-              {/* Team Search Bars */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: teamCount === 2 ? "1fr 1fr" : "1fr",
-                  gap: "16px",
-                }}
-              >
-                <TeamSearch
-                  index={0}
-                  league={league}
-                  onSearch={(team) => searchTeam(0, team)}
-                  isLoading={loading[0]}
-                />
-                {teamCount === 2 && (
-                  <TeamSearch
-                    index={1}
-                    league={league}
-                    onSearch={(team) => searchTeam(1, team)}
-                    isLoading={loading[1]}
-                  />
-                )}
-              </div>
-
-              {/* Error Messages */}
-              {errors.map(
-                (error, idx) =>
-                  error && (
-                    <div
-                      key={idx}
-                      style={{
-                        marginTop: "12px",
-                        padding: "12px 16px",
-                        backgroundColor: "rgba(239, 68, 68, 0.1)",
-                        border: "1px solid rgba(239, 68, 68, 0.3)",
-                        borderRadius: "8px",
-                        color: "#ef4444",
-                        fontSize: "13px",
-                      }}
-                    >
-                      Team {idx + 1} Error: {error}
-                    </div>
-                  )
+              {/* Error Message */}
+              {error && (
+                <div
+                  style={{
+                    marginTop: "16px",
+                    padding: "12px 16px",
+                    backgroundColor: "rgba(239, 68, 68, 0.1)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    borderRadius: "8px",
+                    color: "#ef4444",
+                    fontSize: "13px",
+                  }}
+                >
+                  {error}
+                </div>
               )}
-            </div>
+            </form>
           </motion.div>
 
-          {/* Roster Tables */}
-          {activeRosters.length > 0 && (
+          {/* Results */}
+          {roster && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              style={{
-                marginTop: "24px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "24px",
-              }}
+              style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "24px" }}
             >
-              {rosters.map(
-                (roster, idx) =>
-                  roster && (
-                    <RosterTable
-                      key={`roster-${idx}`}
-                      roster={roster}
-                      highlightedPlayer={highlightedPlayer}
-                      onPlayerHover={setHighlightedPlayer}
-                      teamIndex={idx}
-                    />
-                  )
-              )}
-            </motion.div>
-          )}
-
-          {/* Map */}
-          {activeRosters.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              style={{ marginTop: "24px", marginBottom: "150px" }}
-            >
+              <RosterTable
+                roster={roster}
+                highlightedPlayer={highlightedPlayer}
+                onPlayerHover={setHighlightedPlayer}
+              />
               <PlayerMap
-                rosters={activeRosters}
+                roster={roster}
                 highlightedPlayer={highlightedPlayer}
                 onPlayerHover={setHighlightedPlayer}
               />
@@ -881,7 +680,7 @@ export default function VisualRostersPage() {
           )}
 
           {/* Empty State */}
-          {activeRosters.length === 0 && !loading[0] && !loading[1] && (
+          {!roster && !loading && !error && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -902,16 +701,16 @@ export default function VisualRostersPage() {
                 }}
               />
               <p style={{ color: "var(--foreground-muted)", marginBottom: "8px" }}>
-                Select a league and search for a team to view their roster
+                Select a league and enter a team name to view their roster
               </p>
               <p style={{ color: "var(--foreground-muted)", fontSize: "13px" }}>
-                Example: Select &quot;NCAA Basketball&quot; and search &quot;Iowa&quot;
+                Examples: &quot;Lakers&quot; (NBA), &quot;Duke&quot; (College), &quot;Real Madrid&quot; (International)
               </p>
             </motion.div>
           )}
 
           {/* Loading State */}
-          {(loading[0] || loading[1]) && (
+          {loading && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -931,11 +730,11 @@ export default function VisualRostersPage() {
                   animation: "spin 1s linear infinite",
                 }}
               />
-              <p style={{ color: "var(--foreground-muted)" }}>
-                Fetching roster data...
+              <p style={{ color: "var(--foreground)" }}>
+                Fetching roster for {teamInput}...
               </p>
               <p style={{ color: "var(--foreground-muted)", fontSize: "13px", marginTop: "8px" }}>
-                This may take a moment while we gather player information
+                Gathering player data, stats, and hometown locations
               </p>
             </motion.div>
           )}
@@ -944,12 +743,8 @@ export default function VisualRostersPage() {
 
       <style jsx global>{`
         @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
