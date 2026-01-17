@@ -2,10 +2,12 @@
 
 import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, ScanSearch, Upload, Link2, ExternalLink, Loader2, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, ScanSearch, Upload, Link2, ExternalLink, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 type SearchEngine = "google" | "bing";
 
@@ -16,6 +18,7 @@ export default function ImageLookupPage() {
   const [selectedEngine, setSelectedEngine] = useState<SearchEngine>("google");
   const [isDragging, setIsDragging] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = useCallback((file: File) => {
@@ -64,6 +67,7 @@ export default function ImageLookupPage() {
     setUploadedImage(null);
     setUploadedFile(null);
     setImageUrl("");
+    setUploadStatus(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -77,33 +81,65 @@ export default function ImageLookupPage() {
     return `https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:${encodeURIComponent(url)}`;
   };
 
+  const uploadImageToStorage = async (file: File): Promise<string> => {
+    if (!storage) {
+      throw new Error("Firebase Storage is not configured");
+    }
+
+    // Create a unique filename
+    const timestamp = Date.now();
+    const filename = `image-lookup/${timestamp}-${file.name}`;
+    const storageRef = ref(storage, filename);
+
+    // Upload the file
+    setUploadStatus("Uploading image...");
+    await uploadBytes(storageRef, file);
+
+    // Get the download URL
+    setUploadStatus("Getting image URL...");
+    const downloadUrl = await getDownloadURL(storageRef);
+
+    return downloadUrl;
+  };
+
   const handleSearch = async () => {
     setIsSearching(true);
+    setUploadStatus(null);
 
     try {
       let searchUrl = "";
+      let finalImageUrl = imageUrl;
 
-      if (uploadedImage && uploadedFile) {
-        // For uploaded files, we need to use a different approach
-        // Google Lens doesn't accept data URLs, so we'll redirect to the upload page
-        if (selectedEngine === "google") {
-          // Open Google Lens and prompt user to paste/upload
-          window.open("https://lens.google.com/", "_blank");
-        } else {
-          // Open Bing Visual Search upload page
-          window.open("https://www.bing.com/visualsearch", "_blank");
+      // If we have an uploaded file, upload it to Firebase Storage first
+      if (uploadedFile && uploadedImage) {
+        try {
+          finalImageUrl = await uploadImageToStorage(uploadedFile);
+          setUploadStatus("Opening search...");
+        } catch (error) {
+          console.error("Upload error:", error);
+          // Fallback: open the search engine directly
+          setUploadStatus("Upload failed, opening search page...");
+          if (selectedEngine === "google") {
+            window.open("https://lens.google.com/", "_blank");
+          } else {
+            window.open("https://www.bing.com/visualsearch", "_blank");
+          }
+          return;
         }
-      } else if (imageUrl) {
-        // For URLs, we can directly open the search
+      }
+
+      // Now we have a URL (either pasted or from upload)
+      if (finalImageUrl) {
         if (selectedEngine === "google") {
-          searchUrl = getGoogleLensUrl(imageUrl);
+          searchUrl = getGoogleLensUrl(finalImageUrl);
         } else {
-          searchUrl = getBingVisualSearchUrl(imageUrl);
+          searchUrl = getBingVisualSearchUrl(finalImageUrl);
         }
         window.open(searchUrl, "_blank");
       }
     } finally {
       setIsSearching(false);
+      setUploadStatus(null);
     }
   };
 
@@ -410,7 +446,7 @@ export default function ImageLookupPage() {
               {isSearching ? (
                 <>
                   <Loader2 style={{ width: "20px", height: "20px", animation: "spin 1s linear infinite" }} />
-                  Searching...
+                  {uploadStatus || "Processing..."}
                 </>
               ) : (
                 <>
@@ -420,9 +456,9 @@ export default function ImageLookupPage() {
               )}
             </button>
 
-            {uploadedImage && (
+            {uploadedImage && !isSearching && (
               <p style={{ fontSize: "12px", color: "var(--foreground-muted)", textAlign: "center", marginTop: "12px" }}>
-                Note: For uploaded images, you&apos;ll be redirected to {selectedEngine === "google" ? "Google Lens" : "Bing Visual Search"} where you can upload the image directly.
+                Your image will be temporarily uploaded to enable the reverse image search.
               </p>
             )}
           </motion.div>
