@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 // Debug endpoint to check which environment variables are configured
+// Visit /api/debug/env to see which API keys are set
 // This does NOT expose the actual values, only whether they are set
 export async function GET() {
   const envVars = {
