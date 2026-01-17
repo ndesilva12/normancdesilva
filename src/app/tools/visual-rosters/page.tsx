@@ -75,12 +75,27 @@ const DARK_MAP_STYLES = [
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#010409" }] },
 ];
 
+// Helper to safely format numbers
+function safeToFixed(value: number | null | undefined, decimals: number = 1): string {
+  if (value === null || value === undefined || isNaN(value)) return "0.0";
+  return value.toFixed(decimals);
+}
+
 // Team Profile Component
 function TeamProfileCard({ roster }: { roster: TeamRoster }) {
   const profile = roster.profile;
   if (!profile) return null;
 
   const [logoError, setLogoError] = useState(false);
+
+  // Safe access to stats with defaults
+  const stats = profile.stats || {
+    wins: 0,
+    losses: 0,
+    winPercentage: 0,
+    pointsPerGame: 0,
+    pointsAllowedPerGame: 0,
+  };
 
   return (
     <div className="glass rounded-2xl overflow-hidden">
@@ -136,17 +151,17 @@ function TeamProfileCard({ roster }: { roster: TeamRoster }) {
             <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
               <div>
                 <span style={{ fontSize: "24px", fontWeight: 700, color: "var(--accent)" }}>
-                  {profile.stats.wins}-{profile.stats.losses}
+                  {stats.wins ?? 0}-{stats.losses ?? 0}
                 </span>
                 <span style={{ fontSize: "13px", color: "var(--foreground-muted)", marginLeft: "8px" }}>
-                  ({(profile.stats.winPercentage * 100).toFixed(1)}%)
+                  ({safeToFixed((stats.winPercentage ?? 0) * 100)}%)
                 </span>
               </div>
-              {profile.stats.conferenceRank && (
+              {stats.conferenceRank && (
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <Target style={{ width: "16px", height: "16px", color: "var(--foreground-muted)" }} />
                   <span style={{ fontSize: "14px", color: "var(--foreground)" }}>
-                    #{profile.stats.conferenceRank} in Conference
+                    #{stats.conferenceRank} in Conference
                   </span>
                 </div>
               )}
@@ -198,28 +213,28 @@ function TeamProfileCard({ roster }: { roster: TeamRoster }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
             <div style={{ padding: "8px 12px", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
               <div style={{ fontSize: "18px", fontWeight: 700, color: "var(--accent)" }}>
-                {profile.stats.pointsPerGame.toFixed(1)}
+                {safeToFixed(stats.pointsPerGame)}
               </div>
               <div style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>PPG</div>
             </div>
             <div style={{ padding: "8px 12px", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
               <div style={{ fontSize: "18px", fontWeight: 700, color: "var(--foreground)" }}>
-                {profile.stats.pointsAllowedPerGame.toFixed(1)}
+                {safeToFixed(stats.pointsAllowedPerGame)}
               </div>
               <div style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>Opp PPG</div>
             </div>
-            {profile.stats.reboundsPerGame && (
+            {stats.reboundsPerGame != null && (
               <div style={{ padding: "8px 12px", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
                 <div style={{ fontSize: "18px", fontWeight: 700, color: "var(--foreground)" }}>
-                  {profile.stats.reboundsPerGame.toFixed(1)}
+                  {safeToFixed(stats.reboundsPerGame)}
                 </div>
                 <div style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>RPG</div>
               </div>
             )}
-            {profile.stats.assistsPerGame && (
+            {stats.assistsPerGame != null && (
               <div style={{ padding: "8px 12px", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
                 <div style={{ fontSize: "18px", fontWeight: 700, color: "var(--foreground)" }}>
-                  {profile.stats.assistsPerGame.toFixed(1)}
+                  {safeToFixed(stats.assistsPerGame)}
                 </div>
                 <div style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>APG</div>
               </div>
