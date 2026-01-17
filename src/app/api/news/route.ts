@@ -10,9 +10,9 @@ export interface NewsArticle {
   thumbnail?: string;
 }
 
-export type NewsSource = "zerohedge" | "reason" | "mises";
+export type NewsSource = "zerohedge" | "reason" | "mises" | string;
 
-const RSS_FEEDS: Record<NewsSource, string> = {
+const RSS_FEEDS: Record<string, string> = {
   zerohedge: "https://feeds.feedburner.com/zerohedge/feed",
   reason: "https://reason.com/feed/",
   mises: "https://mises.org/feed",
@@ -21,9 +21,11 @@ const RSS_FEEDS: Record<NewsSource, string> = {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const source = (searchParams.get("source") as NewsSource) || "zerohedge";
+    const source = searchParams.get("source") || "zerohedge";
+    const customRssUrl = searchParams.get("rssUrl");
 
-    const feedUrl = RSS_FEEDS[source];
+    // Use custom RSS URL if provided, otherwise use built-in source
+    const feedUrl = customRssUrl || RSS_FEEDS[source];
     if (!feedUrl) {
       return NextResponse.json({ error: "Invalid news source" }, { status: 400 });
     }

@@ -109,12 +109,15 @@ function UnifiedWidgetsGrid({
   const toolDragState = useDragState();
 
   // Data widgets (Files, Emails, Notes, Market) - removed Contacts
+  // In edit mode, show all widgets; in normal mode, only show visible ones
   const previewWidgets = [...layout.previewWidgets]
     .filter((w) => w.id !== "contacts") // Contacts is now a tool widget
+    .filter((w) => isEditMode || w.visible) // Hide invisible widgets in normal mode
     .sort((a, b) => a.order - b.order)
     .map((w) => ({ ...w, widgetType: "previewWidgets" as const }));
 
   const toolCards = [...layout.toolCards]
+    .filter((w) => isEditMode || w.visible) // Hide invisible widgets in normal mode
     .sort((a, b) => a.order - b.order)
     .map((w) => ({ ...w, widgetType: "toolCards" as const }));
 

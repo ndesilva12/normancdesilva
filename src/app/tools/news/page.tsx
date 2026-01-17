@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Newspaper, ExternalLink, Loader2, RefreshCw, Clock, Tag, X } from "lucide-react";
+import { ArrowLeft, Newspaper, ExternalLink, Loader2, RefreshCw, Clock, Tag, X, Plus, Trash2, Rss } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
+import { useNewsSources, CustomNewsSource } from "@/contexts/NewsSourcesContext";
 
 interface NewsArticle {
   title: string;
@@ -17,30 +18,39 @@ interface NewsArticle {
   thumbnail?: string;
 }
 
-type NewsSource = "zerohedge" | "reason" | "mises";
-
-const NEWS_SOURCES: { id: NewsSource; name: string; url: string }[] = [
-  { id: "zerohedge", name: "ZeroHedge", url: "https://www.zerohedge.com" },
-  { id: "reason", name: "Reason", url: "https://reason.com" },
-  { id: "mises", name: "Mises Institute", url: "https://mises.org" },
-];
-
 export default function NewsPage() {
+  const { sources, addSource, removeSource, isBuiltIn } = useNewsSources();
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSource, setSelectedSource] = useState<NewsSource>("zerohedge");
+  const [selectedSource, setSelectedSource] = useState<string>("zerohedge");
   const [readerArticle, setReaderArticle] = useState<NewsArticle | null>(null);
   const [readerContent, setReaderContent] = useState<string | null>(null);
   const [readerLoading, setReaderLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newSourceName, setNewSourceName] = useState("");
+  const [newSourceUrl, setNewSourceUrl] = useState("");
+  const [newSourceRssUrl, setNewSourceRssUrl] = useState("");
+  const [addingSource, setAddingSource] = useState(false);
 
-  const loadContent = useCallback(async (source: NewsSource) => {
+  const loadContent = useCallback(async (sourceId: string) => {
     setIsLoading(true);
     setError(null);
     setArticles([]);
 
     try {
-      const response = await fetch(`/api/news?source=${source}`);
+      const source = sources.find((s) => s.id === sourceId);
+      if (!source) {
+        throw new Error("Source not found");
+      }
+
+      // Use rssUrl parameter for custom sources
+      const isCustom = sourceId.startsWith("custom-");
+      const url = isCustom
+        ? `/api/news?source=${sourceId}&rssUrl=${encodeURIComponent(source.rssUrl)}`
+        : `/api/news?source=${sourceId}`;
+
+      const response = await fetch(url);
       const data = await response.json();
 
       if (!response.ok) {
@@ -53,14 +63,16 @@ export default function NewsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [sources]);
 
   useEffect(() => {
-    loadContent(selectedSource);
-  }, [selectedSource, loadContent]);
+    if (sources.length > 0) {
+      loadContent(selectedSource);
+    }
+  }, [selectedSource, loadContent, sources.length]);
 
-  const handleSourceChange = (source: NewsSource) => {
-    setSelectedSource(source);
+  const handleSourceChange = (sourceId: string) => {
+    setSelectedSource(sourceId);
   };
 
   const openReader = async (article: NewsArticle) => {
@@ -75,7 +87,6 @@ export default function NewsPage() {
       if (response.ok && data.content) {
         setReaderContent(data.content);
       } else {
-        // Fallback to description if reader fails
         setReaderContent(article.description || "Unable to load article content. Click the link below to read on the original site.");
       }
     } catch {
@@ -90,7 +101,44 @@ export default function NewsPage() {
     setReaderContent(null);
   };
 
-  const currentSource = NEWS_SOURCES.find((s) => s.id === selectedSource);
+  const handleAddSource = async () => {
+    if (!newSourceName.trim() || !newSourceRssUrl.trim()) return;
+
+    setAddingSource(true);
+    try {
+      // Test the RSS feed first
+      const testResponse = await fetch(`/api/news?rssUrl=${encodeURIComponent(newSourceRssUrl)}`);
+      if (!testResponse.ok) {
+        throw new Error("Invalid RSS feed URL");
+      }
+
+      addSource({
+        name: newSourceName.trim(),
+        url: newSourceUrl.trim() || newSourceRssUrl.trim(),
+        rssUrl: newSourceRssUrl.trim(),
+      });
+
+      setNewSourceName("");
+      setNewSourceUrl("");
+      setNewSourceRssUrl("");
+      setShowAddModal(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to add source");
+    } finally {
+      setAddingSource(false);
+    }
+  };
+
+  const handleRemoveSource = (sourceId: string) => {
+    if (confirm("Remove this news source?")) {
+      removeSource(sourceId);
+      if (selectedSource === sourceId) {
+        setSelectedSource("zerohedge");
+      }
+    }
+  };
+
+  const currentSource = sources.find((s) => s.id === selectedSource);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
@@ -187,6 +235,24 @@ export default function NewsPage() {
               </div>
               <div style={{ display: "flex", gap: "12px" }}>
                 <button
+                  onClick={() => setShowAddModal(true)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "10px 18px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--glass-border)",
+                    backgroundColor: "transparent",
+                    color: "var(--foreground-muted)",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Plus style={{ width: "16px", height: "16px" }} />
+                  Add Source
+                </button>
+                <button
                   onClick={() => loadContent(selectedSource)}
                   disabled={isLoading}
                   style={{
@@ -206,26 +272,28 @@ export default function NewsPage() {
                   <RefreshCw style={{ width: "16px", height: "16px", animation: isLoading ? "spin 1s linear infinite" : "none" }} />
                   Refresh
                 </button>
-                <a
-                  href={currentSource?.url || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "10px 18px",
-                    borderRadius: "8px",
-                    backgroundColor: "var(--accent)",
-                    color: "var(--background)",
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    textDecoration: "none",
-                  }}
-                >
-                  Visit {currentSource?.name || "Site"}
-                  <ExternalLink style={{ width: "16px", height: "16px" }} />
-                </a>
+                {currentSource && (
+                  <a
+                    href={currentSource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "10px 18px",
+                      borderRadius: "8px",
+                      backgroundColor: "var(--accent)",
+                      color: "var(--background)",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      textDecoration: "none",
+                    }}
+                  >
+                    Visit {currentSource.name}
+                    <ExternalLink style={{ width: "16px", height: "16px" }} />
+                  </a>
+                )}
               </div>
             </div>
           </motion.div>
@@ -255,25 +323,53 @@ export default function NewsPage() {
                 minWidth: "max-content",
               }}
             >
-              {NEWS_SOURCES.map((source) => (
-                <button
-                  key={source.id}
-                  onClick={() => handleSourceChange(source.id)}
-                  style={{
-                    padding: "10px 20px",
-                    borderRadius: "8px",
-                    border: "none",
-                    backgroundColor: selectedSource === source.id ? "var(--accent)" : "transparent",
-                    color: selectedSource === source.id ? "var(--background)" : "var(--foreground-muted)",
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {source.name}
-                </button>
+              {sources.map((source) => (
+                <div key={source.id} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <button
+                    onClick={() => handleSourceChange(source.id)}
+                    style={{
+                      padding: "10px 20px",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: selectedSource === source.id ? "var(--accent)" : "transparent",
+                      color: selectedSource === source.id ? "var(--background)" : "var(--foreground-muted)",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      whiteSpace: "nowrap",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    {!isBuiltIn(source.id) && <Rss style={{ width: "12px", height: "12px" }} />}
+                    {source.name}
+                  </button>
+                  {!isBuiltIn(source.id) && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveSource(source.id);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "24px",
+                        height: "24px",
+                        borderRadius: "4px",
+                        border: "none",
+                        backgroundColor: "transparent",
+                        color: "var(--foreground-muted)",
+                        cursor: "pointer",
+                      }}
+                      title="Remove source"
+                    >
+                      <Trash2 style={{ width: "12px", height: "12px" }} />
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           </motion.div>
@@ -454,6 +550,176 @@ export default function NewsPage() {
           )}
         </div>
       </main>
+
+      {/* Add Source Modal */}
+      {showAddModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.85)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          onClick={() => setShowAddModal(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass"
+            style={{
+              width: "100%",
+              maxWidth: "500px",
+              borderRadius: "16px",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "20px 24px",
+                borderBottom: "1px solid var(--glass-border)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <Rss style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+                <h2 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)" }}>
+                  Add RSS Source
+                </h2>
+              </div>
+              <button
+                onClick={() => setShowAddModal(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--foreground-muted)",
+                }}
+              >
+                <X style={{ width: "18px", height: "18px" }} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 500, color: "var(--foreground)", marginBottom: "8px" }}>
+                  Source Name *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. TechCrunch"
+                  value={newSourceName}
+                  onChange={(e) => setNewSourceName(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--glass-border)",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    color: "var(--foreground)",
+                    fontSize: "14px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 500, color: "var(--foreground)", marginBottom: "8px" }}>
+                  RSS Feed URL *
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://example.com/feed.xml"
+                  value={newSourceRssUrl}
+                  onChange={(e) => setNewSourceRssUrl(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--glass-border)",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    color: "var(--foreground)",
+                    fontSize: "14px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 500, color: "var(--foreground)", marginBottom: "8px" }}>
+                  Website URL (optional)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://example.com"
+                  value={newSourceUrl}
+                  onChange={(e) => setNewSourceUrl(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--glass-border)",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    color: "var(--foreground)",
+                    fontSize: "14px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={handleAddSource}
+                disabled={!newSourceName.trim() || !newSourceRssUrl.trim() || addingSource}
+                style={{
+                  marginTop: "8px",
+                  padding: "14px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "var(--accent)",
+                  color: "var(--background)",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  cursor: !newSourceName.trim() || !newSourceRssUrl.trim() || addingSource ? "not-allowed" : "pointer",
+                  opacity: !newSourceName.trim() || !newSourceRssUrl.trim() || addingSource ? 0.5 : 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                {addingSource ? (
+                  <>
+                    <Loader2 style={{ width: "16px", height: "16px", animation: "spin 1s linear infinite" }} />
+                    Testing Feed...
+                  </>
+                ) : (
+                  <>
+                    <Plus style={{ width: "16px", height: "16px" }} />
+                    Add Source
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Reader Modal */}
       {readerArticle && (

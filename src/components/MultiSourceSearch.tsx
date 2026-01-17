@@ -55,11 +55,25 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
   const [trendsLoading, setTrendsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [userManuallySelected, setUserManuallySelected] = useState(false);
 
   // Conversation state for follow-up messages
   const [conversations, setConversations] = useState<ConversationState>({});
   const [followUpInputs, setFollowUpInputs] = useState<{ [source: string]: string }>({});
   const [sendingFollowUp, setSendingFollowUp] = useState<{ [source: string]: boolean }>({});
+
+  // Auto-switch to Grok when query exceeds 6 words
+  useEffect(() => {
+    if (userManuallySelected) return; // Don't auto-switch if user manually selected
+
+    const wordCount = query.trim().split(/\s+/).filter(w => w.length > 0).length;
+
+    if (wordCount >= 6 && selectedSources[0] === "duck") {
+      setSelectedSources(["grok"]);
+    } else if (wordCount < 6 && selectedSources[0] === "grok" && !userManuallySelected) {
+      setSelectedSources(["duck"]);
+    }
+  }, [query, selectedSources, userManuallySelected]);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -120,6 +134,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
   // Single-select: clicking a source selects only that source (deselects all others)
   const selectSource = (source: SearchSource) => {
     setSelectedSources([source]);
+    setUserManuallySelected(true); // User manually selected, disable auto-switch
   };
 
   // Check if all AI sources are selected
@@ -130,6 +145,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
 
   // Toggle all AI sources (replaces current selection with all AI)
   const toggleAllAI = () => {
+    setUserManuallySelected(true);
     if (allAISelected) {
       // If AI is already selected, switch to first web source
       setSelectedSources(["duck"]);
@@ -140,10 +156,11 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
   };
 
   // Enable multi-select mode with web sources
-  const WEB_SOURCES: SearchSource[] = ["duck", "google", "wikipedia", "grokipedia", "x", "youtube", "rumble", "trends"];
+  const WEB_SOURCES: SearchSource[] = ["duck", "google", "wikipedia", "grokipedia", "x", "youtube", "rumble", "trends", "amazon"];
   const allWebSelected = WEB_SOURCES.every((s) => selectedSources.includes(s)) && selectedSources.length === WEB_SOURCES.length;
 
   const toggleAllWeb = () => {
+    setUserManuallySelected(true);
     if (allWebSelected) {
       setSelectedSources(["duck"]);
     } else {
@@ -289,6 +306,8 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
     setResults([]);
     setConversations({});
     setFollowUpInputs({});
+    setUserManuallySelected(false); // Reset manual selection to enable auto-switch again
+    setSelectedSources(["duck"]); // Reset to default source
     if (onResultsChange) onResultsChange([]);
   };
 

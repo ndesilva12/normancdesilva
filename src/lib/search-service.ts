@@ -9,6 +9,7 @@ export type SearchSource =
   | "youtube"
   | "rumble"
   | "trends"
+  | "amazon"
   | "grok"
   | "gemini"
   | "claude"
@@ -31,6 +32,7 @@ export const SEARCH_SOURCES: SearchSourceConfig[] = [
   { id: "youtube", name: "YouTube", description: "Search YouTube", icon: "▶️", type: "web" },
   { id: "rumble", name: "Rumble", description: "Search Rumble", icon: "🎬", type: "web" },
   { id: "trends", name: "Google Trends", description: "Search trends", icon: "📈", type: "web" },
+  { id: "amazon", name: "Amazon", description: "Search Amazon products", icon: "📦", type: "web" },
   { id: "grok", name: "Grok", description: "xAI Grok", icon: "🤖", type: "ai" },
   { id: "gemini", name: "Gemini", description: "Google Gemini", icon: "✨", type: "ai" },
   { id: "claude", name: "Claude", description: "Anthropic Claude", icon: "🔮", type: "ai" },
@@ -82,6 +84,8 @@ export function getSearchUrl(source: SearchSource, query: string): string {
       return `https://rumble.com/search/video?q=${encodedQuery}`;
     case "trends":
       return `https://trends.google.com/trends/explore?q=${encodedQuery}`;
+    case "amazon":
+      return `https://www.amazon.com/s?k=${encodedQuery}`;
     default:
       return "";
   }

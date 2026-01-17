@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { LayoutProvider } from "@/contexts/LayoutContext";
 import { RemindersProvider } from "@/contexts/RemindersContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { NewsSourcesProvider } from "@/contexts/NewsSourcesContext";
 import { SettingsPopup } from "@/components/SettingsPopup";
 
 interface ProvidersProps {
@@ -16,10 +17,12 @@ export function Providers({ children }: ProvidersProps) {
     <AuthProvider>
       <SettingsProvider>
         <RemindersProvider>
-          <LayoutProvider>
-            {children}
-            <SettingsPopup />
-          </LayoutProvider>
+          <NewsSourcesProvider>
+            <LayoutProvider>
+              {children}
+              <SettingsPopup />
+            </LayoutProvider>
+          </NewsSourcesProvider>
         </RemindersProvider>
       </SettingsProvider>
     </AuthProvider>

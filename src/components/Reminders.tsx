@@ -143,9 +143,6 @@ export function Reminders() {
   // Sort reminders by time
   const sortedReminders = [...webReminders].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
 
-  // Count active (non-completed, non-triggered) reminders
-  const activeCount = sortedReminders.filter((r) => !r.completed && !r.alarmTriggered).length;
-
   return (
     <div style={{ position: "relative" }} ref={dropdownRef}>
       {/* Active Alarm Modal */}
@@ -240,20 +237,6 @@ export function Reminders() {
             <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>
               Reminders
             </span>
-            {activeCount > 0 && (
-              <span
-                style={{
-                  backgroundColor: "var(--accent)",
-                  color: "var(--background)",
-                  borderRadius: "9999px",
-                  padding: "2px 8px",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                }}
-              >
-                {activeCount}
-              </span>
-            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button
