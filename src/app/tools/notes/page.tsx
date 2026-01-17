@@ -18,6 +18,9 @@ import {
   X,
   Check,
   ChevronRight,
+  Maximize2,
+  Minimize2,
+  Type,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
@@ -36,6 +39,59 @@ interface NotionBlock {
   content: string;
   hasChildren: boolean;
   children?: NotionBlock[];
+}
+
+// Auto-resize textarea hook
+function useAutoResize(value: string) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.max(textarea.scrollHeight, 80)}px`;
+    }
+  }, [value]);
+
+  return textareaRef;
+}
+
+// Auto-resizing textarea component
+function AutoResizeTextarea({
+  value,
+  onChange,
+  placeholder,
+  style,
+  autoFocus,
+  onKeyDown,
+  className,
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  placeholder?: string;
+  style?: React.CSSProperties;
+  autoFocus?: boolean;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  className?: string;
+}) {
+  const textareaRef = useAutoResize(value);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      onKeyDown={onKeyDown}
+      className={className}
+      style={{
+        overflow: "hidden",
+        resize: "none",
+        ...style,
+      }}
+    />
+  );
 }
 
 function NotesContent() {
@@ -87,6 +143,11 @@ function NotesContent() {
   const [showNewSubpage, setShowNewSubpage] = useState(false);
   const [newSubpageTitle, setNewSubpageTitle] = useState("");
   const [creatingSubpage, setCreatingSubpage] = useState(false);
+
+  // Full-page edit mode
+  const [fullPageEditMode, setFullPageEditMode] = useState(false);
+  const [fullPageContent, setFullPageContent] = useState("");
+  const [savingFullPage, setSavingFullPage] = useState(false);
 
   const titleInputRef = useRef<HTMLInputElement>(null);
   const newContentRef = useRef<HTMLTextAreaElement>(null);
@@ -390,6 +451,62 @@ function NotesContent() {
     }
   };
 
+  // Enter full-page edit mode - combine all blocks into one editable area
+  const enterFullPageEditMode = () => {
+    const combinedContent = pageContent
+      .map((block) => {
+        if (block.type === "heading_1") return `# ${block.content}`;
+        if (block.type === "heading_2") return `## ${block.content}`;
+        if (block.type === "heading_3") return `### ${block.content}`;
+        if (block.type === "bulleted_list_item") return `• ${block.content}`;
+        if (block.type === "numbered_list_item") return `- ${block.content}`;
+        if (block.type === "quote") return `> ${block.content}`;
+        if (block.type === "divider") return "---";
+        return block.content;
+      })
+      .join("\n\n");
+    setFullPageContent(combinedContent);
+    setFullPageEditMode(true);
+  };
+
+  // Save full-page edit - replaces all content
+  const saveFullPageEdit = async () => {
+    if (!selectedPage) return;
+
+    setSavingFullPage(true);
+    try {
+      // First, delete all existing blocks
+      for (const block of pageContent) {
+        await fetch(`/api/notion/block?blockId=${block.id}`, {
+          method: "DELETE",
+        });
+      }
+
+      // Then append the new content as paragraphs
+      const paragraphs = fullPageContent.split("\n").filter((line) => line.trim());
+
+      for (const paragraph of paragraphs) {
+        await fetch("/api/notion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "append",
+            pageId: selectedPage.id,
+            content: paragraph.trim(),
+          }),
+        });
+      }
+
+      // Refresh the page content
+      await fetchPageContent(selectedPage.id);
+      setFullPageEditMode(false);
+    } catch (err) {
+      console.error("Error saving full page edit:", err);
+    } finally {
+      setSavingFullPage(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -409,18 +526,19 @@ function NotesContent() {
   const renderBlock = (block: NotionBlock, index: number) => {
     const isEditing = editingBlockId === block.id;
 
+    // More document-like spacing - tighter for continuous reading
     const blockStyles: Record<string, React.CSSProperties> = {
-      heading_1: { fontSize: "24px", fontWeight: 700, marginTop: index > 0 ? "24px" : 0, marginBottom: "12px" },
-      heading_2: { fontSize: "20px", fontWeight: 600, marginTop: index > 0 ? "20px" : 0, marginBottom: "10px" },
-      heading_3: { fontSize: "17px", fontWeight: 600, marginTop: index > 0 ? "16px" : 0, marginBottom: "8px" },
-      paragraph: { fontSize: "15px", lineHeight: 1.7, marginBottom: "8px" },
-      bulleted_list_item: { fontSize: "15px", lineHeight: 1.7, marginBottom: "4px", paddingLeft: "20px" },
-      numbered_list_item: { fontSize: "15px", lineHeight: 1.7, marginBottom: "4px", paddingLeft: "20px" },
-      quote: { fontSize: "15px", lineHeight: 1.7, marginBottom: "12px", paddingLeft: "16px", borderLeft: "3px solid var(--accent)", fontStyle: "italic" },
-      to_do: { fontSize: "15px", lineHeight: 1.7, marginBottom: "4px" },
-      code: { fontSize: "13px", fontFamily: "monospace", padding: "12px 16px", backgroundColor: "rgba(0,0,0,0.3)", borderRadius: "8px", marginBottom: "12px", overflowX: "auto" },
-      divider: { height: "1px", backgroundColor: "var(--glass-border)", margin: "16px 0" },
-      image: { marginBottom: "12px" },
+      heading_1: { fontSize: "26px", fontWeight: 700, marginTop: index > 0 ? "32px" : 0, marginBottom: "16px", lineHeight: 1.3 },
+      heading_2: { fontSize: "22px", fontWeight: 600, marginTop: index > 0 ? "28px" : 0, marginBottom: "14px", lineHeight: 1.3 },
+      heading_3: { fontSize: "18px", fontWeight: 600, marginTop: index > 0 ? "24px" : 0, marginBottom: "12px", lineHeight: 1.3 },
+      paragraph: { fontSize: "16px", lineHeight: 1.85, marginBottom: "16px" },
+      bulleted_list_item: { fontSize: "16px", lineHeight: 1.85, marginBottom: "8px", paddingLeft: "24px" },
+      numbered_list_item: { fontSize: "16px", lineHeight: 1.85, marginBottom: "8px", paddingLeft: "24px" },
+      quote: { fontSize: "16px", lineHeight: 1.85, marginBottom: "16px", paddingLeft: "20px", borderLeft: "3px solid var(--accent)", fontStyle: "italic", color: "var(--foreground-muted)" },
+      to_do: { fontSize: "16px", lineHeight: 1.85, marginBottom: "8px" },
+      code: { fontSize: "14px", fontFamily: "ui-monospace, monospace", padding: "16px 20px", backgroundColor: "rgba(0,0,0,0.4)", borderRadius: "8px", marginBottom: "16px", overflowX: "auto", lineHeight: 1.6 },
+      divider: { height: "1px", backgroundColor: "var(--glass-border)", margin: "24px 0" },
+      image: { marginBottom: "16px" },
     };
 
     const style = blockStyles[block.type] || blockStyles.paragraph;
@@ -458,56 +576,77 @@ function NotesContent() {
         className="note-block"
       >
         {isEditing ? (
-          <div style={{ flex: 1, display: "flex", gap: "8px", alignItems: "flex-start" }}>
-            <textarea
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "12px" }}>
+            <AutoResizeTextarea
               value={editedBlockContent}
               onChange={(e) => setEditedBlockContent(e.target.value)}
               autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setEditingBlockId(null);
+                if (e.key === "Enter" && e.metaKey) handleSaveBlock(block.id, block.type);
+              }}
               style={{
-                flex: 1,
-                padding: "8px 12px",
+                width: "100%",
+                padding: "16px",
                 backgroundColor: "rgba(255,255,255,0.05)",
-                border: "1px solid var(--accent)",
-                borderRadius: "6px",
+                border: "2px solid var(--accent)",
+                borderRadius: "8px",
                 color: "var(--foreground)",
                 fontSize: "15px",
-                lineHeight: 1.6,
-                resize: "vertical",
-                minHeight: "60px",
+                lineHeight: 1.8,
+                minHeight: "120px",
                 fontFamily: block.type === "code" ? "monospace" : "inherit",
               }}
             />
-            <button
-              onClick={() => handleSaveBlock(block.id, block.type)}
-              disabled={savingBlock}
-              style={{
-                padding: "8px",
-                backgroundColor: "var(--accent)",
-                color: "var(--background)",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-              }}
-            >
-              {savingBlock ? <Loader2 style={{ width: "16px", height: "16px", animation: "spin 1s linear infinite" }} /> : <Check style={{ width: "16px", height: "16px" }} />}
-            </button>
-            <button
-              onClick={() => setEditingBlockId(null)}
-              style={{
-                padding: "8px",
-                backgroundColor: "rgba(255,255,255,0.1)",
-                color: "var(--foreground-muted)",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-              }}
-            >
-              <X style={{ width: "16px", height: "16px" }} />
-            </button>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <button
+                onClick={() => handleSaveBlock(block.id, block.type)}
+                disabled={savingBlock}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "var(--accent)",
+                  color: "var(--background)",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: savingBlock ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                }}
+              >
+                {savingBlock ? <Loader2 style={{ width: "16px", height: "16px", animation: "spin 1s linear infinite" }} /> : <Check style={{ width: "16px", height: "16px" }} />}
+                Save
+              </button>
+              <button
+                onClick={() => setEditingBlockId(null)}
+                style={{
+                  padding: "10px 16px",
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  color: "var(--foreground-muted)",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                }}
+              >
+                Cancel
+              </button>
+              <span style={{ marginLeft: "auto", fontSize: "12px", color: "var(--foreground-muted)" }}>
+                ⌘+Enter to save • Esc to cancel
+              </span>
+            </div>
           </div>
         ) : (
           <>
-            <div style={{ flex: 1 }}>
+            <div
+              style={{ flex: 1, cursor: "pointer" }}
+              onClick={() => {
+                setEditingBlockId(block.id);
+                setEditedBlockContent(block.content);
+              }}
+            >
               {listPrefix}{block.content || (block.type === "paragraph" ? "" : "")}
             </div>
             <div className="block-actions" style={{ display: "none", gap: "4px" }}>
@@ -954,27 +1093,36 @@ function NotesContent() {
 
                     {/* Add Content Section */}
                     {addingContent ? (
-                      <div style={{ marginTop: "24px", padding: "16px", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
-                        <textarea
-                          ref={newContentRef}
+                      <div style={{ marginTop: "24px", padding: "20px", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "12px", border: "1px solid var(--glass-border)" }}>
+                        <AutoResizeTextarea
                           value={newContent}
                           onChange={(e) => setNewContent(e.target.value)}
-                          placeholder="Add new content..."
+                          placeholder="Start typing your new content here...
+
+You can write multiple paragraphs.
+Press Enter for new lines within this block.
+Use ⌘+Enter to save quickly."
                           autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && e.metaKey) handleAddContent();
+                            if (e.key === "Escape") {
+                              setAddingContent(false);
+                              setNewContent("");
+                            }
+                          }}
                           style={{
                             width: "100%",
-                            minHeight: "100px",
-                            padding: "12px",
+                            minHeight: "150px",
+                            padding: "16px",
                             backgroundColor: "rgba(255,255,255,0.05)",
-                            border: "1px solid var(--glass-border)",
-                            borderRadius: "6px",
+                            border: "2px solid var(--accent)",
+                            borderRadius: "8px",
                             color: "var(--foreground)",
                             fontSize: "15px",
-                            lineHeight: 1.6,
-                            resize: "vertical",
+                            lineHeight: 1.8,
                           }}
                         />
-                        <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                        <div style={{ display: "flex", gap: "8px", marginTop: "16px", alignItems: "center" }}>
                           <button
                             onClick={handleAddContent}
                             disabled={savingNewContent || !newContent.trim()}
@@ -982,13 +1130,14 @@ function NotesContent() {
                               display: "flex",
                               alignItems: "center",
                               gap: "6px",
-                              padding: "10px 16px",
+                              padding: "10px 20px",
                               borderRadius: "6px",
                               backgroundColor: "var(--accent)",
                               color: "var(--background)",
                               border: "none",
                               cursor: savingNewContent || !newContent.trim() ? "not-allowed" : "pointer",
                               fontSize: "14px",
+                              fontWeight: 500,
                               opacity: savingNewContent || !newContent.trim() ? 0.5 : 1,
                             }}
                           >
@@ -1012,30 +1161,70 @@ function NotesContent() {
                           >
                             Cancel
                           </button>
+                          <span style={{ marginLeft: "auto", fontSize: "12px", color: "var(--foreground-muted)" }}>
+                            ⌘+Enter to save • Esc to cancel
+                          </span>
                         </div>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => setAddingContent(true)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          marginTop: "24px",
-                          padding: "12px 16px",
-                          borderRadius: "8px",
-                          backgroundColor: "transparent",
-                          border: "1px dashed var(--glass-border)",
-                          color: "var(--foreground-muted)",
-                          cursor: "pointer",
-                          fontSize: "14px",
-                          width: "100%",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Plus style={{ width: "16px", height: "16px" }} />
-                        Add Content
-                      </button>
+                      <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+                        <button
+                          onClick={() => setAddingContent(true)}
+                          style={{
+                            flex: 1,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "14px 16px",
+                            borderRadius: "8px",
+                            backgroundColor: "transparent",
+                            border: "1px dashed var(--glass-border)",
+                            color: "var(--foreground-muted)",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                            justifyContent: "center",
+                            transition: "all 0.15s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)";
+                            e.currentTarget.style.borderColor = "var(--accent)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.borderColor = "var(--glass-border)";
+                          }}
+                        >
+                          <Plus style={{ width: "16px", height: "16px" }} />
+                          Add Content
+                        </button>
+                        <button
+                          onClick={enterFullPageEditMode}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "14px 20px",
+                            borderRadius: "8px",
+                            backgroundColor: "rgba(255,255,255,0.05)",
+                            border: "1px solid var(--glass-border)",
+                            color: "var(--foreground)",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                            fontWeight: 500,
+                            transition: "all 0.15s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
+                          }}
+                          title="Edit all content as one document"
+                        >
+                          <Maximize2 style={{ width: "16px", height: "16px" }} />
+                          Full Page Edit
+                        </button>
+                      </div>
                     )}
 
                     {/* Subpages Section */}
@@ -1193,6 +1382,125 @@ function NotesContent() {
         </div>
       </main>
 
+      {/* Full Page Edit Modal */}
+      {fullPageEditMode && selectedPage && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(0,0,0,0.9)",
+          display: "flex",
+          flexDirection: "column",
+          zIndex: 1000,
+        }}>
+          {/* Header */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 24px",
+            borderBottom: "1px solid var(--glass-border)",
+            backgroundColor: "rgba(255,255,255,0.02)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Type style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+              <h2 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)" }}>
+                Editing: {selectedPage.title}
+              </h2>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
+                Edit your entire note as one document
+              </span>
+              <button
+                onClick={saveFullPageEdit}
+                disabled={savingFullPage}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  backgroundColor: "var(--accent)",
+                  color: "var(--background)",
+                  border: "none",
+                  cursor: savingFullPage ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                }}
+              >
+                {savingFullPage ? (
+                  <Loader2 style={{ width: "16px", height: "16px", animation: "spin 1s linear infinite" }} />
+                ) : (
+                  <Save style={{ width: "16px", height: "16px" }} />
+                )}
+                Save Changes
+              </button>
+              <button
+                onClick={() => setFullPageEditMode(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  color: "var(--foreground-muted)",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <Minimize2 style={{ width: "18px", height: "18px" }} />
+              </button>
+            </div>
+          </div>
+
+          {/* Editor */}
+          <div style={{
+            flex: 1,
+            display: "flex",
+            justifyContent: "center",
+            padding: "32px",
+            overflowY: "auto",
+          }}>
+            <div style={{
+              width: "100%",
+              maxWidth: "800px",
+            }}>
+              <AutoResizeTextarea
+                value={fullPageContent}
+                onChange={(e) => setFullPageContent(e.target.value)}
+                autoFocus
+                placeholder="Start writing your note...
+
+Use blank lines to separate paragraphs.
+Your content will be saved as individual blocks in Notion."
+                style={{
+                  width: "100%",
+                  minHeight: "calc(100vh - 200px)",
+                  padding: "32px",
+                  backgroundColor: "rgba(255,255,255,0.03)",
+                  border: "1px solid var(--glass-border)",
+                  borderRadius: "12px",
+                  color: "var(--foreground)",
+                  fontSize: "16px",
+                  lineHeight: 2,
+                  fontFamily: "system-ui, -apple-system, sans-serif",
+                }}
+              />
+              <p style={{
+                marginTop: "16px",
+                textAlign: "center",
+                fontSize: "13px",
+                color: "var(--foreground-muted)",
+              }}>
+                Tip: Use blank lines to separate paragraphs. Each paragraph becomes a separate block in Notion.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* New Note Modal */}
       {showNewNote && (
         <div style={{
@@ -1265,23 +1573,33 @@ function NotesContent() {
               <label style={{ display: "block", fontSize: "13px", color: "var(--foreground-muted)", marginBottom: "6px" }}>
                 Content (optional)
               </label>
-              <textarea
+              <AutoResizeTextarea
                 value={newNoteContent}
                 onChange={(e) => setNewNoteContent(e.target.value)}
-                placeholder="Start writing..."
+                placeholder="Start writing...
+
+You can write as much as you want here.
+The editor will expand as you type."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && e.metaKey && newNoteTitle.trim()) {
+                    handleCreateNote();
+                  }
+                }}
                 style={{
                   width: "100%",
-                  minHeight: "120px",
-                  padding: "12px",
+                  minHeight: "150px",
+                  padding: "16px",
                   backgroundColor: "rgba(255,255,255,0.05)",
                   border: "1px solid var(--glass-border)",
                   borderRadius: "8px",
                   color: "var(--foreground)",
                   fontSize: "15px",
-                  lineHeight: 1.6,
-                  resize: "vertical",
+                  lineHeight: 1.8,
                 }}
               />
+              <p style={{ marginTop: "8px", fontSize: "12px", color: "var(--foreground-muted)" }}>
+                ⌘+Enter to create • Editor expands as you type
+              </p>
             </div>
 
             <div style={{ display: "flex", gap: "12px" }}>
