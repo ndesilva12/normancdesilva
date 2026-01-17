@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -12,17 +12,74 @@ import {
   Link2,
   Check,
   Mail,
-  Plus,
+  UserPlus,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { useSettings, THEME_COLORS, TIMEZONES, ThemeMode, TimeFormat } from "@/contexts/SettingsContext";
 
 type SettingsTab = "appearance" | "time" | "integrations";
 
+interface GoogleAccount {
+  email: string;
+  name?: string;
+  picture?: string;
+}
+
 export function SettingsPopup() {
   const { settings, updateSettings, isSettingsOpen, closeSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<SettingsTab>("appearance");
-  const [newEmail, setNewEmail] = useState("");
+  const [googleAccounts, setGoogleAccounts] = useState<GoogleAccount[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+
+  // Fetch connected Google accounts when integrations tab is shown
+  useEffect(() => {
+    if (isSettingsOpen && activeTab === "integrations") {
+      fetchGoogleAccounts();
+    }
+  }, [isSettingsOpen, activeTab]);
+
+  const fetchGoogleAccounts = async () => {
+    setLoadingAccounts(true);
+    try {
+      const response = await fetch("/api/auth/google/accounts");
+      const data = await response.json();
+      setGoogleAccounts(data.accounts || []);
+    } catch (err) {
+      console.error("Failed to fetch Google accounts:", err);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  const handleAddGoogleAccount = async () => {
+    try {
+      const returnUrl = encodeURIComponent(window.location.pathname);
+      const response = await fetch(`/api/auth/google?returnUrl=${returnUrl}&addAccount=true`);
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("Failed to add account:", err);
+    }
+  };
+
+  const handleRemoveGoogleAccount = async (email: string) => {
+    if (!confirm(`Remove ${email} from connected accounts?`)) return;
+
+    try {
+      const response = await fetch(`/api/auth/google/accounts?email=${encodeURIComponent(email)}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (data.success) {
+        setGoogleAccounts((prev) => prev.filter((a) => a.email !== email));
+      }
+    } catch (err) {
+      console.error("Failed to remove account:", err);
+    }
+  };
 
   if (!isSettingsOpen) return null;
 
@@ -31,17 +88,6 @@ export function SettingsPopup() {
     { id: "time", label: "Time & Date", icon: Clock },
     { id: "integrations", label: "Integrations", icon: Link2 },
   ];
-
-  const handleAddEmail = () => {
-    if (newEmail && !settings.connectedEmails.includes(newEmail)) {
-      updateSettings({ connectedEmails: [...settings.connectedEmails, newEmail] });
-      setNewEmail("");
-    }
-  };
-
-  const handleRemoveEmail = (email: string) => {
-    updateSettings({ connectedEmails: settings.connectedEmails.filter(e => e !== email) });
-  };
 
   return (
     <AnimatePresence>
@@ -312,34 +358,67 @@ export function SettingsPopup() {
               {/* Integrations Tab */}
               {activeTab === "integrations" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                  {/* Email Accounts */}
+                  {/* Google Accounts */}
                   <div>
                     <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "12px" }}>
                       <Mail style={{ width: "16px", height: "16px", display: "inline", marginRight: "8px", verticalAlign: "middle" }} />
-                      Email Accounts
+                      Connected Google Accounts
                     </label>
                     <p style={{ fontSize: "13px", color: "var(--foreground-muted)", marginBottom: "16px" }}>
-                      Add additional email accounts to view in your Emails widget.
+                      Connect multiple Google accounts to view emails from all your inboxes.
                     </p>
 
-                    {/* Existing emails */}
-                    {settings.connectedEmails.length > 0 && (
+                    {/* Loading state */}
+                    {loadingAccounts && (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+                        <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+                      </div>
+                    )}
+
+                    {/* Connected accounts */}
+                    {!loadingAccounts && googleAccounts.length > 0 && (
                       <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
-                        {settings.connectedEmails.map((email) => (
+                        {googleAccounts.map((account) => (
                           <div
-                            key={email}
+                            key={account.email}
                             style={{
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "space-between",
+                              gap: "12px",
                               padding: "12px 16px",
                               borderRadius: "10px",
                               backgroundColor: "rgba(255, 255, 255, 0.05)",
                             }}
                           >
-                            <span style={{ fontSize: "14px", color: "var(--foreground)" }}>{email}</span>
+                            {account.picture ? (
+                              <img
+                                src={account.picture}
+                                alt=""
+                                style={{ width: "32px", height: "32px", borderRadius: "50%" }}
+                              />
+                            ) : (
+                              <div style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "50%",
+                                backgroundColor: "var(--accent)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}>
+                                <Mail style={{ width: "16px", height: "16px", color: "var(--background)" }} />
+                              </div>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>
+                                {account.name || account.email.split("@")[0]}
+                              </div>
+                              <div style={{ fontSize: "12px", color: "var(--foreground-muted)", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {account.email}
+                              </div>
+                            </div>
                             <button
-                              onClick={() => handleRemoveEmail(email)}
+                              onClick={() => handleRemoveGoogleAccount(account.email)}
                               style={{
                                 display: "flex",
                                 alignItems: "center",
@@ -352,6 +431,7 @@ export function SettingsPopup() {
                                 cursor: "pointer",
                                 color: "var(--foreground-muted)",
                               }}
+                              title="Remove account"
                             >
                               <Trash2 style={{ width: "14px", height: "14px" }} />
                             </button>
@@ -360,44 +440,43 @@ export function SettingsPopup() {
                       </div>
                     )}
 
-                    {/* Add new email */}
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <input
-                        type="email"
-                        value={newEmail}
-                        onChange={(e) => setNewEmail(e.target.value)}
-                        placeholder="Enter email address"
-                        style={{
-                          flex: 1,
-                          padding: "12px 16px",
-                          borderRadius: "10px",
-                          backgroundColor: "rgba(255, 255, 255, 0.05)",
-                          border: "1px solid var(--glass-border)",
-                          color: "var(--foreground)",
-                          fontSize: "14px",
-                          outline: "none",
-                        }}
-                        onKeyDown={(e) => e.key === "Enter" && handleAddEmail()}
-                      />
-                      <button
-                        onClick={handleAddEmail}
-                        disabled={!newEmail}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: "44px",
-                          height: "44px",
-                          borderRadius: "10px",
-                          backgroundColor: newEmail ? "var(--accent)" : "rgba(255, 255, 255, 0.05)",
-                          border: "none",
-                          cursor: newEmail ? "pointer" : "not-allowed",
-                          color: newEmail ? "var(--background)" : "var(--foreground-muted)",
-                        }}
-                      >
-                        <Plus style={{ width: "18px", height: "18px" }} />
-                      </button>
-                    </div>
+                    {/* No accounts message */}
+                    {!loadingAccounts && googleAccounts.length === 0 && (
+                      <div style={{
+                        padding: "20px",
+                        borderRadius: "10px",
+                        backgroundColor: "rgba(255, 255, 255, 0.03)",
+                        textAlign: "center",
+                        marginBottom: "16px",
+                      }}>
+                        <p style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
+                          No Google accounts connected yet.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Add account button */}
+                    <button
+                      onClick={handleAddGoogleAccount}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        width: "100%",
+                        padding: "12px 16px",
+                        borderRadius: "10px",
+                        backgroundColor: "var(--accent)",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--background)",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                      }}
+                    >
+                      <UserPlus style={{ width: "16px", height: "16px" }} />
+                      {googleAccounts.length > 0 ? "Add Another Google Account" : "Connect Google Account"}
+                    </button>
                   </div>
 
                   {/* Other integrations info */}
@@ -410,7 +489,7 @@ export function SettingsPopup() {
                     }}
                   >
                     <p style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.6 }}>
-                      <strong style={{ color: "var(--foreground)" }}>Other integrations</strong> like Google Drive, Gmail, and Notion are managed through environment variables. Contact your administrator to update these connections.
+                      <strong style={{ color: "var(--foreground)" }}>Tip:</strong> Connected accounts will be used for Gmail, Google Calendar, Google Drive, and Google Contacts integrations.
                     </p>
                   </div>
                 </div>
