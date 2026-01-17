@@ -15,15 +15,35 @@ export interface ThemeColor {
 }
 
 export const THEME_COLORS: ThemeColor[] = [
+  // Blues & Cyans
   { name: "Cyan", value: "#00d4ff", rgb: "0, 212, 255" },
+  { name: "Sky", value: "#0ea5e9", rgb: "14, 165, 233" },
   { name: "Blue", value: "#3b82f6", rgb: "59, 130, 246" },
+  { name: "Indigo", value: "#6366f1", rgb: "99, 102, 241" },
+  { name: "Navy", value: "#1e40af", rgb: "30, 64, 175" },
+  // Purples & Pinks
+  { name: "Violet", value: "#8b5cf6", rgb: "139, 92, 246" },
   { name: "Purple", value: "#a855f7", rgb: "168, 85, 247" },
+  { name: "Fuchsia", value: "#d946ef", rgb: "217, 70, 239" },
   { name: "Pink", value: "#ec4899", rgb: "236, 72, 153" },
+  { name: "Rose", value: "#f43f5e", rgb: "244, 63, 94" },
+  // Reds & Oranges
   { name: "Red", value: "#ef4444", rgb: "239, 68, 68" },
+  { name: "Crimson", value: "#dc2626", rgb: "220, 38, 38" },
   { name: "Orange", value: "#f97316", rgb: "249, 115, 22" },
+  { name: "Amber", value: "#f59e0b", rgb: "245, 158, 11" },
+  { name: "Gold", value: "#ca8a04", rgb: "202, 138, 4" },
+  // Yellows & Greens
   { name: "Yellow", value: "#eab308", rgb: "234, 179, 8" },
+  { name: "Lime", value: "#84cc16", rgb: "132, 204, 22" },
   { name: "Green", value: "#22c55e", rgb: "34, 197, 94" },
+  { name: "Emerald", value: "#10b981", rgb: "16, 185, 129" },
   { name: "Teal", value: "#14b8a6", rgb: "20, 184, 166" },
+  // Neutrals & Special
+  { name: "Slate", value: "#64748b", rgb: "100, 116, 139" },
+  { name: "Stone", value: "#78716c", rgb: "120, 113, 108" },
+  { name: "White", value: "#f5f5f5", rgb: "245, 245, 245" },
+  { name: "Silver", value: "#a1a1aa", rgb: "161, 161, 170" },
 ];
 
 export const TIMEZONES = [

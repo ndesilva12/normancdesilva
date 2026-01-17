@@ -93,8 +93,25 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-export async function queryGrok(query: string): Promise<string> {
+export interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export async function queryGrok(query: string, conversationHistory: ConversationMessage[] = []): Promise<string> {
   if (!XAI_API_KEY) throw new Error("Grok API key not configured");
+
+  const messages = [
+    {
+      role: "system",
+      content: "You are a helpful assistant. Provide concise, informative answers.",
+    },
+    ...conversationHistory.map(m => ({ role: m.role, content: m.content })),
+    {
+      role: "user",
+      content: query,
+    },
+  ];
 
   const response = await fetch("https://api.x.ai/v1/chat/completions", {
     method: "POST",
@@ -104,16 +121,7 @@ export async function queryGrok(query: string): Promise<string> {
     },
     body: JSON.stringify({
       model: "grok-3-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant. Provide concise, informative answers.",
-        },
-        {
-          role: "user",
-          content: query,
-        },
-      ],
+      messages,
       temperature: 0.7,
     }),
   });
@@ -127,8 +135,20 @@ export async function queryGrok(query: string): Promise<string> {
   return data.choices[0].message.content;
 }
 
-export async function queryGemini(query: string): Promise<string> {
+export async function queryGemini(query: string, conversationHistory: ConversationMessage[] = []): Promise<string> {
   if (!GEMINI_API_KEY) throw new Error("Gemini API key not configured");
+
+  // Build contents array with conversation history
+  const contents = [
+    ...conversationHistory.map(m => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    })),
+    {
+      role: "user",
+      parts: [{ text: query }],
+    },
+  ];
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -137,13 +157,7 @@ export async function queryGemini(query: string): Promise<string> {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: query }],
-          },
-        ],
-      }),
+      body: JSON.stringify({ contents }),
     }
   );
 
@@ -156,8 +170,16 @@ export async function queryGemini(query: string): Promise<string> {
   return data.candidates[0].content.parts[0].text;
 }
 
-export async function queryClaude(query: string): Promise<string> {
+export async function queryClaude(query: string, conversationHistory: ConversationMessage[] = []): Promise<string> {
   if (!ANTHROPIC_API_KEY) throw new Error("Claude API key not configured");
+
+  const messages = [
+    ...conversationHistory.map(m => ({ role: m.role, content: m.content })),
+    {
+      role: "user",
+      content: query,
+    },
+  ];
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -169,12 +191,7 @@ export async function queryClaude(query: string): Promise<string> {
     body: JSON.stringify({
       model: "claude-3-haiku-20240307",
       max_tokens: 2048,
-      messages: [
-        {
-          role: "user",
-          content: query,
-        },
-      ],
+      messages,
     }),
   });
 
@@ -187,8 +204,20 @@ export async function queryClaude(query: string): Promise<string> {
   return data.content[0].text;
 }
 
-export async function queryChatGPT(query: string): Promise<string> {
+export async function queryChatGPT(query: string, conversationHistory: ConversationMessage[] = []): Promise<string> {
   if (!OPENAI_API_KEY) throw new Error("ChatGPT API key not configured");
+
+  const messages = [
+    {
+      role: "system",
+      content: "You are a helpful assistant. Provide concise, informative answers.",
+    },
+    ...conversationHistory.map(m => ({ role: m.role, content: m.content })),
+    {
+      role: "user",
+      content: query,
+    },
+  ];
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -198,16 +227,7 @@ export async function queryChatGPT(query: string): Promise<string> {
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant. Provide concise, informative answers.",
-        },
-        {
-          role: "user",
-          content: query,
-        },
-      ],
+      messages,
       temperature: 0.7,
     }),
   });

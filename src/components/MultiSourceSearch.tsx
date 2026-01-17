@@ -17,8 +17,33 @@ interface TrendingSearch {
   source: "google" | "x";
 }
 
+// Get the URL to open an AI model's web interface
+function getAIModelUrl(source: SearchSource): string {
+  switch (source) {
+    case "grok":
+      return "https://x.com/i/grok";
+    case "gemini":
+      return "https://gemini.google.com/app";
+    case "claude":
+      return "https://claude.ai/new";
+    case "chatgpt":
+      return "https://chatgpt.com";
+    default:
+      return "";
+  }
+}
+
 interface MultiSourceSearchProps {
   onResultsChange?: (results: SearchResult[]) => void;
+}
+
+interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface ConversationState {
+  [source: string]: ConversationMessage[];
 }
 
 export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
@@ -30,6 +55,11 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
   const [trendsLoading, setTrendsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Conversation state for follow-up messages
+  const [conversations, setConversations] = useState<ConversationState>({});
+  const [followUpInputs, setFollowUpInputs] = useState<{ [source: string]: string }>({});
+  const [sendingFollowUp, setSendingFollowUp] = useState<{ [source: string]: boolean }>({});
 
   // Detect mobile viewport
   useEffect(() => {
@@ -257,7 +287,81 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
 
   const clearResults = () => {
     setResults([]);
+    setConversations({});
+    setFollowUpInputs({});
     if (onResultsChange) onResultsChange([]);
+  };
+
+  // Handle follow-up message for a specific AI source
+  const handleFollowUp = async (source: SearchSource) => {
+    const followUpQuery = followUpInputs[source]?.trim();
+    if (!followUpQuery) return;
+
+    setSendingFollowUp(prev => ({ ...prev, [source]: true }));
+
+    // Get the current result for this source
+    const currentResult = results.find(r => r.source === source);
+    if (!currentResult || currentResult.type !== "ai") return;
+
+    // Build conversation history from previous messages
+    const existingConversation = conversations[source] || [];
+
+    // If this is the first follow-up, add the original query and response to history
+    let conversationHistory = [...existingConversation];
+    if (conversationHistory.length === 0 && currentResult.content) {
+      conversationHistory = [
+        { role: "user" as const, content: query },
+        { role: "assistant" as const, content: currentResult.content },
+      ];
+    }
+
+    try {
+      const response = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: followUpQuery,
+          source,
+          conversationHistory,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Follow-up failed");
+      }
+
+      // Update conversation history
+      const newHistory: ConversationMessage[] = [
+        ...conversationHistory,
+        { role: "user", content: followUpQuery },
+        { role: "assistant", content: data.content },
+      ];
+      setConversations(prev => ({ ...prev, [source]: newHistory }));
+
+      // Update the result with the new content (append to existing)
+      setResults(prev =>
+        prev.map(r => {
+          if (r.source === source) {
+            const existingContent = r.content || "";
+            const separator = "\n\n---\n\n**You:** " + followUpQuery + "\n\n**" + r.sourceName + ":** ";
+            return {
+              ...r,
+              content: existingContent + separator + data.content,
+            };
+          }
+          return r;
+        })
+      );
+
+      // Clear the follow-up input
+      setFollowUpInputs(prev => ({ ...prev, [source]: "" }));
+    } catch (error) {
+      console.error("Follow-up error:", error);
+    } finally {
+      setSendingFollowUp(prev => ({ ...prev, [source]: false }));
+    }
   };
 
   const isSingleSource = selectedSources.length === 1;
@@ -339,7 +443,6 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             borderBottom: "1px solid var(--glass-border)",
           }}
         >
-          <span style={{ fontSize: "24px" }}>{sourceConfig?.icon}</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, fontSize: "18px", color: "var(--foreground)" }}>
               {result.sourceName}
@@ -369,6 +472,27 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               }}
             >
               Open in {result.sourceName}
+              <ExternalLink style={{ width: "14px", height: "14px" }} />
+            </a>
+          )}
+          {result.type === "ai" && getAIModelUrl(result.source) && (
+            <a
+              href={getAIModelUrl(result.source)}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 14px",
+                borderRadius: "6px",
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                color: "var(--foreground-muted)",
+                fontSize: "13px",
+                textDecoration: "none",
+              }}
+            >
+              Open {result.sourceName}
               <ExternalLink style={{ width: "14px", height: "14px" }} />
             </a>
           )}
@@ -403,16 +527,80 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
           )}
 
           {result.status === "success" && result.type === "ai" && result.content && (
-            <div
-              style={{
-                fontSize: "15px",
-                lineHeight: 1.8,
-                color: "var(--foreground)",
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {result.content}
-            </div>
+            <>
+              <div
+                style={{
+                  fontSize: "15px",
+                  lineHeight: 1.8,
+                  color: "var(--foreground)",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {result.content}
+              </div>
+
+              {/* Follow-up input for AI responses */}
+              <div
+                style={{
+                  marginTop: "20px",
+                  paddingTop: "16px",
+                  borderTop: "1px solid var(--glass-border)",
+                }}
+              >
+                <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                  <textarea
+                    placeholder="Ask a follow-up question..."
+                    value={followUpInputs[result.source] || ""}
+                    onChange={(e) =>
+                      setFollowUpInputs(prev => ({ ...prev, [result.source]: e.target.value }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleFollowUp(result.source);
+                      }
+                    }}
+                    rows={1}
+                    style={{
+                      flex: 1,
+                      background: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid var(--glass-border)",
+                      borderRadius: "8px",
+                      padding: "10px 14px",
+                      fontSize: "14px",
+                      color: "var(--foreground)",
+                      resize: "none",
+                      outline: "none",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                  <button
+                    onClick={() => handleFollowUp(result.source)}
+                    disabled={sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim()}
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: "var(--accent)",
+                      color: "var(--background)",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      cursor: sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim() ? "not-allowed" : "pointer",
+                      opacity: sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim() ? 0.5 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    {sendingFollowUp[result.source] ? (
+                      <Loader2 style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite" }} />
+                    ) : (
+                      "Send"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </>
           )}
 
           {result.status === "success" && result.type === "web" && (
@@ -473,7 +661,6 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             borderBottom: "1px solid var(--glass-border)",
           }}
         >
-          <span style={{ fontSize: "18px" }}>{sourceConfig?.icon}</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 500, fontSize: "14px", color: "var(--foreground)" }}>
               {result.sourceName}
@@ -485,6 +672,28 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
           {result.type === "web" && result.url && result.status === "success" && (
             <a
               href={result.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "6px 10px",
+                borderRadius: "6px",
+                backgroundColor: "var(--accent)",
+                color: "var(--background)",
+                fontSize: "12px",
+                fontWeight: 500,
+                textDecoration: "none",
+              }}
+            >
+              Open
+              <ExternalLink style={{ width: "12px", height: "12px" }} />
+            </a>
+          )}
+          {result.type === "ai" && result.status === "success" && getAIModelUrl(result.source) && (
+            <a
+              href={getAIModelUrl(result.source)}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -532,16 +741,71 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
           )}
 
           {result.status === "success" && result.type === "ai" && result.content && (
-            <div
-              style={{
-                fontSize: "13px",
-                lineHeight: 1.6,
-                color: "var(--foreground)",
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {result.content}
-            </div>
+            <>
+              <div
+                style={{
+                  fontSize: "13px",
+                  lineHeight: 1.6,
+                  color: "var(--foreground)",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {result.content}
+              </div>
+
+              {/* Follow-up input for AI responses in cards */}
+              <div
+                style={{
+                  marginTop: "12px",
+                  paddingTop: "12px",
+                  borderTop: "1px solid var(--glass-border)",
+                }}
+              >
+                <div style={{ display: "flex", gap: "6px", alignItems: "flex-start" }}>
+                  <input
+                    type="text"
+                    placeholder="Follow-up..."
+                    value={followUpInputs[result.source] || ""}
+                    onChange={(e) =>
+                      setFollowUpInputs(prev => ({ ...prev, [result.source]: e.target.value }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleFollowUp(result.source);
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      background: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid var(--glass-border)",
+                      borderRadius: "6px",
+                      padding: "8px 10px",
+                      fontSize: "12px",
+                      color: "var(--foreground)",
+                      outline: "none",
+                    }}
+                  />
+                  <button
+                    onClick={() => handleFollowUp(result.source)}
+                    disabled={sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim()}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "none",
+                      backgroundColor: "var(--accent)",
+                      color: "var(--background)",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      cursor: sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim() ? "not-allowed" : "pointer",
+                      opacity: sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim() ? 0.5 : 1,
+                    }}
+                  >
+                    {sendingFollowUp[result.source] ? "..." : "Send"}
+                  </button>
+                </div>
+              </div>
+            </>
           )}
 
           {result.status === "success" && result.type === "web" && (

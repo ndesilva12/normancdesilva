@@ -1,22 +1,10 @@
 import { NextResponse } from "next/server";
-import { queryGrok, queryGemini, queryClaude, queryChatGPT, SearchSource } from "@/lib/search-service";
+import { queryGrok, queryGemini, queryClaude, queryChatGPT, SearchSource, ConversationMessage } from "@/lib/search-service";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q");
-  const source = searchParams.get("source") as SearchSource;
-
-  if (!query) {
-    return NextResponse.json({ error: "Query is required" }, { status: 400 });
-  }
-
-  if (!source) {
-    return NextResponse.json({ error: "Source is required" }, { status: 400 });
-  }
-
+async function handleSearch(query: string, source: SearchSource, conversationHistory: ConversationMessage[] = []) {
   // Only AI sources need API calls
   if (!["grok", "gemini", "claude", "chatgpt"].includes(source)) {
-    return NextResponse.json({ error: "Invalid AI source" }, { status: 400 });
+    return { error: "Invalid AI source", status: 400 };
   }
 
   try {
@@ -24,22 +12,22 @@ export async function GET(request: Request) {
 
     switch (source) {
       case "grok":
-        content = await queryGrok(query);
+        content = await queryGrok(query, conversationHistory);
         break;
       case "gemini":
-        content = await queryGemini(query);
+        content = await queryGemini(query, conversationHistory);
         break;
       case "claude":
-        content = await queryClaude(query);
+        content = await queryClaude(query, conversationHistory);
         break;
       case "chatgpt":
-        content = await queryChatGPT(query);
+        content = await queryChatGPT(query, conversationHistory);
         break;
       default:
-        return NextResponse.json({ error: "Unknown source" }, { status: 400 });
+        return { error: "Unknown source", status: 400 };
     }
 
-    return NextResponse.json({ content, source });
+    return { content, source };
   } catch (error) {
     console.error(`Search error for ${source}:`, error);
     const errorMessage = error instanceof Error ? error.message : "Search failed";
@@ -57,15 +45,54 @@ export async function GET(request: Request) {
         claude: "Claude",
         chatgpt: "ChatGPT"
       };
-      return NextResponse.json(
-        { error: `${sourceNames[source] || source} API key not configured`, isConfigError: true },
-        { status: 503 }
-      );
+      return { error: `${sourceNames[source] || source} API key not configured`, isConfigError: true, status: 503 };
     }
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return { error: errorMessage, status: 500 };
+  }
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("q");
+  const source = searchParams.get("source") as SearchSource;
+
+  if (!query) {
+    return NextResponse.json({ error: "Query is required" }, { status: 400 });
+  }
+
+  if (!source) {
+    return NextResponse.json({ error: "Source is required" }, { status: 400 });
+  }
+
+  const result = await handleSearch(query, source);
+  if (result.status) {
+    return NextResponse.json({ error: result.error, isConfigError: result.isConfigError }, { status: result.status });
+  }
+  return NextResponse.json(result);
+}
+
+// POST endpoint for conversation continuation
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { query, source, conversationHistory } = body;
+
+    if (!query) {
+      return NextResponse.json({ error: "Query is required" }, { status: 400 });
+    }
+
+    if (!source) {
+      return NextResponse.json({ error: "Source is required" }, { status: 400 });
+    }
+
+    const result = await handleSearch(query, source as SearchSource, conversationHistory || []);
+    if (result.status) {
+      return NextResponse.json({ error: result.error, isConfigError: result.isConfigError }, { status: result.status });
+    }
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("POST search error:", error);
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 }
