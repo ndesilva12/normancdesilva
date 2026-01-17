@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, Star } from "lucide-react";
-import { formatEmailSender } from "@/lib/google-services";
+import { ArrowLeft, Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, ExternalLink } from "lucide-react";
+import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { EmailDetailModal } from "@/components/EmailDetailModal";
@@ -582,9 +582,39 @@ export default function EmailsPage() {
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: "12px", color: "var(--foreground-muted)", flexShrink: 0 }}>
-                      {formatDate(email.date)}
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                      <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                        {formatDate(email.date)}
+                      </span>
+                      <a
+                        href={getSuperhumanUrl(email.threadId)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "24px",
+                          height: "24px",
+                          borderRadius: "4px",
+                          backgroundColor: "rgba(255, 255, 255, 0.05)",
+                          color: "var(--foreground-muted)",
+                          transition: "all 0.15s",
+                        }}
+                        title="Open in Superhuman"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                          e.currentTarget.style.color = "var(--accent)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                          e.currentTarget.style.color = "var(--foreground-muted)";
+                        }}
+                      >
+                        <ExternalLink style={{ width: "12px", height: "12px" }} />
+                      </a>
+                    </div>
                   </div>
                   <div style={{
                     fontSize: "15px",

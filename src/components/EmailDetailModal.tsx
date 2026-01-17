@@ -15,8 +15,9 @@ import {
   Paperclip,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
 } from "lucide-react";
-import { formatEmailSender } from "@/lib/google-services";
+import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
 
 interface FullEmail {
   id: string;
@@ -413,6 +414,27 @@ export function EmailDetailModal({
                   <Forward style={{ width: "14px", height: "14px" }} />
                   Forward
                 </button>
+                <a
+                  href={getSuperhumanUrl(email.threadId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    color: "var(--foreground)",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    textDecoration: "none",
+                  }}
+                >
+                  <ExternalLink style={{ width: "14px", height: "14px" }} />
+                  Superhuman
+                </a>
               </div>
 
               {/* Right actions */}
