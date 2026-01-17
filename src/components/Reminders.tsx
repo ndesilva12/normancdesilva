@@ -1,17 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Bell, Plus, X, Volume2, VolumeX, Clock } from "lucide-react";
-
-interface Reminder {
-  id: string;
-  label: string;
-  time: string; // HH:MM format
-  enabled: boolean;
-  triggered: boolean;
-}
-
-const REMINDERS_KEY = "dashboard-reminders";
+import { useReminders, ReminderItem } from "@/contexts/RemindersContext";
 
 // Generate alarm sound using Web Audio API
 function playAlarmSound(audioContext: AudioContext, duration: number = 3000) {
@@ -48,53 +39,47 @@ function playAlarmSound(audioContext: AudioContext, duration: number = 3000) {
 }
 
 export function Reminders() {
-  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const { reminders, addReminder, removeReminder, toggleComplete, saveReminders } = useReminders();
   const [isExpanded, setIsExpanded] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newTime, setNewTime] = useState("");
-  const [activeAlarm, setActiveAlarm] = useState<Reminder | null>(null);
+  const [activeAlarm, setActiveAlarm] = useState<ReminderItem | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Load reminders from localStorage
+  // Handle click outside to close dropdown
   useEffect(() => {
-    const stored = localStorage.getItem(REMINDERS_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        // Reset triggered state for new day
-        const today = new Date().toDateString();
-        const lastCheck = localStorage.getItem("reminders-last-check");
-        if (lastCheck !== today) {
-          const reset = parsed.map((r: Reminder) => ({ ...r, triggered: false }));
-          setReminders(reset);
-          localStorage.setItem(REMINDERS_KEY, JSON.stringify(reset));
-          localStorage.setItem("reminders-last-check", today);
-        } else {
-          setReminders(parsed);
-        }
-      } catch {
-        setReminders([]);
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsExpanded(false);
       }
     }
-  }, []);
 
-  // Save reminders to localStorage
-  const saveReminders = useCallback((updated: Reminder[]) => {
-    setReminders(updated);
-    localStorage.setItem(REMINDERS_KEY, JSON.stringify(updated));
-  }, []);
+    if (isExpanded) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isExpanded]);
 
   // Check for triggered reminders
   useEffect(() => {
     const checkReminders = () => {
       const now = new Date();
       const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+      const currentDate = now.toISOString().split("T")[0]; // YYYY-MM-DD
 
       reminders.forEach((reminder) => {
-        if (reminder.enabled && !reminder.triggered && reminder.time === currentTime) {
+        // Only trigger if webAlarm is enabled, not already triggered, and time matches
+        const matchesTime = reminder.time === currentTime;
+        const matchesDate = !reminder.date || reminder.date === currentDate;
+
+        if (reminder.webAlarm && !reminder.alarmTriggered && !reminder.completed && matchesTime && matchesDate) {
           // Trigger the alarm
           setActiveAlarm(reminder);
 
@@ -108,7 +93,7 @@ export function Reminders() {
 
           // Mark as triggered
           const updated = reminders.map((r) =>
-            r.id === reminder.id ? { ...r, triggered: true } : r
+            r.id === reminder.id ? { ...r, alarmTriggered: true } : r
           );
           saveReminders(updated);
         }
@@ -124,32 +109,16 @@ export function Reminders() {
     };
   }, [reminders, isMuted, saveReminders]);
 
-  const addReminder = () => {
+  const handleAddReminder = () => {
     if (!newLabel.trim() || !newTime) return;
 
-    const reminder: Reminder = {
-      id: Date.now().toString(),
+    addReminder({
       label: newLabel.trim(),
       time: newTime,
-      enabled: true,
-      triggered: false,
-    };
-
-    saveReminders([...reminders, reminder]);
+      webAlarm: true,
+    });
     setNewLabel("");
     setNewTime("");
-  };
-
-  const removeReminder = (id: string) => {
-    saveReminders(reminders.filter((r) => r.id !== id));
-  };
-
-  const toggleReminder = (id: string) => {
-    saveReminders(
-      reminders.map((r) =>
-        r.id === id ? { ...r, enabled: !r.enabled, triggered: false } : r
-      )
-    );
   };
 
   const dismissAlarm = () => {
@@ -164,15 +133,21 @@ export function Reminders() {
   };
 
   const resetAllReminders = () => {
-    const reset = reminders.map((r) => ({ ...r, triggered: false }));
+    const reset = reminders.map((r) => ({ ...r, alarmTriggered: false }));
     saveReminders(reset);
   };
 
+  // Filter to show only reminders with webAlarm enabled (time-based alarms)
+  const webReminders = reminders.filter((r) => r.webAlarm && r.time);
+
   // Sort reminders by time
-  const sortedReminders = [...reminders].sort((a, b) => a.time.localeCompare(b.time));
+  const sortedReminders = [...webReminders].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+
+  // Count active (non-completed, non-triggered) reminders
+  const activeCount = sortedReminders.filter((r) => !r.completed && !r.alarmTriggered).length;
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative" }} ref={dropdownRef}>
       {/* Active Alarm Modal */}
       {activeAlarm && (
         <div
@@ -265,7 +240,7 @@ export function Reminders() {
             <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>
               Reminders
             </span>
-            {reminders.filter((r) => r.enabled && !r.triggered).length > 0 && (
+            {activeCount > 0 && (
               <span
                 style={{
                   backgroundColor: "var(--accent)",
@@ -276,7 +251,7 @@ export function Reminders() {
                   fontWeight: 600,
                 }}
               >
-                {reminders.filter((r) => r.enabled && !r.triggered).length}
+                {activeCount}
               </span>
             )}
           </div>
@@ -325,6 +300,11 @@ export function Reminders() {
                 placeholder="Reminder label"
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newLabel.trim() && newTime) {
+                    handleAddReminder();
+                  }
+                }}
                 style={{
                   flex: 1,
                   padding: "10px 12px",
@@ -351,7 +331,7 @@ export function Reminders() {
                 }}
               />
               <button
-                onClick={addReminder}
+                onClick={handleAddReminder}
                 disabled={!newLabel.trim() || !newTime}
                 style={{
                   padding: "10px 14px",
@@ -381,22 +361,20 @@ export function Reminders() {
                       gap: "12px",
                       padding: "10px 12px",
                       borderRadius: "8px",
-                      backgroundColor: reminder.triggered
+                      backgroundColor: reminder.alarmTriggered || reminder.completed
                         ? "rgba(100, 100, 100, 0.1)"
-                        : reminder.enabled
-                        ? "rgba(255, 255, 255, 0.05)"
-                        : "rgba(100, 100, 100, 0.05)",
-                      opacity: reminder.triggered ? 0.5 : 1,
+                        : "rgba(255, 255, 255, 0.05)",
+                      opacity: reminder.alarmTriggered || reminder.completed ? 0.5 : 1,
                     }}
                   >
                     <button
-                      onClick={() => toggleReminder(reminder.id)}
+                      onClick={() => toggleComplete(reminder.id)}
                       style={{
                         width: "20px",
                         height: "20px",
                         borderRadius: "4px",
-                        border: `2px solid ${reminder.enabled ? "var(--accent)" : "var(--glass-border)"}`,
-                        backgroundColor: reminder.enabled ? "var(--accent)" : "transparent",
+                        border: `2px solid ${!reminder.completed ? "var(--accent)" : "var(--glass-border)"}`,
+                        backgroundColor: reminder.completed ? "var(--accent)" : "transparent",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
@@ -404,7 +382,7 @@ export function Reminders() {
                         flexShrink: 0,
                       }}
                     >
-                      {reminder.enabled && (
+                      {reminder.completed && (
                         <span style={{ color: "var(--background)", fontSize: "12px", fontWeight: 700 }}>✓</span>
                       )}
                     </button>
@@ -414,7 +392,7 @@ export function Reminders() {
                           fontSize: "13px",
                           fontWeight: 500,
                           color: "var(--foreground)",
-                          textDecoration: reminder.triggered ? "line-through" : "none",
+                          textDecoration: reminder.completed ? "line-through" : "none",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -445,7 +423,7 @@ export function Reminders() {
                 ))}
 
                 {/* Reset button */}
-                {reminders.some((r) => r.triggered) && (
+                {sortedReminders.some((r) => r.alarmTriggered) && (
                   <button
                     onClick={resetAllReminders}
                     style={{
