@@ -204,7 +204,7 @@ export function Header({
           </Link>
 
           {/* Reminders */}
-          {user && onConnectGoogle && (
+          {user && (
             <Reminders
               isGoogleConnected={isGoogleConnected}
               onConnectGoogle={onConnectGoogle}

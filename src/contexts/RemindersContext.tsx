@@ -137,20 +137,61 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
       completed: false,
       alarmTriggered: false,
     };
-    saveReminders([...reminders, newReminder]);
-  }, [reminders, saveReminders]);
+    // Use functional update to avoid stale closure issues
+    setReminders(currentReminders => {
+      const updated = [...currentReminders, newReminder];
+      // Save asynchronously
+      if (user) {
+        const storageKey = getStorageKey(user.uid);
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        if (db) {
+          const userDocRef = doc(db, "users", user.uid);
+          setDoc(userDocRef, { reminders: updated }, { merge: true }).catch(err =>
+            console.error("Failed to save reminders to Firestore:", err)
+          );
+        }
+      }
+      return updated;
+    });
+  }, [user]);
 
   const toggleComplete = useCallback((id: string) => {
-    saveReminders(
-      reminders.map((r) =>
+    setReminders(currentReminders => {
+      const updated = currentReminders.map((r) =>
         r.id === id ? { ...r, completed: !r.completed } : r
-      )
-    );
-  }, [reminders, saveReminders]);
+      );
+      // Save asynchronously
+      if (user) {
+        const storageKey = getStorageKey(user.uid);
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        if (db) {
+          const userDocRef = doc(db, "users", user.uid);
+          setDoc(userDocRef, { reminders: updated }, { merge: true }).catch(err =>
+            console.error("Failed to save reminders to Firestore:", err)
+          );
+        }
+      }
+      return updated;
+    });
+  }, [user]);
 
   const removeReminder = useCallback((id: string) => {
-    saveReminders(reminders.filter((r) => r.id !== id));
-  }, [reminders, saveReminders]);
+    setReminders(currentReminders => {
+      const updated = currentReminders.filter((r) => r.id !== id);
+      // Save asynchronously
+      if (user) {
+        const storageKey = getStorageKey(user.uid);
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        if (db) {
+          const userDocRef = doc(db, "users", user.uid);
+          setDoc(userDocRef, { reminders: updated }, { merge: true }).catch(err =>
+            console.error("Failed to save reminders to Firestore:", err)
+          );
+        }
+      }
+      return updated;
+    });
+  }, [user]);
 
   // Sort reminders: incomplete first, then by date/time
   const sortedReminders = [...reminders].sort((a, b) => {
