@@ -57,19 +57,45 @@ export async function POST(request: Request) {
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        console.error("OpenAI API error:", error);
+        let errorMessage = "Failed to generate image";
+
+        try {
+          const errorData = await response.json();
+          console.error("OpenAI API error:", errorData);
+
+          // Extract specific error message from OpenAI response
+          if (errorData.error?.message) {
+            errorMessage = errorData.error.message;
+          }
+        } catch {
+          const errorText = await response.text().catch(() => "Unknown error");
+          console.error("OpenAI API error (text):", errorText);
+        }
 
         if (response.status === 401) {
           return NextResponse.json(
-            { error: "OpenAI API key is invalid", isConfigError: true },
+            { error: "OpenAI API key is invalid or missing", isConfigError: true },
             { status: 503 }
           );
         }
 
+        if (response.status === 400) {
+          return NextResponse.json(
+            { error: errorMessage || "Invalid request - your prompt may contain content that cannot be generated" },
+            { status: 400 }
+          );
+        }
+
+        if (response.status === 429) {
+          return NextResponse.json(
+            { error: "Rate limit exceeded. Please try again in a moment." },
+            { status: 429 }
+          );
+        }
+
         return NextResponse.json(
-          { error: "Failed to generate image" },
-          { status: 500 }
+          { error: errorMessage },
+          { status: response.status || 500 }
         );
       }
 
