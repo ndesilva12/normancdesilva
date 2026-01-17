@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mail, Loader2, RefreshCw, ExternalLink, ChevronDown, UserPlus, X, Users } from "lucide-react";
-import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
+import { ArrowLeft, Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, Star } from "lucide-react";
+import { formatEmailSender } from "@/lib/google-services";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
+import { EmailDetailModal } from "@/components/EmailDetailModal";
+import { ComposeEmailModal } from "@/components/ComposeEmailModal";
 
 interface EmailWithAccount {
   id: string;
@@ -33,6 +35,13 @@ export default function EmailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+
+  // Email detail and compose modal state
+  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
+  const [selectedEmailAccount, setSelectedEmailAccount] = useState<string | undefined>(undefined);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeMode, setComposeMode] = useState<"compose" | "reply" | "forward">("compose");
+  const [replyToEmail, setReplyToEmail] = useState<any>(null);
 
   useEffect(() => {
     checkConnectionAndFetch();
@@ -163,6 +172,39 @@ export default function EmailsPage() {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
+  const handleEmailClick = (email: EmailWithAccount) => {
+    setSelectedEmailId(email.id);
+    setSelectedEmailAccount(email.accountEmail || (selectedAccount !== "all" ? selectedAccount : undefined));
+  };
+
+  const handleReply = (email: any) => {
+    setReplyToEmail(email);
+    setComposeMode("reply");
+    setComposeOpen(true);
+    setSelectedEmailId(null);
+  };
+
+  const handleForward = (email: any) => {
+    setReplyToEmail(email);
+    setComposeMode("forward");
+    setComposeOpen(true);
+    setSelectedEmailId(null);
+  };
+
+  const handleCompose = () => {
+    setReplyToEmail(null);
+    setComposeMode("compose");
+    setComposeOpen(true);
+  };
+
+  const handleEmailUpdated = () => {
+    fetchEmails();
+  };
+
+  const handleEmailSent = () => {
+    fetchEmails();
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
@@ -193,7 +235,7 @@ export default function EmailsPage() {
                 <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>Emails</h1>
               </div>
               <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginTop: "4px" }}>
-                Your recent emails • Opens in Superhuman
+                Read, compose, and manage your emails
               </p>
             </div>
             {isConnected && (
@@ -405,6 +447,25 @@ export default function EmailsPage() {
                   <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
                   Refresh
                 </button>
+                <button
+                  onClick={handleCompose}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    backgroundColor: "var(--accent)",
+                    color: "var(--background)",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                  }}
+                >
+                  <Plus style={{ width: "14px", height: "14px" }} />
+                  Compose
+                </button>
               </div>
             )}
           </div>
@@ -473,11 +534,9 @@ export default function EmailsPage() {
           ) : (
             <div>
               {emails.map((email, index) => (
-                <a
+                <button
                   key={email.id}
-                  href={getSuperhumanUrl(email.threadId)}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  onClick={() => handleEmailClick(email)}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -487,6 +546,12 @@ export default function EmailsPage() {
                     textDecoration: "none",
                     transition: "background 0.15s",
                     borderLeft: email.isUnread ? "4px solid var(--accent)" : "4px solid transparent",
+                    width: "100%",
+                    textAlign: "left",
+                    backgroundColor: "transparent",
+                    border: "none",
+                    borderBottomStyle: index < emails.length - 1 ? "solid" : "none",
+                    cursor: "pointer",
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
@@ -517,12 +582,9 @@ export default function EmailsPage() {
                         </span>
                       )}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                      <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                        {formatDate(email.date)}
-                      </span>
-                      <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-                    </div>
+                    <span style={{ fontSize: "12px", color: "var(--foreground-muted)", flexShrink: 0 }}>
+                      {formatDate(email.date)}
+                    </span>
                   </div>
                   <div style={{
                     fontSize: "15px",
@@ -541,13 +603,34 @@ export default function EmailsPage() {
                   }}>
                     {email.snippet}
                   </div>
-                </a>
+                </button>
               ))}
             </div>
           )}
         </div>
         </div>
       </main>
+
+      {/* Email Detail Modal */}
+      <EmailDetailModal
+        emailId={selectedEmailId}
+        account={selectedEmailAccount}
+        onClose={() => setSelectedEmailId(null)}
+        onReply={handleReply}
+        onForward={handleForward}
+        onEmailUpdated={handleEmailUpdated}
+      />
+
+      {/* Compose Email Modal */}
+      <ComposeEmailModal
+        isOpen={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        onSent={handleEmailSent}
+        mode={composeMode}
+        replyTo={replyToEmail}
+        account={selectedAccount !== "all" ? selectedAccount : undefined}
+        accounts={accounts}
+      />
 
       <style jsx global>{`
         @keyframes spin {

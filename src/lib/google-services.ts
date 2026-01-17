@@ -242,3 +242,332 @@ export function formatEmailSender(from: string): string {
 export function getSuperhumanUrl(threadId: string): string {
   return `https://mail.superhuman.com/thread/${threadId}`;
 }
+
+// ============================================
+// Gmail Full Email & Actions
+// ============================================
+
+export interface FullEmail {
+  id: string;
+  threadId: string;
+  subject: string;
+  from: string;
+  to: string;
+  cc?: string;
+  bcc?: string;
+  date: string;
+  snippet: string;
+  body: string;
+  bodyHtml?: string;
+  isUnread: boolean;
+  isStarred: boolean;
+  labels: string[];
+  attachments: { filename: string; mimeType: string; size: number; attachmentId: string }[];
+}
+
+export interface SendEmailParams {
+  to: string;
+  subject: string;
+  body: string;
+  cc?: string;
+  bcc?: string;
+  replyToMessageId?: string;
+  threadId?: string;
+}
+
+// Helper to decode base64url
+function decodeBase64Url(data: string): string {
+  const base64 = data.replace(/-/g, "+").replace(/_/g, "/");
+  try {
+    return decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+  } catch {
+    return atob(base64);
+  }
+}
+
+// Helper to extract body from email parts
+function extractBody(payload: any): { text: string; html?: string } {
+  let text = "";
+  let html: string | undefined;
+
+  if (payload.body?.data) {
+    const decoded = decodeBase64Url(payload.body.data);
+    if (payload.mimeType === "text/html") {
+      html = decoded;
+    } else {
+      text = decoded;
+    }
+  }
+
+  if (payload.parts) {
+    for (const part of payload.parts) {
+      if (part.mimeType === "text/plain" && part.body?.data) {
+        text = decodeBase64Url(part.body.data);
+      } else if (part.mimeType === "text/html" && part.body?.data) {
+        html = decodeBase64Url(part.body.data);
+      } else if (part.parts) {
+        const nested = extractBody(part);
+        if (nested.text) text = nested.text;
+        if (nested.html) html = nested.html;
+      }
+    }
+  }
+
+  return { text, html };
+}
+
+// Helper to extract attachments
+function extractAttachments(payload: any): FullEmail["attachments"] {
+  const attachments: FullEmail["attachments"] = [];
+
+  function processPayload(p: any) {
+    if (p.filename && p.body?.attachmentId) {
+      attachments.push({
+        filename: p.filename,
+        mimeType: p.mimeType,
+        size: p.body.size || 0,
+        attachmentId: p.body.attachmentId,
+      });
+    }
+    if (p.parts) {
+      p.parts.forEach(processPayload);
+    }
+  }
+
+  processPayload(payload);
+  return attachments;
+}
+
+// Get full email content
+export async function getFullEmail(accessToken: string, messageId: string): Promise<FullEmail> {
+  const response = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get email: ${error}`);
+  }
+
+  const data = await response.json();
+  const headers = data.payload?.headers || [];
+  const getHeader = (name: string) =>
+    headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value || "";
+
+  const { text, html } = extractBody(data.payload);
+  const attachments = extractAttachments(data.payload);
+
+  return {
+    id: data.id,
+    threadId: data.threadId,
+    subject: getHeader("Subject") || "(No subject)",
+    from: getHeader("From"),
+    to: getHeader("To"),
+    cc: getHeader("Cc") || undefined,
+    bcc: getHeader("Bcc") || undefined,
+    date: data.internalDate,
+    snippet: data.snippet,
+    body: text || (html ? "See HTML content" : ""),
+    bodyHtml: html,
+    isUnread: data.labelIds?.includes("UNREAD") || false,
+    isStarred: data.labelIds?.includes("STARRED") || false,
+    labels: data.labelIds || [],
+    attachments,
+  };
+}
+
+// Mark email as read
+export async function markEmailAsRead(accessToken: string, messageId: string): Promise<void> {
+  const response = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        removeLabelIds: ["UNREAD"],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to mark as read: ${error}`);
+  }
+}
+
+// Mark email as unread
+export async function markEmailAsUnread(accessToken: string, messageId: string): Promise<void> {
+  const response = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        addLabelIds: ["UNREAD"],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to mark as unread: ${error}`);
+  }
+}
+
+// Archive email (remove from inbox)
+export async function archiveEmail(accessToken: string, messageId: string): Promise<void> {
+  const response = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        removeLabelIds: ["INBOX"],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to archive: ${error}`);
+  }
+}
+
+// Move email to trash
+export async function trashEmail(accessToken: string, messageId: string): Promise<void> {
+  const response = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/trash`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to trash: ${error}`);
+  }
+}
+
+// Star/unstar email
+export async function toggleStarEmail(accessToken: string, messageId: string, star: boolean): Promise<void> {
+  const response = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        star
+          ? { addLabelIds: ["STARRED"] }
+          : { removeLabelIds: ["STARRED"] }
+      ),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to ${star ? "star" : "unstar"}: ${error}`);
+  }
+}
+
+// Helper to create RFC 2822 email message
+function createEmailMessage(params: SendEmailParams, fromEmail: string): string {
+  const boundary = `boundary_${Date.now()}`;
+
+  let message = "";
+  message += `From: ${fromEmail}\r\n`;
+  message += `To: ${params.to}\r\n`;
+  if (params.cc) message += `Cc: ${params.cc}\r\n`;
+  if (params.bcc) message += `Bcc: ${params.bcc}\r\n`;
+  message += `Subject: ${params.subject}\r\n`;
+
+  if (params.replyToMessageId) {
+    message += `In-Reply-To: ${params.replyToMessageId}\r\n`;
+    message += `References: ${params.replyToMessageId}\r\n`;
+  }
+
+  message += `MIME-Version: 1.0\r\n`;
+  message += `Content-Type: multipart/alternative; boundary="${boundary}"\r\n`;
+  message += `\r\n`;
+
+  // Plain text version
+  message += `--${boundary}\r\n`;
+  message += `Content-Type: text/plain; charset="UTF-8"\r\n`;
+  message += `\r\n`;
+  message += `${params.body}\r\n`;
+
+  // HTML version (simple conversion)
+  message += `--${boundary}\r\n`;
+  message += `Content-Type: text/html; charset="UTF-8"\r\n`;
+  message += `\r\n`;
+  message += `<html><body><p>${params.body.replace(/\n/g, "<br>")}</p></body></html>\r\n`;
+
+  message += `--${boundary}--\r\n`;
+
+  return message;
+}
+
+// Helper to encode to base64url
+function encodeBase64Url(str: string): string {
+  const base64 = btoa(unescape(encodeURIComponent(str)));
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// Send email
+export async function sendEmail(
+  accessToken: string,
+  params: SendEmailParams,
+  fromEmail: string
+): Promise<{ id: string; threadId: string }> {
+  const rawMessage = createEmailMessage(params, fromEmail);
+  const encodedMessage = encodeBase64Url(rawMessage);
+
+  const body: any = { raw: encodedMessage };
+  if (params.threadId) {
+    body.threadId = params.threadId;
+  }
+
+  const response = await fetch(
+    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to send email: ${error}`);
+  }
+
+  const data = await response.json();
+  return { id: data.id, threadId: data.threadId };
+}
