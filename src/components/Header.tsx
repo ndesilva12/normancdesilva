@@ -8,7 +8,7 @@ import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useSettings } from "@/contexts/SettingsContext";
-import { Reminders } from "@/components/Actions";
+import { Reminders } from "@/components/Reminders";
 
 export function Header({
   isGoogleConnected = false,
