@@ -1,43 +1,111 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { refreshAccessToken, GoogleAccountsStore } from "@/lib/google-calendar";
+import { refreshAccessToken, GoogleAccountsStore, GoogleTokens, getGoogleUserInfo } from "@/lib/google-calendar";
 
 // GET - List all connected accounts
 export async function GET() {
   const cookieStore = await cookies();
   const accountsCookie = cookieStore.get("google_accounts");
 
-  if (!accountsCookie) {
-    return NextResponse.json({
-      accounts: [],
-      primaryAccount: null,
-      connected: false
-    });
+  // Check for new multi-account cookie first
+  if (accountsCookie) {
+    try {
+      const accountsStore: GoogleAccountsStore = JSON.parse(accountsCookie.value);
+
+      // Return account info without tokens (for security)
+      const accounts = Object.entries(accountsStore.accounts).map(([email, account]) => ({
+        email,
+        name: account.name,
+        picture: account.picture,
+        isExpired: account.expires_at < Date.now(),
+      }));
+
+      return NextResponse.json({
+        accounts,
+        primaryAccount: accountsStore.primaryAccount,
+        connected: accounts.length > 0,
+      });
+    } catch {
+      // Fall through to legacy check
+    }
   }
 
-  try {
-    const accountsStore: GoogleAccountsStore = JSON.parse(accountsCookie.value);
+  // Fallback: Check for legacy single-account cookie and migrate it
+  const legacyTokensCookie = cookieStore.get("google_tokens");
+  if (legacyTokensCookie) {
+    try {
+      const tokens: GoogleTokens = JSON.parse(legacyTokensCookie.value);
 
-    // Return account info without tokens (for security)
-    const accounts = Object.entries(accountsStore.accounts).map(([email, account]) => ({
-      email,
-      name: account.name,
-      picture: account.picture,
-      isExpired: account.expires_at < Date.now(),
-    }));
+      // Try to get user info to populate the account
+      let email = "connected@google.com"; // Fallback
+      let name: string | undefined;
+      let picture: string | undefined;
 
-    return NextResponse.json({
-      accounts,
-      primaryAccount: accountsStore.primaryAccount,
-      connected: accounts.length > 0,
-    });
-  } catch {
-    return NextResponse.json({
-      accounts: [],
-      primaryAccount: null,
-      connected: false
-    });
+      // Refresh token if needed
+      let validTokens = tokens;
+      if (tokens.expires_at < Date.now() + 60 * 1000 && tokens.refresh_token) {
+        try {
+          validTokens = await refreshAccessToken(tokens.refresh_token);
+        } catch {
+          // Continue with possibly expired token
+        }
+      }
+
+      // Try to fetch user info
+      try {
+        const userInfo = await getGoogleUserInfo(validTokens.access_token);
+        email = userInfo.email;
+        name = userInfo.name;
+        picture = userInfo.picture;
+      } catch {
+        // Use fallback email
+      }
+
+      // Migrate to new format
+      const accountsStore: GoogleAccountsStore = {
+        accounts: {
+          [email]: {
+            ...validTokens,
+            email,
+            name,
+            picture,
+          },
+        },
+        primaryAccount: email,
+      };
+
+      const response = NextResponse.json({
+        accounts: [{
+          email,
+          name,
+          picture,
+          isExpired: validTokens.expires_at < Date.now(),
+        }],
+        primaryAccount: email,
+        connected: true,
+        migrated: true, // Indicate this was migrated from legacy
+      });
+
+      // Save the migrated data
+      response.cookies.set("google_accounts", JSON.stringify(accountsStore), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 30,
+        path: "/",
+      });
+
+      return response;
+    } catch {
+      // Fall through to no accounts
+    }
   }
+
+  return NextResponse.json({
+    accounts: [],
+    primaryAccount: null,
+    connected: false
+  });
 }
 
 // POST - Set primary account
