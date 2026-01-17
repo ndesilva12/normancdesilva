@@ -21,7 +21,7 @@ interface TrendingSearch {
 function getAIModelUrl(source: SearchSource): string {
   switch (source) {
     case "grok":
-      return "https://x.com/i/grok";
+      return "https://grok.com";
     case "gemini":
       return "https://gemini.google.com/app";
     case "claude":
