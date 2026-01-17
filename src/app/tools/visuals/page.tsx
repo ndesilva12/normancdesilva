@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -13,6 +13,8 @@ import {
   ExternalLink,
   Download,
   Image as ImageIcon,
+  Zap,
+  Gem,
 } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
@@ -20,6 +22,7 @@ import { RemindersBanner } from "@/components/RemindersBanner";
 
 type Action = "search" | "generate";
 type GenerateMode = "data" | "imagine";
+type ImageProvider = "grok" | "gemini";
 
 interface SearchUrls {
   google: string;
@@ -28,15 +31,46 @@ interface SearchUrls {
   pexels: string;
 }
 
+interface ProviderInfo {
+  id: string;
+  name: string;
+  description: string;
+  available: boolean;
+}
+
 export default function VisualsPage() {
   const [prompt, setPrompt] = useState("");
   const [action, setAction] = useState<Action>("search");
   const [generateMode, setGenerateMode] = useState<GenerateMode>("imagine");
+  const [provider, setProvider] = useState<ImageProvider>("grok");
+  const [availableProviders, setAvailableProviders] = useState<ProviderInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [revisedPrompt, setRevisedPrompt] = useState<string | null>(null);
   const [searchUrls, setSearchUrls] = useState<SearchUrls | null>(null);
+  const [usedProvider, setUsedProvider] = useState<string | null>(null);
+
+  // Fetch available providers on mount
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        const response = await fetch("/api/visuals");
+        const data = await response.json();
+        if (data.providers) {
+          setAvailableProviders(data.providers);
+          // Set default to first available provider
+          const firstAvailable = data.providers.find((p: ProviderInfo) => p.available);
+          if (firstAvailable) {
+            setProvider(firstAvailable.id as ImageProvider);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch providers:", err);
+      }
+    };
+    fetchProviders();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +81,7 @@ export default function VisualsPage() {
     setGeneratedImage(null);
     setSearchUrls(null);
     setRevisedPrompt(null);
+    setUsedProvider(null);
 
     try {
       const response = await fetch("/api/visuals", {
@@ -56,6 +91,7 @@ export default function VisualsPage() {
           prompt: prompt.trim(),
           action,
           mode: generateMode,
+          provider,
         }),
       });
 
@@ -70,6 +106,7 @@ export default function VisualsPage() {
       } else if (data.action === "generate") {
         setGeneratedImage(data.imageUrl);
         setRevisedPrompt(data.revisedPrompt);
+        setUsedProvider(data.provider);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -312,6 +349,73 @@ export default function VisualsPage() {
             </motion.div>
           )}
 
+          {/* Provider Selector (only shown when generating) */}
+          {action === "generate" && availableProviders.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              style={{ marginBottom: "24px" }}
+            >
+              <p style={{ fontSize: "13px", color: "var(--foreground-muted)", marginBottom: "10px" }}>
+                AI Model
+              </p>
+              <div style={{ display: "flex", gap: "12px" }}>
+                {availableProviders.filter(p => p.available).map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setProvider(p.id as ImageProvider)}
+                    className="glass"
+                    style={{
+                      flex: 1,
+                      padding: "14px 16px",
+                      borderRadius: "10px",
+                      border: provider === p.id ? "2px solid var(--accent)" : "2px solid transparent",
+                      backgroundColor: provider === p.id ? "rgba(var(--accent-rgb), 0.1)" : "transparent",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      {p.id === "grok" ? (
+                        <Zap
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            color: provider === p.id ? "var(--accent)" : "var(--foreground-muted)",
+                          }}
+                        />
+                      ) : (
+                        <Gem
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            color: provider === p.id ? "var(--accent)" : "var(--foreground-muted)",
+                          }}
+                        />
+                      )}
+                      <div>
+                        <span
+                          style={{
+                            fontSize: "14px",
+                            fontWeight: 600,
+                            color: provider === p.id ? "var(--accent)" : "var(--foreground)",
+                          }}
+                        >
+                          {p.name}
+                        </span>
+                        <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "2px" }}>
+                          {p.description}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
           {/* Input Form */}
           <motion.form
             initial={{ opacity: 0, y: 20 }}
@@ -534,9 +638,16 @@ export default function VisualsPage() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)" }}>
-                  Generated Image
-                </h3>
+                <div>
+                  <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)" }}>
+                    Generated Image
+                  </h3>
+                  {usedProvider && (
+                    <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "4px" }}>
+                      Created with {usedProvider === "grok" ? "Grok (Aurora)" : "Gemini (Imagen 3)"}
+                    </p>
+                  )}
+                </div>
                 <button
                   onClick={handleDownload}
                   style={{
