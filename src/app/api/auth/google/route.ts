@@ -5,8 +5,9 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const returnUrl = searchParams.get("returnUrl") || undefined;
+    const addAccount = searchParams.get("addAccount") === "true";
 
-    const authUrl = getGoogleAuthUrl(returnUrl);
+    const authUrl = getGoogleAuthUrl(returnUrl, addAccount);
     return NextResponse.json({ url: authUrl });
   } catch (error) {
     console.error("Error generating auth URL:", error);

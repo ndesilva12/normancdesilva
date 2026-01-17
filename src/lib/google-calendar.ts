@@ -18,6 +18,23 @@ export interface GoogleTokens {
   expires_at: number;
 }
 
+export interface GoogleUserInfo {
+  email: string;
+  name?: string;
+  picture?: string;
+}
+
+export interface GoogleAccountTokens extends GoogleTokens {
+  email: string;
+  name?: string;
+  picture?: string;
+}
+
+export interface GoogleAccountsStore {
+  accounts: Record<string, GoogleAccountTokens>;
+  primaryAccount?: string;
+}
+
 export interface CalendarEvent {
   id?: string;
   summary: string;
@@ -38,8 +55,29 @@ export interface CalendarEvent {
   };
 }
 
+// Get user info from access token
+export async function getGoogleUserInfo(accessToken: string): Promise<GoogleUserInfo> {
+  const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get user info: ${error}`);
+  }
+
+  const data = await response.json();
+  return {
+    email: data.email,
+    name: data.name,
+    picture: data.picture,
+  };
+}
+
 // Generate OAuth URL for user authorization
-export function getGoogleAuthUrl(returnUrl?: string): string {
+export function getGoogleAuthUrl(returnUrl?: string, addAccount?: boolean): string {
   if (!GOOGLE_CLIENT_ID) {
     throw new Error("Google Client ID not configured");
   }
@@ -50,13 +88,15 @@ export function getGoogleAuthUrl(returnUrl?: string): string {
     response_type: "code",
     scope: SCOPES.join(" "),
     access_type: "offline",
-    prompt: "consent",
+    prompt: addAccount ? "consent select_account" : "consent",
   });
 
-  // Encode return URL in state parameter
-  if (returnUrl) {
-    params.set("state", encodeURIComponent(returnUrl));
-  }
+  // Encode return URL and addAccount flag in state parameter
+  const stateData = {
+    returnUrl: returnUrl || "/",
+    addAccount: addAccount || false,
+  };
+  params.set("state", encodeURIComponent(JSON.stringify(stateData)));
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }

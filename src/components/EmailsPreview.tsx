@@ -3,7 +3,25 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail, Loader2, ExternalLink, RefreshCw } from "lucide-react";
-import { EmailPreview, formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
+import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
+
+interface EmailWithAccount {
+  id: string;
+  threadId: string;
+  subject: string;
+  from: string;
+  snippet: string;
+  date: string;
+  isUnread: boolean;
+  accountEmail?: string;
+  accountName?: string;
+}
+
+interface AccountInfo {
+  email: string;
+  name?: string;
+  picture?: string;
+}
 
 interface EmailsPreviewProps {
   isGoogleConnected: boolean;
@@ -11,7 +29,8 @@ interface EmailsPreviewProps {
 }
 
 export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPreviewProps) {
-  const [emails, setEmails] = useState<EmailPreview[]>([]);
+  const [emails, setEmails] = useState<EmailWithAccount[]>([]);
+  const [accounts, setAccounts] = useState<AccountInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,12 +44,14 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/gmail?limit=10");
+      // Fetch from all accounts for merged view in widget
+      const response = await fetch("/api/gmail?limit=10&all=true");
       if (!response.ok) {
         throw new Error("Failed to fetch emails");
       }
       const data = await response.json();
       setEmails(data.emails || []);
+      setAccounts(data.accounts || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load emails");
     } finally {
@@ -178,6 +199,18 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                 }}>
                   {email.subject}
                 </div>
+                {accounts.length > 1 && email.accountEmail && (
+                  <div style={{
+                    fontSize: "10px",
+                    color: "var(--accent)",
+                    opacity: 0.7,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}>
+                    {email.accountName || email.accountEmail}
+                  </div>
+                )}
               </a>
             ))}
           </div>
