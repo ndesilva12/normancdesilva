@@ -34,6 +34,7 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const accountParam = searchParams.get("account"); // specific account email
     const all = searchParams.get("all") === "true"; // fetch from all accounts
+    const searchQuery = searchParams.get("q") || undefined; // search query
 
     const cookieStore = await cookies();
     const accountsCookie = cookieStore.get("google_accounts");
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
         }
       }
 
-      const emails = await getRecentEmails(tokens.access_token, limit);
+      const emails = await getRecentEmails(tokens.access_token, limit, searchQuery);
       const response = NextResponse.json({ emails, accounts: [] });
 
       if (tokens.expires_at > Date.now()) {
@@ -102,7 +103,8 @@ export async function GET(request: Request) {
 
         const accountEmails = await getRecentEmails(
           tokens.access_token,
-          all ? Math.ceil(limit / targetAccounts.length) : limit
+          all ? Math.ceil(limit / targetAccounts.length) : limit,
+          searchQuery
         );
 
         // Add account info to each email

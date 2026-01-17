@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, ExternalLink, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, ExternalLink, Trash2, Search } from "lucide-react";
 import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
@@ -43,15 +43,27 @@ export default function EmailsPage() {
   const [composeMode, setComposeMode] = useState<"compose" | "reply" | "forward">("compose");
   const [replyToEmail, setReplyToEmail] = useState<any>(null);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
   useEffect(() => {
     checkConnectionAndFetch();
   }, []);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (isConnected) {
       fetchEmails();
     }
-  }, [selectedAccount, isConnected]);
+  }, [selectedAccount, isConnected, debouncedSearch]);
 
   const checkConnectionAndFetch = async () => {
     try {
@@ -87,6 +99,10 @@ export default function EmailsPage() {
         params.set("all", "true");
       } else {
         params.set("account", selectedAccount);
+      }
+      // Add search query - if searching, prepend in:inbox to keep archived hidden
+      if (debouncedSearch.trim()) {
+        params.set("q", `in:inbox ${debouncedSearch.trim()}`);
       }
 
       const response = await fetch(`/api/gmail?${params.toString()}`);
@@ -498,6 +514,63 @@ export default function EmailsPage() {
               style={{ position: "fixed", inset: 0, zIndex: 40 }}
               onClick={() => setShowAccountMenu(false)}
             />
+          )}
+
+          {/* Search Bar */}
+          {isConnected && (
+            <div style={{ marginBottom: "16px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  padding: "10px 14px",
+                  borderRadius: "10px",
+                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid var(--glass-border)",
+                }}
+              >
+                <Search style={{ width: "18px", height: "18px", color: "var(--foreground-muted)", flexShrink: 0 }} />
+                <input
+                  type="text"
+                  placeholder="Search emails..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "var(--foreground)",
+                    fontSize: "14px",
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "20px",
+                      height: "20px",
+                      borderRadius: "50%",
+                      backgroundColor: "rgba(255, 255, 255, 0.1)",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--foreground-muted)",
+                    }}
+                  >
+                    <X style={{ width: "12px", height: "12px" }} />
+                  </button>
+                )}
+              </div>
+              {debouncedSearch && (
+                <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "8px" }}>
+                  Searching for: &quot;{debouncedSearch}&quot;
+                </p>
+              )}
+            </div>
           )}
 
           {/* Content */}

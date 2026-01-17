@@ -85,10 +85,22 @@ export async function getRecentDriveFiles(accessToken: string, limit: number = 1
 }
 
 // Get recent Gmail messages
-export async function getRecentEmails(accessToken: string, limit: number = 10): Promise<EmailPreview[]> {
+export async function getRecentEmails(
+  accessToken: string,
+  limit: number = 10,
+  query?: string
+): Promise<EmailPreview[]> {
+  // Build query - always filter to inbox unless searching
+  // If no query provided, show only inbox (non-archived) emails
+  const baseQuery = query ? query : "in:inbox";
+  const params = new URLSearchParams({
+    maxResults: limit.toString(),
+    q: baseQuery,
+  });
+
   // First, get the list of message IDs
   const listResponse = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${limit}`,
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
