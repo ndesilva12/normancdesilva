@@ -2,11 +2,48 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Search, Users, MapPin, Loader2, ChevronDown, Trophy, History } from "lucide-react";
+import {
+  ArrowLeft,
+  Search,
+  Users,
+  MapPin,
+  Loader2,
+  ChevronDown,
+  Trophy,
+  History,
+  Building2,
+  Calendar,
+  TrendingUp,
+  TrendingDown,
+  User,
+  Target,
+} from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
-import { League, LEAGUES, TeamRoster, Player } from "@/types/roster";
+import { League, LEAGUES, TeamRoster, Player, TeamProfile } from "@/types/roster";
+
+// Generate external profile URL for a player
+function getPlayerProfileUrl(playerName: string, league: League): string {
+  // Format name for URL (lowercase, hyphenated)
+  const formattedName = playerName.toLowerCase().replace(/[^a-z\s]/g, "").replace(/\s+/g, "-");
+  const searchQuery = encodeURIComponent(playerName);
+
+  switch (league) {
+    case "nba":
+      // Basketball Reference search
+      return `https://www.basketball-reference.com/search/search.fcgi?search=${searchQuery}`;
+    case "college":
+      // Sports Reference college basketball search
+      return `https://www.sports-reference.com/cbb/search/search.fcgi?search=${searchQuery}`;
+    case "international":
+      // Use Wikipedia for international players
+      return `https://en.wikipedia.org/wiki/Special:Search?search=${searchQuery}+basketball`;
+    default:
+      return `https://www.google.com/search?q=${searchQuery}+basketball`;
+  }
+}
 
 // Dark map styles
 const DARK_MAP_STYLES = [
@@ -19,52 +56,257 @@ const DARK_MAP_STYLES = [
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#010409" }] },
 ];
 
+// Team Profile Component
+function TeamProfileCard({ roster }: { roster: TeamRoster }) {
+  const profile = roster.profile;
+  if (!profile) return null;
+
+  const [logoError, setLogoError] = useState(false);
+
+  return (
+    <div className="glass rounded-2xl overflow-hidden">
+      {/* Team Header with Logo */}
+      <div
+        style={{
+          padding: "24px",
+          background: `linear-gradient(135deg, ${roster.primaryColor}22 0%, transparent 50%)`,
+          borderBottom: "1px solid var(--glass-border)",
+        }}
+      >
+        <div style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
+          {/* Logo */}
+          <div
+            style={{
+              width: "100px",
+              height: "100px",
+              borderRadius: "16px",
+              backgroundColor: roster.primaryColor,
+              border: `3px solid ${roster.secondaryColor}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              flexShrink: 0,
+            }}
+          >
+            {profile.logoUrl && !logoError ? (
+              <Image
+                src={profile.logoUrl}
+                alt={`${roster.teamName} logo`}
+                width={80}
+                height={80}
+                style={{ objectFit: "contain" }}
+                onError={() => setLogoError(true)}
+                unoptimized
+              />
+            ) : (
+              <Trophy style={{ width: "48px", height: "48px", color: roster.secondaryColor }} />
+            )}
+          </div>
+
+          {/* Team Info */}
+          <div style={{ flex: 1 }}>
+            <h2 style={{ fontSize: "24px", fontWeight: 700, color: "var(--foreground)", marginBottom: "4px" }}>
+              {roster.teamName}
+            </h2>
+            <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginBottom: "12px" }}>
+              {roster.leagueName} • {roster.season} Season
+            </p>
+
+            {/* Quick Stats Row */}
+            <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+              <div>
+                <span style={{ fontSize: "24px", fontWeight: 700, color: "var(--accent)" }}>
+                  {profile.stats.wins}-{profile.stats.losses}
+                </span>
+                <span style={{ fontSize: "13px", color: "var(--foreground-muted)", marginLeft: "8px" }}>
+                  ({(profile.stats.winPercentage * 100).toFixed(1)}%)
+                </span>
+              </div>
+              {profile.stats.conferenceRank && (
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Target style={{ width: "16px", height: "16px", color: "var(--foreground-muted)" }} />
+                  <span style={{ fontSize: "14px", color: "var(--foreground)" }}>
+                    #{profile.stats.conferenceRank} in Conference
+                  </span>
+                </div>
+              )}
+              {profile.championships && profile.championships > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Trophy style={{ width: "16px", height: "16px", color: "#fbbf24" }} />
+                  <span style={{ fontSize: "14px", color: "var(--foreground)" }}>
+                    {profile.championships} Championship{profile.championships > 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div style={{ padding: "20px 24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+        {/* Team Info */}
+        <div>
+          <h4 style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            Team Info
+          </h4>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Building2 style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+              <span style={{ fontSize: "13px", color: "var(--foreground)" }}>{profile.arena}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <MapPin style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+              <span style={{ fontSize: "13px", color: "var(--foreground)" }}>
+                {profile.city}{profile.state ? `, ${profile.state}` : ""}, {profile.country}
+              </span>
+            </div>
+            {profile.founded && (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Calendar style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                <span style={{ fontSize: "13px", color: "var(--foreground)" }}>Founded {profile.founded}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Team Stats */}
+        <div>
+          <h4 style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            Team Statistics
+          </h4>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            <div style={{ padding: "8px 12px", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
+              <div style={{ fontSize: "18px", fontWeight: 700, color: "var(--accent)" }}>
+                {profile.stats.pointsPerGame.toFixed(1)}
+              </div>
+              <div style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>PPG</div>
+            </div>
+            <div style={{ padding: "8px 12px", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
+              <div style={{ fontSize: "18px", fontWeight: 700, color: "var(--foreground)" }}>
+                {profile.stats.pointsAllowedPerGame.toFixed(1)}
+              </div>
+              <div style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>Opp PPG</div>
+            </div>
+            {profile.stats.reboundsPerGame && (
+              <div style={{ padding: "8px 12px", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
+                <div style={{ fontSize: "18px", fontWeight: 700, color: "var(--foreground)" }}>
+                  {profile.stats.reboundsPerGame.toFixed(1)}
+                </div>
+                <div style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>RPG</div>
+              </div>
+            )}
+            {profile.stats.assistsPerGame && (
+              <div style={{ padding: "8px 12px", backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
+                <div style={{ fontSize: "18px", fontWeight: 700, color: "var(--foreground)" }}>
+                  {profile.stats.assistsPerGame.toFixed(1)}
+                </div>
+                <div style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>APG</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Coaches */}
+        {profile.coaches && profile.coaches.length > 0 && (
+          <div>
+            <h4 style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              Coaching Staff
+            </h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {profile.coaches.map((coach, idx) => (
+                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <User style={{ width: "14px", height: "14px", color: idx === 0 ? "var(--accent)" : "var(--foreground-muted)" }} />
+                  <div>
+                    <span style={{ fontSize: "13px", fontWeight: idx === 0 ? 600 : 400, color: "var(--foreground)" }}>
+                      {coach.name}
+                    </span>
+                    <span style={{ fontSize: "12px", color: "var(--foreground-muted)", marginLeft: "6px" }}>
+                      {coach.role}
+                      {coach.yearsWithTeam ? ` (${coach.yearsWithTeam} yr${coach.yearsWithTeam > 1 ? "s" : ""})` : ""}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recent Results */}
+        {profile.recentResults && profile.recentResults.length > 0 && (
+          <div>
+            <h4 style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              Recent Games
+            </h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              {profile.recentResults.slice(0, 5).map((result, idx) => {
+                const isWin = result.startsWith("W");
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {isWin ? (
+                      <TrendingUp style={{ width: "14px", height: "14px", color: "#22c55e" }} />
+                    ) : (
+                      <TrendingDown style={{ width: "14px", height: "14px", color: "#ef4444" }} />
+                    )}
+                    <span style={{ color: isWin ? "#22c55e" : "#ef4444", fontWeight: 600 }}>
+                      {result.charAt(0)}
+                    </span>
+                    <span style={{ color: "var(--foreground)" }}>
+                      {result.substring(2)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Roster Table Component
 function RosterTable({
   roster,
   highlightedPlayer,
   onPlayerHover,
+  league,
 }: {
   roster: TeamRoster;
   highlightedPlayer: string | null;
   onPlayerHover: (playerName: string | null) => void;
+  league: League;
 }) {
   const [expandedPlayer, setExpandedPlayer] = useState<string | null>(null);
 
   return (
     <div className="glass rounded-2xl overflow-hidden">
-      {/* Team Header */}
+      {/* Table Header */}
       <div
         style={{
-          padding: "20px 24px",
+          padding: "16px 24px",
           borderBottom: "1px solid var(--glass-border)",
           display: "flex",
           alignItems: "center",
-          gap: "16px",
+          gap: "12px",
         }}
       >
-        <div
-          style={{
-            width: "48px",
-            height: "48px",
-            borderRadius: "12px",
-            backgroundColor: roster.primaryColor,
-            border: `3px solid ${roster.secondaryColor}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Trophy style={{ width: "24px", height: "24px", color: roster.secondaryColor }} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ fontSize: "20px", fontWeight: 700, color: "var(--foreground)" }}>
-            {roster.teamName}
-          </h3>
-          <p style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
-            {roster.leagueName} • {roster.season} Season • {roster.players.length} players
-          </p>
-        </div>
+        <Users style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+        <h3 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)" }}>
+          Roster
+        </h3>
+        <span style={{ marginLeft: "auto", fontSize: "13px", color: "var(--foreground-muted)" }}>
+          {roster.players.length} players
+        </span>
       </div>
 
       {/* Table */}
@@ -105,7 +347,28 @@ function RosterTable({
                 >
                   <td style={tdStyle}>{player.number || "-"}</td>
                   <td style={{ ...tdStyle, fontWeight: 600, textAlign: "left" }}>
-                    {player.name}
+                    <a
+                      href={getPlayerProfileUrl(player.name, league)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        color: "var(--foreground)",
+                        textDecoration: "none",
+                        borderBottom: "1px dashed var(--foreground-muted)",
+                        transition: "color 0.15s, border-color 0.15s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = "var(--accent)";
+                        e.currentTarget.style.borderColor = "var(--accent)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = "var(--foreground)";
+                        e.currentTarget.style.borderColor = "var(--foreground-muted)";
+                      }}
+                    >
+                      {player.name}
+                    </a>
                   </td>
                   <td style={tdStyle}>{player.position}</td>
                   <td style={tdStyle}>{player.height}</td>
@@ -485,7 +748,7 @@ export default function VisualRostersPage() {
                   Visual Rosters
                 </h1>
                 <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-                  Basketball team rosters with stats and hometown mapping
+                  Basketball team profiles, rosters, and hometown mapping
                 </p>
               </div>
             </div>
@@ -666,11 +929,18 @@ export default function VisualRostersPage() {
               transition={{ duration: 0.5 }}
               style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "24px" }}
             >
+              {/* Team Profile Card */}
+              <TeamProfileCard roster={roster} />
+
+              {/* Roster Table */}
               <RosterTable
                 roster={roster}
                 highlightedPlayer={highlightedPlayer}
                 onPlayerHover={setHighlightedPlayer}
+                league={league!}
               />
+
+              {/* Player Map */}
               <PlayerMap
                 roster={roster}
                 highlightedPlayer={highlightedPlayer}
@@ -701,7 +971,7 @@ export default function VisualRostersPage() {
                 }}
               />
               <p style={{ color: "var(--foreground-muted)", marginBottom: "8px" }}>
-                Select a league and enter a team name to view their roster
+                Select a league and enter a team name to view their profile and roster
               </p>
               <p style={{ color: "var(--foreground-muted)", fontSize: "13px" }}>
                 Examples: &quot;Lakers&quot; (NBA), &quot;Duke&quot; (College), &quot;Real Madrid&quot; (International)
@@ -731,10 +1001,10 @@ export default function VisualRostersPage() {
                 }}
               />
               <p style={{ color: "var(--foreground)" }}>
-                Fetching roster for {teamInput}...
+                Fetching team profile and roster for {teamInput}...
               </p>
               <p style={{ color: "var(--foreground-muted)", fontSize: "13px", marginTop: "8px" }}>
-                Gathering player data, stats, and hometown locations
+                Gathering team info, player data, stats, and hometown locations
               </p>
             </motion.div>
           )}

@@ -61,6 +61,40 @@ export interface Player {
   };
 }
 
+// Coach information
+export interface Coach {
+  name: string;
+  role: string; // e.g., "Head Coach", "Assistant Coach"
+  yearsWithTeam?: number;
+}
+
+// Team statistics
+export interface TeamStats {
+  wins: number;
+  losses: number;
+  winPercentage: number;
+  pointsPerGame: number;
+  pointsAllowedPerGame: number;
+  reboundsPerGame?: number;
+  assistsPerGame?: number;
+  conferenceRank?: number;
+  overallRank?: number;
+}
+
+// Team profile
+export interface TeamProfile {
+  logoUrl?: string;
+  founded?: string;
+  arena: string;
+  city: string;
+  state?: string;
+  country: string;
+  championships?: number;
+  coaches: Coach[];
+  stats: TeamStats;
+  recentResults?: string[]; // e.g., ["W vs Lakers 110-105", "L vs Celtics 98-102"]
+}
+
 export interface TeamRoster {
   teamName: string;
   league: League;
@@ -70,4 +104,5 @@ export interface TeamRoster {
   secondaryColor: string;
   players: Player[];
   season: string;
+  profile?: TeamProfile;
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Mail, Loader2, ExternalLink, RefreshCw } from "lucide-react";
+import { Mail, Loader2, ExternalLink, RefreshCw, Archive, Trash2 } from "lucide-react";
 import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
 
 interface EmailWithAccount {
@@ -62,6 +62,33 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
   const handleReconnect = async () => {
     await fetch("/api/auth/google/status", { method: "POST" });
     onConnectGoogle();
+  };
+
+  const handleEmailAction = async (
+    e: React.MouseEvent,
+    emailId: string,
+    action: "archive" | "trash",
+    accountEmail?: string
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      const response = await fetch(`/api/gmail/${emailId}/actions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, account: accountEmail }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} email`);
+      }
+
+      // Remove the email from the list immediately
+      setEmails((prev) => prev.filter((email) => email.id !== emailId));
+    } catch (err) {
+      console.error(`Error ${action}ing email:`, err);
+    }
   };
 
   const formatDate = (timestamp: string) => {
@@ -155,63 +182,127 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {emails.map((email) => (
-              <a
+              <div
                 key={email.id}
-                href={getSuperhumanUrl(email.threadId)}
-                target="_blank"
-                rel="noopener noreferrer"
                 style={{
+                  position: "relative",
                   display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
-                  padding: "8px",
+                  alignItems: "stretch",
                   borderRadius: "6px",
-                  textDecoration: "none",
                   transition: "background 0.15s",
                   borderLeft: email.isUnread ? "3px solid var(--accent)" : "3px solid transparent",
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{
-                    fontSize: "12px",
-                    color: email.isUnread ? "var(--foreground)" : "var(--foreground-muted)",
-                    fontWeight: email.isUnread ? 600 : 400,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    maxWidth: "70%",
-                  }}>
-                    {formatEmailSender(email.from)}
-                  </span>
-                  <span style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>
-                    {formatDate(email.date)}
-                  </span>
-                </div>
-                <div style={{
-                  fontSize: "13px",
-                  color: email.isUnread ? "var(--foreground)" : "var(--foreground-muted)",
-                  fontWeight: email.isUnread ? 500 : 400,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}>
-                  {email.subject}
-                </div>
-                {accounts.length > 1 && email.accountEmail && (
-                  <div style={{
-                    fontSize: "10px",
-                    color: "var(--accent)",
-                    opacity: 0.7,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}>
-                    {email.accountName || email.accountEmail}
+                {/* Email Content */}
+                <a
+                  href={getSuperhumanUrl(email.threadId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    padding: "8px",
+                    textDecoration: "none",
+                    minWidth: 0,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{
+                      fontSize: "12px",
+                      color: email.isUnread ? "var(--foreground)" : "var(--foreground-muted)",
+                      fontWeight: email.isUnread ? 600 : 400,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      maxWidth: "70%",
+                    }}>
+                      {formatEmailSender(email.from)}
+                    </span>
+                    <span style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>
+                      {formatDate(email.date)}
+                    </span>
                   </div>
-                )}
-              </a>
+                  <div style={{
+                    fontSize: "13px",
+                    color: email.isUnread ? "var(--foreground)" : "var(--foreground-muted)",
+                    fontWeight: email.isUnread ? 500 : 400,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}>
+                    {email.subject}
+                  </div>
+                  {accounts.length > 1 && email.accountEmail && (
+                    <div style={{
+                      fontSize: "10px",
+                      color: "var(--accent)",
+                      opacity: 0.7,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}>
+                      {email.accountName || email.accountEmail}
+                    </div>
+                  )}
+                </a>
+
+                {/* Action Buttons */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "0 8px",
+                    opacity: 0.6,
+                    transition: "opacity 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+                >
+                  <button
+                    onClick={(e) => handleEmailAction(e, email.id, "archive", email.accountEmail)}
+                    title="Archive"
+                    style={{
+                      padding: "6px",
+                      borderRadius: "4px",
+                      border: "none",
+                      backgroundColor: "transparent",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <Archive style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                  </button>
+                  <button
+                    onClick={(e) => handleEmailAction(e, email.id, "trash", email.accountEmail)}
+                    title="Delete"
+                    style={{
+                      padding: "6px",
+                      borderRadius: "4px",
+                      border: "none",
+                      backgroundColor: "transparent",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239, 68, 68, 0.2)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <Trash2 style={{ width: "14px", height: "14px", color: "#ef4444" }} />
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         )}

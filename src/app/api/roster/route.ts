@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { League, LEAGUES, TeamRoster, Player } from "@/types/roster";
+import { League, LEAGUES, TeamRoster, Player, TeamProfile } from "@/types/roster";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
@@ -29,7 +29,7 @@ async function callGeminiWithSearch(prompt: string): Promise<string> {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 16384,
+          maxOutputTokens: 32768,
         },
         tools: [{ google_search: {} }],
       }),
@@ -95,37 +95,78 @@ function getCurrentSeason(): string {
 function buildRosterPrompt(league: League, teamName: string, season: string): string {
   const leagueInfo = LEAGUES.find(l => l.id === league);
 
-  const basePrompt = `Search for the current ${season} roster of the "${teamName}" basketball team in the ${leagueInfo?.name || league}.
+  const basePrompt = `Search for comprehensive information about the "${teamName}" basketball team in the ${leagueInfo?.name || league} for the ${season} season.
 
-I need you to find and return comprehensive roster information. For EACH player on the roster, find:
+I need TWO things:
 
-1. Jersey number
-2. Full name
-3. Position (PG, SG, SF, PF, C or combo positions)
-4. Height (format: "6-5" or "6'5\"")
-5. Weight in lbs
-6. Age or class year (for college: Fr, So, Jr, Sr, Gr)
-7. Hometown (city, state/country where they are from)
-8. Current season statistics:
-   - Games played
-   - Points per game
-   - Rebounds per game
-   - Assists per game
-   - Minutes per game (if available)
-9. Prior teams/schools they played for before joining this team
+## 1. TEAM PROFILE
+Find and return:
+- Team's official logo URL (direct image URL, preferably from Wikipedia or official sources)
+- Year the team/program was founded
+- Home arena/stadium name
+- City and state/country location
+- Number of championships won (if any)
+- Head coach name and years with team
+- Assistant coaches (top 1-2)
+- Current season record (wins-losses)
+- Win percentage
+- Points per game (team average)
+- Points allowed per game
+- Rebounds per game (team average)
+- Assists per game (team average)
+- Conference/division ranking
+- Overall ranking (if available)
+- Last 5 game results (W/L with opponent and score)
 
-Also find:
-- The team's official full name
-- The team's primary color (hex code)
-- The team's secondary color (hex code)
-- The conference/league they play in
+## 2. PLAYER ROSTER
+For EACH player on the current roster, find:
+- Jersey number
+- Full name
+- Position (PG, SG, SF, PF, C)
+- Height (format: "6-5")
+- Weight in lbs
+- Age or class year (for college: Fr, So, Jr, Sr, Gr)
+- Hometown (city, state/country)
+- Current season stats: games played, PPG, RPG, APG, MPG
+- Prior teams/schools before this team
 
-Return the data as JSON with this exact structure (no markdown, no backticks):
+Return ONLY valid JSON with this exact structure (no markdown, no backticks, no explanation):
 {
   "teamName": "Full Official Team Name",
   "leagueName": "Conference or League Name",
   "primaryColor": "#hexcode",
   "secondaryColor": "#hexcode",
+  "profile": {
+    "logoUrl": "https://direct-image-url.png",
+    "founded": "1946",
+    "arena": "Arena Name",
+    "city": "City Name",
+    "state": "State/Province",
+    "country": "Country",
+    "championships": 17,
+    "coaches": [
+      { "name": "Head Coach Name", "role": "Head Coach", "yearsWithTeam": 5 },
+      { "name": "Assistant Name", "role": "Assistant Coach" }
+    ],
+    "stats": {
+      "wins": 35,
+      "losses": 20,
+      "winPercentage": 0.636,
+      "pointsPerGame": 112.5,
+      "pointsAllowedPerGame": 108.2,
+      "reboundsPerGame": 44.5,
+      "assistsPerGame": 26.3,
+      "conferenceRank": 3,
+      "overallRank": 8
+    },
+    "recentResults": [
+      "W vs Lakers 115-108",
+      "W vs Heat 122-110",
+      "L vs Celtics 105-118",
+      "W vs Bulls 130-112",
+      "L vs Bucks 99-105"
+    ]
+  },
   "players": [
     {
       "number": "23",
@@ -134,7 +175,7 @@ Return the data as JSON with this exact structure (no markdown, no backticks):
       "height": "6-5",
       "weight": "215",
       "age": "25",
-      "hometown": "City, State or City, Country",
+      "hometown": "City, State",
       "stats": {
         "gamesPlayed": 45,
         "pointsPerGame": 18.5,
@@ -143,19 +184,18 @@ Return the data as JSON with this exact structure (no markdown, no backticks):
         "minutesPerGame": 32.5
       },
       "priorTeams": [
-        { "team": "Previous Team Name", "league": "NBA/NCAA/etc", "years": "2020-2022" }
+        { "team": "Previous Team", "league": "NBA", "years": "2020-2022" }
       ]
     }
   ]
 }
 
 IMPORTANT:
+- Use REAL, ACCURATE, CURRENT data from reliable sources
+- For logoUrl, try to find a direct PNG or SVG image URL (Wikipedia, ESPN, or official team site)
 - Include ALL players on the current roster
-- Use real, accurate data from reliable sources
-- For stats, use current season averages (set to 0 if player hasn't played yet)
-- For hometown, be as specific as possible (city and state/country)
-- priorTeams should list previous professional or college teams (not youth/high school)
-- Return ONLY valid JSON, no explanations`;
+- For stats, use current ${season} season averages
+- Return ONLY valid JSON`;
 
   return basePrompt;
 }
@@ -247,6 +287,38 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Build team profile with defaults
+    const profile: TeamProfile = rosterData.profile ? {
+      logoUrl: rosterData.profile.logoUrl,
+      founded: rosterData.profile.founded,
+      arena: rosterData.profile.arena || "Unknown Arena",
+      city: rosterData.profile.city || "Unknown",
+      state: rosterData.profile.state,
+      country: rosterData.profile.country || "USA",
+      championships: rosterData.profile.championships || 0,
+      coaches: rosterData.profile.coaches || [],
+      stats: rosterData.profile.stats || {
+        wins: 0,
+        losses: 0,
+        winPercentage: 0,
+        pointsPerGame: 0,
+        pointsAllowedPerGame: 0,
+      },
+      recentResults: rosterData.profile.recentResults || [],
+    } : {
+      arena: "Unknown",
+      city: "Unknown",
+      country: "USA",
+      coaches: [],
+      stats: {
+        wins: 0,
+        losses: 0,
+        winPercentage: 0,
+        pointsPerGame: 0,
+        pointsAllowedPerGame: 0,
+      },
+    };
+
     const roster: TeamRoster = {
       teamName: rosterData.teamName || team,
       league,
@@ -255,6 +327,7 @@ export async function GET(request: NextRequest) {
       secondaryColor: rosterData.secondaryColor || "#ffffff",
       players: playersWithCoords,
       season,
+      profile,
     };
 
     console.log(`Successfully fetched ${roster.players.length} players for ${roster.teamName}`);
