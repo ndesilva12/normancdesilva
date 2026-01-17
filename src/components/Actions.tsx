@@ -69,15 +69,15 @@ function playAlarmSound(audioContext: AudioContext, duration: number = 3000) {
 }
 
 interface RemindersProps {
-  isGoogleConnected: boolean;
-  onConnectGoogle: () => void;
+  isGoogleConnected?: boolean;
+  onConnectGoogle?: () => void;
   defaultCollapsed?: boolean;
   onExpandChange?: (expanded: boolean) => void;
   compact?: boolean;
 }
 
 // Export as both Reminders and Actions for backwards compatibility
-export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed = false, onExpandChange, compact = false }: RemindersProps) {
+export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultCollapsed = true, onExpandChange, compact = false }: RemindersProps) {
   const { user } = useAuth();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [isExpanded, setIsExpanded] = useState(!defaultCollapsed);
@@ -115,9 +115,8 @@ export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed
     }
   }, [user]);
 
-  const saveReminders = useCallback((updated: Reminder[]) => {
+  const saveRemindersToStorage = useCallback((updated: Reminder[]) => {
     if (!user) return;
-    setReminders(updated);
     const storageKey = getStorageKey(user.uid);
     localStorage.setItem(storageKey, JSON.stringify(updated));
   }, [user]);
@@ -129,32 +128,38 @@ export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed
       const currentDate = now.toISOString().split("T")[0];
       const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 
-      reminders.forEach((reminder) => {
-        if (
-          reminder.webAlarm &&
-          !reminder.alarmTriggered &&
-          !reminder.completed &&
-          reminder.date === currentDate &&
-          reminder.time === currentTime
-        ) {
-          setActiveAlarm(reminder);
-
-          if (!audioContextRef.current) {
-            audioContextRef.current = new AudioContext();
+      setReminders(currentReminders => {
+        let hasTriggered = false;
+        const updated = currentReminders.map((reminder) => {
+          if (
+            reminder.webAlarm &&
+            !reminder.alarmTriggered &&
+            !reminder.completed &&
+            reminder.date === currentDate &&
+            reminder.time === currentTime
+          ) {
+            if (!hasTriggered) {
+              setActiveAlarm(reminder);
+              if (!audioContextRef.current) {
+                audioContextRef.current = new AudioContext();
+              }
+              oscillatorRef.current = playAlarmSound(audioContextRef.current, 5000);
+              hasTriggered = true;
+            }
+            return { ...reminder, alarmTriggered: true };
           }
-          oscillatorRef.current = playAlarmSound(audioContextRef.current, 5000);
-
-          const updated = reminders.map((r) =>
-            r.id === reminder.id ? { ...r, alarmTriggered: true } : r
-          );
-          saveReminders(updated);
+          return reminder;
+        });
+        if (hasTriggered) {
+          saveRemindersToStorage(updated);
         }
+        return hasTriggered ? updated : currentReminders;
       });
     };
 
     const interval = setInterval(checkAlarms, 1000);
     return () => clearInterval(interval);
-  }, [reminders, saveReminders]);
+  }, [saveRemindersToStorage]);
 
   const addReminder = async () => {
     if (!newLabel.trim()) return;
@@ -204,7 +209,11 @@ export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed
       }
     }
 
-    saveReminders([...reminders, reminder]);
+    setReminders(currentReminders => {
+      const updated = [...currentReminders, reminder];
+      saveRemindersToStorage(updated);
+      return updated;
+    });
     setNewLabel("");
     setNewDate("");
     setNewTime("");
@@ -234,17 +243,23 @@ export function Reminders({ isGoogleConnected, onConnectGoogle, defaultCollapsed
       }
     }
 
-    saveReminders(reminders.filter((r) => r.id !== reminder.id));
+    setReminders(currentReminders => {
+      const updated = currentReminders.filter((r) => r.id !== reminder.id);
+      saveRemindersToStorage(updated);
+      return updated;
+    });
     setDeleteConfirm(null);
     setIsDeleting(false);
   };
 
   const toggleComplete = (id: string) => {
-    saveReminders(
-      reminders.map((r) =>
+    setReminders(currentReminders => {
+      const updated = currentReminders.map((r) =>
         r.id === id ? { ...r, completed: !r.completed } : r
-      )
-    );
+      );
+      saveRemindersToStorage(updated);
+      return updated;
+    });
   };
 
   const dismissAlarm = () => {

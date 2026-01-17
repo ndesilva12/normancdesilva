@@ -9,12 +9,105 @@ interface ToolCardProps {
   tool: Tool;
   index: number;
   compact?: boolean;
+  customName?: string;
 }
 
-export function ToolCard({ tool, index, compact = false }: ToolCardProps) {
+export function ToolCard({ tool, index, compact = false, customName }: ToolCardProps) {
   const Icon = tool.icon;
   const isDisabled = tool.status === "coming-soon";
+  const displayName = customName || tool.name;
 
+  // Compact mode: single row with icon + title only
+  if (compact) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.02 }}
+      >
+        <Link
+          href={isDisabled ? "#" : tool.href}
+          style={{
+            display: "block",
+            cursor: isDisabled ? "not-allowed" : "pointer",
+          }}
+          onClick={(e) => isDisabled && e.preventDefault()}
+        >
+          <div
+            className="glass"
+            style={{
+              borderRadius: "10px",
+              padding: "10px 12px",
+              opacity: isDisabled ? 0.5 : 1,
+              transition: "all 0.3s ease-out",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                width: "28px",
+                height: "28px",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "6px",
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                flexShrink: 0,
+              }}
+            >
+              <Icon
+                style={{
+                  width: "14px",
+                  height: "14px",
+                  color: "var(--foreground-muted)",
+                }}
+              />
+            </div>
+            <span
+              style={{
+                fontSize: "13px",
+                fontWeight: 500,
+                color: "var(--foreground)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {displayName}
+            </span>
+            {tool.status !== "available" && (
+              <span
+                style={{
+                  borderRadius: "9999px",
+                  padding: "2px 6px",
+                  fontSize: "8px",
+                  fontWeight: 500,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  backgroundColor:
+                    tool.status === "beta"
+                      ? "rgba(6, 182, 212, 0.2)"
+                      : "rgba(255, 255, 255, 0.1)",
+                  color:
+                    tool.status === "beta"
+                      ? "var(--accent)"
+                      : "var(--foreground-muted)",
+                  marginLeft: "auto",
+                  flexShrink: 0,
+                }}
+              >
+                {tool.status === "beta" ? "Beta" : "Soon"}
+              </span>
+            )}
+          </div>
+        </Link>
+      </motion.div>
+    );
+  }
+
+  // Full mode: original layout
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -34,8 +127,8 @@ export function ToolCard({ tool, index, compact = false }: ToolCardProps) {
           className="glass"
           style={{
             height: "100%",
-            borderRadius: compact ? "10px" : "12px",
-            padding: compact ? "12px" : "16px",
+            borderRadius: "12px",
+            padding: "16px",
             opacity: isDisabled ? 0.5 : 1,
             transition: "all 0.3s ease-out",
           }}
@@ -43,28 +136,28 @@ export function ToolCard({ tool, index, compact = false }: ToolCardProps) {
           {/* Header Row: Icon + Status */}
           <div
             style={{
-              marginBottom: compact ? "8px" : "12px",
+              marginBottom: "12px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: compact ? "6px" : "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <div
                 style={{
                   display: "flex",
-                  width: compact ? "32px" : "40px",
-                  height: compact ? "32px" : "40px",
+                  width: "40px",
+                  height: "40px",
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: compact ? "8px" : "10px",
+                  borderRadius: "10px",
                   backgroundColor: "rgba(255, 255, 255, 0.05)",
                 }}
               >
                 <Icon
                   style={{
-                    width: compact ? "16px" : "20px",
-                    height: compact ? "16px" : "20px",
+                    width: "20px",
+                    height: "20px",
                     color: "var(--foreground-muted)",
                   }}
                 />
@@ -72,8 +165,8 @@ export function ToolCard({ tool, index, compact = false }: ToolCardProps) {
               {tool.aiPowered && (
                 <Sparkles
                   style={{
-                    width: compact ? "12px" : "16px",
-                    height: compact ? "12px" : "16px",
+                    width: "16px",
+                    height: "16px",
                     color: "var(--accent)",
                   }}
                 />
@@ -83,8 +176,8 @@ export function ToolCard({ tool, index, compact = false }: ToolCardProps) {
               <span
                 style={{
                   borderRadius: "9999px",
-                  padding: compact ? "2px 6px" : "4px 10px",
-                  fontSize: compact ? "8px" : "10px",
+                  padding: "4px 10px",
+                  fontSize: "10px",
                   fontWeight: 500,
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
@@ -106,26 +199,24 @@ export function ToolCard({ tool, index, compact = false }: ToolCardProps) {
           {/* Content */}
           <h3
             style={{
-              marginBottom: compact ? "4px" : "6px",
-              fontSize: compact ? "13px" : "15px",
+              marginBottom: "6px",
+              fontSize: "15px",
               fontWeight: 600,
               color: "var(--foreground)",
             }}
           >
-            {tool.name}
+            {displayName}
           </h3>
-          {!compact && (
-            <p
-              style={{
-                marginBottom: "12px",
-                fontSize: "13px",
-                lineHeight: 1.5,
-                color: "var(--foreground-muted)",
-              }}
-            >
-              {tool.description}
-            </p>
-          )}
+          <p
+            style={{
+              marginBottom: "12px",
+              fontSize: "13px",
+              lineHeight: 1.5,
+              color: "var(--foreground-muted)",
+            }}
+          >
+            {tool.description}
+          </p>
 
           {/* Footer */}
           <div
@@ -133,20 +224,19 @@ export function ToolCard({ tool, index, compact = false }: ToolCardProps) {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              marginTop: compact ? "8px" : 0,
             }}
           >
             <span
               className={categoryColors[tool.category]}
-              style={{ fontSize: compact ? "10px" : "12px", fontWeight: 500 }}
+              style={{ fontSize: "12px", fontWeight: 500 }}
             >
               {categoryLabels[tool.category]}
             </span>
             {!isDisabled && (
               <ArrowUpRight
                 style={{
-                  width: compact ? "12px" : "16px",
-                  height: compact ? "12px" : "16px",
+                  width: "16px",
+                  height: "16px",
                   color: "var(--foreground-muted)",
                 }}
               />

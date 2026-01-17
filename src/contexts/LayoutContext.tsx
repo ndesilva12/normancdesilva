@@ -12,6 +12,7 @@ export interface WidgetConfig {
   size: WidgetSize;
   visible: boolean;
   order: number;
+  customName?: string;
 }
 
 // Layout configuration
@@ -60,6 +61,7 @@ interface LayoutContextType {
   exitEditMode: (save: boolean) => void;
   updateWidgetSize: (type: "previewWidgets" | "toolCards", id: string, size: WidgetSize) => void;
   updateWidgetVisibility: (type: "previewWidgets" | "toolCards", id: string, visible: boolean) => void;
+  updateWidgetName: (type: "previewWidgets" | "toolCards", id: string, customName: string) => void;
   reorderWidgets: (type: "previewWidgets" | "toolCards", fromIndex: number, toIndex: number) => void;
   resetLayout: () => void;
   getWidgetConfig: (type: "previewWidgets" | "toolCards", id: string) => WidgetConfig | undefined;
@@ -154,6 +156,19 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     [isEditMode, pendingLayout]
   );
 
+  const updateWidgetName = useCallback(
+    (type: "previewWidgets" | "toolCards", id: string, customName: string) => {
+      if (!isEditMode || !pendingLayout) return;
+
+      const widgets = pendingLayout[type];
+      const updatedWidgets = widgets.map((w) =>
+        w.id === id ? { ...w, customName: customName.trim() || undefined } : w
+      );
+      setPendingLayout({ ...pendingLayout, [type]: updatedWidgets });
+    },
+    [isEditMode, pendingLayout]
+  );
+
   const reorderWidgets = useCallback(
     (type: "previewWidgets" | "toolCards", fromIndex: number, toIndex: number) => {
       if (!isEditMode || !pendingLayout) return;
@@ -198,6 +213,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
         exitEditMode,
         updateWidgetSize,
         updateWidgetVisibility,
+        updateWidgetName,
         reorderWidgets,
         resetLayout,
         getWidgetConfig,

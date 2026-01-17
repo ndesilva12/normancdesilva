@@ -8,7 +8,7 @@ import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useSettings } from "@/contexts/SettingsContext";
-import { Reminders } from "@/components/Reminders";
+import { Reminders } from "@/components/Actions";
 
 export function Header({
   isGoogleConnected = false,
@@ -204,7 +204,12 @@ export function Header({
           </Link>
 
           {/* Reminders */}
-          {user && <Reminders />}
+          {user && (
+            <Reminders
+              isGoogleConnected={isGoogleConnected}
+              onConnectGoogle={onConnectGoogle}
+            />
+          )}
 
           {/* User Menu */}
           {loading ? (

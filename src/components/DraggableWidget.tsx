@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, ReactNode } from "react";
-import { GripVertical, Minimize2, Maximize2, Square, Eye, EyeOff } from "lucide-react";
+import { GripVertical, Minimize2, Maximize2, Square, Eye, EyeOff, Pencil, Check, X } from "lucide-react";
 import { useLayout, WidgetSize } from "@/contexts/LayoutContext";
 
 interface DraggableWidgetProps {
@@ -29,13 +29,17 @@ export function DraggableWidget({
   isDragging,
   dragOverIndex,
 }: DraggableWidgetProps) {
-  const { isEditMode, getWidgetConfig, updateWidgetSize, updateWidgetVisibility } = useLayout();
+  const { isEditMode, getWidgetConfig, updateWidgetSize, updateWidgetVisibility, updateWidgetName } = useLayout();
   const [showSizeMenu, setShowSizeMenu] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editingNameValue, setEditingNameValue] = useState("");
   const widgetRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const config = getWidgetConfig(type, id);
   const size = config?.size || "default";
   const visible = config?.visible ?? true;
+  const displayName = config?.customName || title;
 
   const handleDragStart = (e: React.DragEvent) => {
     if (!isEditMode) return;
@@ -62,6 +66,22 @@ export function DraggableWidget({
 
   const handleVisibilityToggle = () => {
     updateWidgetVisibility(type, id, !visible);
+  };
+
+  const startEditingName = () => {
+    setEditingNameValue(displayName);
+    setIsEditingName(true);
+    setTimeout(() => nameInputRef.current?.focus(), 0);
+  };
+
+  const saveNameEdit = () => {
+    updateWidgetName(type, id, editingNameValue);
+    setIsEditingName(false);
+  };
+
+  const cancelNameEdit = () => {
+    setIsEditingName(false);
+    setEditingNameValue("");
   };
 
   // Size-based styles
@@ -129,17 +149,99 @@ export function DraggableWidget({
             }}
           />
 
-          {/* Title */}
-          <span
-            style={{
-              flex: 1,
-              fontSize: "14px",
-              fontWeight: 600,
-              color: visible ? "var(--foreground)" : "var(--foreground-muted)",
-            }}
-          >
-            {title}
-          </span>
+          {/* Title with edit capability */}
+          {isEditingName ? (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px" }}>
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={editingNameValue}
+                onChange={(e) => setEditingNameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveNameEdit();
+                  if (e.key === "Escape") cancelNameEdit();
+                }}
+                style={{
+                  flex: 1,
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "var(--foreground)",
+                  background: "rgba(255, 255, 255, 0.1)",
+                  border: "1px solid var(--accent)",
+                  borderRadius: "4px",
+                  padding: "2px 6px",
+                  outline: "none",
+                }}
+              />
+              <button
+                onClick={saveNameEdit}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "4px",
+                  backgroundColor: "rgba(34, 197, 94, 0.2)",
+                  border: "none",
+                  color: "#22c55e",
+                  cursor: "pointer",
+                }}
+                title="Save name"
+              >
+                <Check style={{ width: "12px", height: "12px" }} />
+              </button>
+              <button
+                onClick={cancelNameEdit}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "4px",
+                  backgroundColor: "rgba(239, 68, 68, 0.2)",
+                  border: "none",
+                  color: "#ef4444",
+                  cursor: "pointer",
+                }}
+                title="Cancel"
+              >
+                <X style={{ width: "12px", height: "12px" }} />
+              </button>
+            </div>
+          ) : (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "6px" }}>
+              <span
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: visible ? "var(--foreground)" : "var(--foreground-muted)",
+                }}
+              >
+                {displayName}
+              </span>
+              <button
+                onClick={startEditingName}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "20px",
+                  height: "20px",
+                  borderRadius: "4px",
+                  backgroundColor: "transparent",
+                  border: "none",
+                  color: "var(--foreground-muted)",
+                  cursor: "pointer",
+                  opacity: 0.6,
+                }}
+                title="Rename widget"
+              >
+                <Pencil style={{ width: "11px", height: "11px" }} />
+              </button>
+            </div>
+          )}
 
           {/* Size selector */}
           <div style={{ position: "relative" }}>

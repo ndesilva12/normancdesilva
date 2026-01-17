@@ -182,9 +182,11 @@ function UnifiedWidgetsGrid({
   };
 
   const renderToolCard = (widgetConfig: WidgetConfig & { widgetType: "toolCards" }, index: number) => {
-    const { id } = widgetConfig;
+    const { id, customName } = widgetConfig;
     const tool = tools.find((t) => t.id === id);
     if (!tool) return null;
+
+    const displayName = customName || WIDGET_TITLES[id] || tool.name;
 
     return (
       <DraggableWidget
@@ -199,7 +201,7 @@ function UnifiedWidgetsGrid({
         isDragging={toolDragState.isDragging}
         dragOverIndex={toolDragState.dragOverIndex}
       >
-        <ToolCard tool={tool} index={index} compact />
+        <ToolCard tool={tool} index={index} compact customName={displayName} />
       </DraggableWidget>
     );
   };
@@ -253,24 +255,42 @@ function UnifiedWidgetsGrid({
     );
   }
 
+  // Calculate optimal columns for balanced rows
+  const visibleToolCount = toolCards.length;
+  const getBalancedColumns = (count: number, maxCols: number): number => {
+    // For small counts, use the count itself
+    if (count <= maxCols) return count;
+
+    // Find the best column count that creates balanced rows
+    for (let cols = maxCols; cols >= 2; cols--) {
+      const remainder = count % cols;
+      // If it divides evenly, or the last row has at least half the columns, use this
+      if (remainder === 0 || remainder >= cols / 2) {
+        return cols;
+      }
+    }
+    return maxCols;
+  };
+
+  const maxColumns = isMobile ? 2 : 6;
+  const optimalColumns = getBalancedColumns(visibleToolCount, maxColumns);
+
   // Normal mode: Tool widgets first, then data widgets
   return (
     <>
-      {/* Tool Widgets - First (centered with even distribution) */}
+      {/* Tool Widgets - First (balanced grid) */}
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
+          display: "grid",
+          gridTemplateColumns: isMobile
+            ? "repeat(2, 1fr)"
+            : `repeat(${optimalColumns}, minmax(120px, 160px))`,
           justifyContent: "center",
           gap: isMobile ? "8px" : "10px",
           marginBottom: "24px",
         }}
       >
-        {toolCards.map((widget, index) => (
-          <div key={`tool-wrapper-${widget.id}`} style={{ width: isMobile ? "calc(50% - 4px)" : "140px" }}>
-            {renderToolCard(widget, index)}
-          </div>
-        ))}
+        {toolCards.map((widget, index) => renderToolCard(widget, index))}
       </div>
 
       {/* Data Widgets - Second (uniform grid) */}
