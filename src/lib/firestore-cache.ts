@@ -9,8 +9,13 @@ export const CACHE_TTL = {
   // Company TTLs
   company: 2160,        // 90 days - company data is fairly stable
   companyNews: 24,      // 24 hours - news should be refreshed daily
+  // Business TTLs
+  business: 720,        // 30 days - local business data changes moderately
+  businessSearch: 24,   // 24 hours - search results should refresh daily
   // Other
   geocode: 8760,        // 1 year - geocoded locations rarely change
+  roster: 168,          // 7 days - default roster cache
+  contactFinder: 720,   // 30 days - contact info doesn't change often
 };
 
 // Helper to get roster TTL based on league type

@@ -9,6 +9,7 @@ import {
   Sparkles,
   Radar,
   Moon,
+  Store,
 } from "lucide-react";
 import { Tool } from "@/types/tool";
 
@@ -25,10 +26,20 @@ export const tools: Tool[] = [
   },
   {
     id: "company-politics",
-    name: "Company Info",
+    name: "Corporate Info",
     description: "Analyze corporate political leanings, donations, lobbying activities, and public statements.",
     icon: Building2,
     href: "/tools/company-politics",
+    category: "ai",
+    status: "available",
+    aiPowered: true,
+  },
+  {
+    id: "business-info",
+    name: "Business Info",
+    description: "Deep dive into local businesses with public records, filings, ownership details, and news coverage.",
+    icon: Store,
+    href: "/tools/business-info",
     category: "ai",
     status: "available",
     aiPowered: true,

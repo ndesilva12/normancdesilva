@@ -17,10 +17,9 @@ async function generateWithGrok(prompt: string): Promise<{ imageUrl: string; rev
       "Authorization": `Bearer ${XAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "grok-2-image",
+      model: "grok-2-image-1212",
       prompt,
       n: 1,
-      size: "1024x1024",
     }),
   });
 

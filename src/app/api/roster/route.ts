@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { League, LEAGUES, TeamRoster, Player, TeamProfile } from "@/types/roster";
+import { getCachedRoster, cacheRoster } from "@/lib/roster-cache";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
@@ -231,6 +232,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const season = getCurrentSeason();
+
+    // Check cache first
+    const cached = await getCachedRoster(league, team);
+    if (cached) {
+      console.log(`Returning cached roster for ${team} in ${league}`);
+      return NextResponse.json({
+        success: true,
+        data: cached.roster,
+        fromCache: true,
+      });
+    }
+
     const prompt = buildRosterPrompt(league, team, season);
 
     console.log(`Fetching roster for ${team} in ${league} (${season})`);
@@ -332,9 +345,13 @@ export async function GET(request: NextRequest) {
 
     console.log(`Successfully fetched ${roster.players.length} players for ${roster.teamName}`);
 
+    // Cache the result for faster future lookups
+    await cacheRoster(league, team, roster);
+
     return NextResponse.json({
       success: true,
       data: roster,
+      fromCache: false,
     });
 
   } catch (error) {

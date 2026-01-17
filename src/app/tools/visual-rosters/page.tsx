@@ -17,12 +17,31 @@ import {
   TrendingDown,
   User,
   Target,
+  Clock,
+  Plus,
+  X,
+  Database,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { League, LEAGUES, TeamRoster, Player, TeamProfile } from "@/types/roster";
+
+// Recent roster type
+interface RecentRoster {
+  league: League;
+  teamName: string;
+  leagueName: string;
+  primaryColor: string;
+  secondaryColor: string;
+  season: string;
+  playerCount: number;
+  logoUrl: string | null;
+  record: string | null;
+  searchedAt: string;
+  cacheKey: string;
+}
 
 // Generate external profile URL for a player
 function getPlayerProfileUrl(playerName: string, league: League): string {
@@ -660,17 +679,51 @@ export default function VisualRostersPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [highlightedPlayer, setHighlightedPlayer] = useState<string | null>(null);
+  const [fromCache, setFromCache] = useState(false);
 
-  const searchTeam = useCallback(async () => {
-    if (!league || !teamInput.trim()) return;
+  // Second team for side-by-side comparison
+  const [showSecondTeam, setShowSecondTeam] = useState(false);
+  const [teamInput2, setTeamInput2] = useState("");
+  const [roster2, setRoster2] = useState<TeamRoster | null>(null);
+  const [loading2, setLoading2] = useState(false);
+  const [error2, setError2] = useState<string | null>(null);
+  const [fromCache2, setFromCache2] = useState(false);
+
+  // Recent rosters
+  const [recentRosters, setRecentRosters] = useState<RecentRoster[]>([]);
+  const [loadingRecent, setLoadingRecent] = useState(true);
+
+  // Fetch recent rosters on mount
+  useEffect(() => {
+    async function fetchRecentRosters() {
+      try {
+        const response = await fetch("/api/roster/recent?limit=8");
+        if (response.ok) {
+          const data = await response.json();
+          setRecentRosters(data.rosters || []);
+        }
+      } catch (err) {
+        console.error("Error fetching recent rosters:", err);
+      } finally {
+        setLoadingRecent(false);
+      }
+    }
+    fetchRecentRosters();
+  }, []);
+
+  const searchTeam = useCallback(async (teamName?: string, targetLeague?: League) => {
+    const searchLeague = targetLeague || league;
+    const searchTeamName = teamName || teamInput.trim();
+    if (!searchLeague || !searchTeamName) return;
 
     setLoading(true);
     setError(null);
     setRoster(null);
+    setFromCache(false);
 
     try {
       const response = await fetch(
-        `/api/roster?league=${encodeURIComponent(league)}&team=${encodeURIComponent(teamInput.trim())}`
+        `/api/roster?league=${encodeURIComponent(searchLeague)}&team=${encodeURIComponent(searchTeamName)}`
       );
       const data = await response.json();
 
@@ -679,6 +732,9 @@ export default function VisualRostersPage() {
       }
 
       setRoster(data.data);
+      setFromCache(data.fromCache || false);
+      setLeague(searchLeague);
+      setTeamInput(searchTeamName);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -686,9 +742,52 @@ export default function VisualRostersPage() {
     }
   }, [league, teamInput]);
 
+  const searchTeam2 = useCallback(async () => {
+    if (!league || !teamInput2.trim()) return;
+
+    setLoading2(true);
+    setError2(null);
+    setRoster2(null);
+    setFromCache2(false);
+
+    try {
+      const response = await fetch(
+        `/api/roster?league=${encodeURIComponent(league)}&team=${encodeURIComponent(teamInput2.trim())}`
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || "Failed to fetch roster");
+      }
+
+      setRoster2(data.data);
+      setFromCache2(data.fromCache || false);
+    } catch (err) {
+      setError2(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading2(false);
+    }
+  }, [league, teamInput2]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     searchTeam();
+  };
+
+  const handleSubmit2 = (e: React.FormEvent) => {
+    e.preventDefault();
+    searchTeam2();
+  };
+
+  const handleRecentClick = (recent: RecentRoster) => {
+    searchTeam(recent.teamName, recent.league);
+  };
+
+  const clearSecondTeam = () => {
+    setShowSecondTeam(false);
+    setTeamInput2("");
+    setRoster2(null);
+    setError2(null);
   };
 
   return (
@@ -754,6 +853,68 @@ export default function VisualRostersPage() {
             </div>
           </motion.div>
 
+          {/* Recent Rosters */}
+          {recentRosters.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.05 }}
+              style={{ marginTop: "16px" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                <Clock style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Recently Searched
+                </span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {recentRosters.map((recent) => (
+                  <button
+                    key={recent.cacheKey}
+                    onClick={() => handleRecentClick(recent)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "6px 12px",
+                      backgroundColor: "rgba(255,255,255,0.03)",
+                      border: `1px solid ${recent.primaryColor}44`,
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = `${recent.primaryColor}22`;
+                      e.currentTarget.style.borderColor = recent.primaryColor;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)";
+                      e.currentTarget.style.borderColor = `${recent.primaryColor}44`;
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        backgroundColor: recent.primaryColor,
+                      }}
+                    />
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)" }}>
+                      {recent.teamName}
+                    </span>
+                    {recent.record && (
+                      <span style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>
+                        ({recent.record})
+                      </span>
+                    )}
+                    <Database style={{ width: "10px", height: "10px", color: "var(--accent)", opacity: 0.6 }} />
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
           {/* Search Form */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -779,7 +940,14 @@ export default function VisualRostersPage() {
                   <div style={{ position: "relative" }}>
                     <select
                       value={league || ""}
-                      onChange={(e) => setLeague(e.target.value as League)}
+                      onChange={(e) => {
+                        setLeague(e.target.value as League);
+                        // Clear second team if league changes
+                        if (showSecondTeam) {
+                          setTeamInput2("");
+                          setRoster2(null);
+                        }
+                      }}
                       style={{
                         width: "100%",
                         padding: "12px 36px 12px 14px",
@@ -827,7 +995,7 @@ export default function VisualRostersPage() {
                       marginBottom: "8px",
                     }}
                   >
-                    Team Name
+                    {showSecondTeam ? "Team 1" : "Team Name"}
                   </label>
                   <div style={{ position: "relative" }}>
                     <Search
@@ -902,7 +1070,153 @@ export default function VisualRostersPage() {
                 </button>
               </div>
 
-              {/* Error Message */}
+              {/* Second Team Input (for side-by-side comparison) */}
+              {showSecondTeam && (
+                <div style={{ marginTop: "16px", display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "16px", alignItems: "end" }}>
+                  <div>
+                    {/* Spacer to align with first row */}
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        color: "var(--foreground-muted)",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Team 2 (Same League)
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <Search
+                        style={{
+                          position: "absolute",
+                          left: "14px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          width: "18px",
+                          height: "18px",
+                          color: "var(--foreground-muted)",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Enter opponent team name..."
+                        value={teamInput2}
+                        onChange={(e) => setTeamInput2(e.target.value)}
+                        disabled={!league}
+                        style={{
+                          width: "100%",
+                          padding: "12px 14px 12px 44px",
+                          fontSize: "14px",
+                          backgroundColor: "rgba(255,255,255,0.05)",
+                          border: "1px solid var(--glass-border)",
+                          borderRadius: "10px",
+                          color: "var(--foreground)",
+                          opacity: !league ? 0.5 : 1,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      type="button"
+                      onClick={handleSubmit2}
+                      disabled={!league || !teamInput2.trim() || loading2}
+                      style={{
+                        padding: "12px 20px",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        backgroundColor: "var(--accent)",
+                        color: "var(--background)",
+                        border: "none",
+                        borderRadius: "10px",
+                        cursor: !league || !teamInput2.trim() || loading2 ? "not-allowed" : "pointer",
+                        opacity: !league || !teamInput2.trim() || loading2 ? 0.5 : 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      {loading2 ? (
+                        <Loader2 style={{ width: "18px", height: "18px", animation: "spin 1s linear infinite" }} />
+                      ) : (
+                        <Search style={{ width: "18px", height: "18px" }} />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearSecondTeam}
+                      style={{
+                        padding: "12px",
+                        fontSize: "14px",
+                        backgroundColor: "rgba(239, 68, 68, 0.1)",
+                        color: "#ef4444",
+                        border: "1px solid rgba(239, 68, 68, 0.3)",
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      <X style={{ width: "18px", height: "18px" }} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Compare Teams Button */}
+              {!showSecondTeam && roster && (
+                <button
+                  type="button"
+                  onClick={() => setShowSecondTeam(true)}
+                  style={{
+                    marginTop: "16px",
+                    padding: "10px 16px",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    color: "var(--foreground)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
+                  }}
+                >
+                  <Plus style={{ width: "16px", height: "16px" }} />
+                  Compare with Another Team
+                </button>
+              )}
+
+              {/* Cache indicator */}
+              {(fromCache || fromCache2) && (
+                <div
+                  style={{
+                    marginTop: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    fontSize: "12px",
+                    color: "var(--accent)",
+                    opacity: 0.8,
+                  }}
+                >
+                  <Database style={{ width: "12px", height: "12px" }} />
+                  <span>Loaded from cache for faster results</span>
+                </div>
+              )}
+
+              {/* Error Messages */}
               {error && (
                 <div
                   style={{
@@ -915,7 +1229,22 @@ export default function VisualRostersPage() {
                     fontSize: "13px",
                   }}
                 >
-                  {error}
+                  Team 1: {error}
+                </div>
+              )}
+              {error2 && (
+                <div
+                  style={{
+                    marginTop: "8px",
+                    padding: "12px 16px",
+                    backgroundColor: "rgba(239, 68, 68, 0.1)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    borderRadius: "8px",
+                    color: "#ef4444",
+                    fontSize: "13px",
+                  }}
+                >
+                  Team 2: {error2}
                 </div>
               )}
             </form>
@@ -929,23 +1258,66 @@ export default function VisualRostersPage() {
               transition={{ duration: 0.5 }}
               style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "24px" }}
             >
-              {/* Team Profile Card */}
-              <TeamProfileCard roster={roster} />
+              {/* Side-by-side or single view */}
+              {roster2 ? (
+                <>
+                  {/* Side-by-side Team Profiles */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                    <TeamProfileCard roster={roster} />
+                    <TeamProfileCard roster={roster2} />
+                  </div>
 
-              {/* Roster Table */}
-              <RosterTable
-                roster={roster}
-                highlightedPlayer={highlightedPlayer}
-                onPlayerHover={setHighlightedPlayer}
-                league={league!}
-              />
+                  {/* Side-by-side Roster Tables */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                    <RosterTable
+                      roster={roster}
+                      highlightedPlayer={highlightedPlayer}
+                      onPlayerHover={setHighlightedPlayer}
+                      league={league!}
+                    />
+                    <RosterTable
+                      roster={roster2}
+                      highlightedPlayer={highlightedPlayer}
+                      onPlayerHover={setHighlightedPlayer}
+                      league={league!}
+                    />
+                  </div>
 
-              {/* Player Map */}
-              <PlayerMap
-                roster={roster}
-                highlightedPlayer={highlightedPlayer}
-                onPlayerHover={setHighlightedPlayer}
-              />
+                  {/* Combined Player Map - shows both teams */}
+                  <PlayerMap
+                    roster={{
+                      ...roster,
+                      players: [
+                        ...roster.players,
+                        ...roster2.players.map(p => ({
+                          ...p,
+                          // Mark second team players with different color
+                        }))
+                      ]
+                    }}
+                    highlightedPlayer={highlightedPlayer}
+                    onPlayerHover={setHighlightedPlayer}
+                  />
+                </>
+              ) : (
+                <>
+                  {/* Single Team View */}
+                  <TeamProfileCard roster={roster} />
+
+                  <RosterTable
+                    roster={roster}
+                    highlightedPlayer={highlightedPlayer}
+                    onPlayerHover={setHighlightedPlayer}
+                    league={league!}
+                  />
+
+                  <PlayerMap
+                    roster={roster}
+                    highlightedPlayer={highlightedPlayer}
+                    onPlayerHover={setHighlightedPlayer}
+                  />
+                </>
+              )}
             </motion.div>
           )}
 
