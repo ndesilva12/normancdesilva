@@ -11,6 +11,7 @@ import { NotesPreview } from "@/components/NotesPreview";
 import { StocksPreview } from "@/components/StocksPreview";
 import { NewsPreview } from "@/components/NewsPreview";
 import { RaindropPreview } from "@/components/RaindropPreview";
+import { TrendingPreview } from "@/components/TrendingPreview";
 import { LayoutEditor } from "@/components/LayoutEditor";
 import { DraggableWidget, useDragState } from "@/components/DraggableWidget";
 import { RemindersBanner } from "@/components/RemindersBanner";
@@ -148,6 +149,8 @@ function UnifiedWidgetsGrid({
           return <NewsPreview />;
         case "raindrop":
           return <RaindropPreview />;
+        case "trending":
+          return <TrendingPreview />;
         default:
           return null;
       }

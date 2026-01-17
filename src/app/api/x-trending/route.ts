@@ -133,7 +133,7 @@ Return ONLY a JSON array with this format (no markdown, no explanation):
               const topics: TrendingTopic[] = parsed.map((item: { topic: string; description?: string }) => ({
                 topic: item.topic,
                 description: item.description,
-                searchUrl: `https://x.com/search?q=${encodeURIComponent(item.topic)}&src=typed_query`,
+                searchUrl: `https://www.google.com/search?q=${encodeURIComponent(item.topic)}&tbm=nws`,
               }));
               return NextResponse.json({ topics, source: "claude" });
             }
@@ -178,7 +178,7 @@ function parseTrendsFromNitter(html: string): TrendingTopic[] {
       if (topic && !topics.some(t => t.topic === topic)) {
         topics.push({
           topic: topic.trim(),
-          searchUrl: `https://x.com/search?q=${encodeURIComponent(topic.trim())}&src=typed_query`,
+          searchUrl: `https://www.google.com/search?q=${encodeURIComponent(topic.trim())}&tbm=nws`,
         });
       }
     }
@@ -201,7 +201,7 @@ function parseTrendsFromTrends24(html: string): TrendingTopic[] {
     if (topic && !topics.some(t => t.topic === topic)) {
       topics.push({
         topic,
-        searchUrl: `https://x.com/search?q=${encodeURIComponent(topic)}&src=typed_query`,
+        searchUrl: `https://www.google.com/search?q=${encodeURIComponent(topic)}&tbm=nws`,
       });
     }
   }
@@ -212,7 +212,7 @@ function parseTrendsFromTrends24(html: string): TrendingTopic[] {
       if (topic && !topics.some(t => t.topic === topic)) {
         topics.push({
           topic,
-          searchUrl: `https://x.com/search?q=${encodeURIComponent(topic)}&src=typed_query`,
+          searchUrl: `https://www.google.com/search?q=${encodeURIComponent(topic)}&tbm=nws`,
         });
       }
     }
@@ -224,7 +224,7 @@ function parseTrendsFromTrends24(html: string): TrendingTopic[] {
       if (topic && !topics.some(t => t.topic === topic)) {
         topics.push({
           topic,
-          searchUrl: `https://x.com/search?q=${encodeURIComponent(topic)}&src=typed_query`,
+          searchUrl: `https://www.google.com/search?q=${encodeURIComponent(topic)}&tbm=nws`,
         });
       }
     }
@@ -246,7 +246,7 @@ function parseTrendsFromGetdaytrends(html: string): TrendingTopic[] {
     if (topic && !topics.some(t => t.topic === topic)) {
       topics.push({
         topic,
-        searchUrl: `https://x.com/search?q=${encodeURIComponent(topic)}&src=typed_query`,
+        searchUrl: `https://www.google.com/search?q=${encodeURIComponent(topic)}&tbm=nws`,
       });
     }
   }
@@ -257,7 +257,7 @@ function parseTrendsFromGetdaytrends(html: string): TrendingTopic[] {
       if (topic && topic !== "Trends" && !topics.some(t => t.topic === topic)) {
         topics.push({
           topic,
-          searchUrl: `https://x.com/search?q=${encodeURIComponent(topic)}&src=typed_query`,
+          searchUrl: `https://www.google.com/search?q=${encodeURIComponent(topic)}&tbm=nws`,
         });
       }
     }

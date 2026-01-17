@@ -6,6 +6,7 @@ import { ArrowLeft, TrendingUp, ExternalLink, Loader2, RefreshCw } from "lucide-
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
+import { SwipeNavigation } from "@/components/SwipeNavigation";
 
 interface TrendingTopic {
   topic: string;
@@ -132,6 +133,7 @@ export default function TrendingPage() {
   };
 
   return (
+    <SwipeNavigation backPath="/">
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
 
@@ -442,5 +444,6 @@ export default function TrendingPage() {
         }
       `}</style>
     </div>
+    </SwipeNavigation>
   );
 }

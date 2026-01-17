@@ -29,6 +29,7 @@ const DEFAULT_PREVIEW_WIDGETS: WidgetConfig[] = [
   { id: "stocks", size: "default", visible: true, order: 3 },
   { id: "news", size: "default", visible: true, order: 4 },
   { id: "raindrop", size: "default", visible: true, order: 5 },
+  { id: "trending", size: "default", visible: true, order: 6 },
 ];
 
 // Tool Widgets (interactive tools and features)
@@ -37,8 +38,7 @@ const DEFAULT_TOOL_CARDS: WidgetConfig[] = [
   { id: "company-politics", size: "default", visible: true, order: 1 },
   { id: "visual-rosters", size: "default", visible: true, order: 2 },
   { id: "spotify", size: "default", visible: true, order: 3 },
-  { id: "trending", size: "default", visible: true, order: 4 },
-  { id: "contacts", size: "default", visible: true, order: 5 },
+  { id: "contacts", size: "default", visible: true, order: 4 },
 ];
 
 const DEFAULT_LAYOUT: LayoutConfig = {

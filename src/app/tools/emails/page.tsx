@@ -8,6 +8,7 @@ import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { EmailDetailModal } from "@/components/EmailDetailModal";
 import { ComposeEmailModal } from "@/components/ComposeEmailModal";
+import { SwipeNavigation } from "@/components/SwipeNavigation";
 
 interface EmailWithAccount {
   id: string;
@@ -244,6 +245,7 @@ export default function EmailsPage() {
   };
 
   return (
+    <SwipeNavigation backPath="/">
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
@@ -637,15 +639,15 @@ export default function EmailsPage() {
                     flexDirection: "column",
                     gap: "6px",
                     padding: "16px 20px",
-                    borderBottom: index < emails.length - 1 ? "1px solid var(--glass-border)" : "none",
                     textDecoration: "none",
                     transition: "background 0.15s",
-                    borderLeft: email.isUnread ? "4px solid var(--accent)" : "4px solid transparent",
                     width: "100%",
                     textAlign: "left",
                     backgroundColor: "transparent",
-                    border: "none",
-                    borderBottomStyle: index < emails.length - 1 ? "solid" : "none",
+                    borderTop: "none",
+                    borderRight: "none",
+                    borderBottom: index < emails.length - 1 ? "1px solid rgba(255, 255, 255, 0.05)" : "none",
+                    borderLeft: email.isUnread ? "4px solid var(--accent)" : "4px solid transparent",
                     cursor: "pointer",
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
@@ -791,5 +793,6 @@ export default function EmailsPage() {
         }
       `}</style>
     </div>
+    </SwipeNavigation>
   );
 }
