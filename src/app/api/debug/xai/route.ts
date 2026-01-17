@@ -28,7 +28,7 @@ export async function GET() {
         Authorization: `Bearer ${XAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "grok-2",
+        model: "grok-3-mini",
         messages: [
           { role: "user", content: "Say 'API key is working' and nothing else." },
         ],
