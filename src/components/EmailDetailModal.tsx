@@ -188,12 +188,13 @@ export function EmailDetailModal({
             width: "100%",
             maxWidth: "800px",
             maxHeight: "90vh",
-            backgroundColor: "var(--glass-bg)",
+            backgroundColor: "rgba(20, 20, 25, 0.95)",
             border: "1px solid var(--glass-border)",
             borderRadius: "16px",
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
+            backdropFilter: "blur(20px)",
           }}
         >
           {/* Header */}

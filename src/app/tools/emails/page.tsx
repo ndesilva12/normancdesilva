@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, ExternalLink } from "lucide-react";
+import { ArrowLeft, Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, ExternalLink, Trash2 } from "lucide-react";
 import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
@@ -203,6 +203,28 @@ export default function EmailsPage() {
 
   const handleEmailSent = () => {
     fetchEmails();
+  };
+
+  const handleDeleteEmail = async (e: React.MouseEvent, email: EmailWithAccount) => {
+    e.stopPropagation();
+    if (!confirm("Move this email to trash?")) return;
+
+    try {
+      const response = await fetch(`/api/gmail/${email.id}/actions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "trash",
+          account: email.accountEmail || (selectedAccount !== "all" ? selectedAccount : undefined),
+        }),
+      });
+
+      if (response.ok) {
+        setEmails((prev) => prev.filter((e) => e.id !== email.id));
+      }
+    } catch (err) {
+      console.error("Failed to delete email:", err);
+    }
   };
 
   return (
@@ -614,6 +636,33 @@ export default function EmailsPage() {
                       >
                         <ExternalLink style={{ width: "12px", height: "12px" }} />
                       </a>
+                      <button
+                        onClick={(e) => handleDeleteEmail(e, email)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "24px",
+                          height: "24px",
+                          borderRadius: "4px",
+                          backgroundColor: "rgba(255, 255, 255, 0.05)",
+                          color: "var(--foreground-muted)",
+                          border: "none",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                        title="Delete"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "rgba(248, 113, 113, 0.15)";
+                          e.currentTarget.style.color = "#f87171";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                          e.currentTarget.style.color = "var(--foreground-muted)";
+                        }}
+                      >
+                        <Trash2 style={{ width: "12px", height: "12px" }} />
+                      </button>
                     </div>
                   </div>
                   <div style={{
