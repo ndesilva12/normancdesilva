@@ -106,7 +106,8 @@ export default function DarkSearchPage() {
     setIsLoading(true);
     setError(null);
     setReport(null);
-    setExpandedSections(new Set([0])); // Expand first section by default
+    // Expand all sections by default
+    setExpandedSections(new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]));
 
     try {
       const response = await fetch("/api/dark-search", {
@@ -129,6 +130,36 @@ export default function DarkSearchPage() {
       setIsLoading(false);
     }
   }, [query, addRecentSearch]);
+
+  // Aggregate all links from all sections
+  const getAllLinks = () => {
+    if (!report) return { videos: [], articles: [], documents: [], data: [], images: [], social: [], podcasts: [] };
+
+    const videos: ReportLink[] = [];
+    const articles: ReportLink[] = [];
+    const documents: ReportLink[] = [];
+    const dataLinks: ReportLink[] = [];
+    const images: ReportLink[] = [];
+    const social: ReportLink[] = [];
+    const podcasts: ReportLink[] = [];
+
+    report.sections.forEach(section => {
+      section.links?.forEach(link => {
+        switch (link.type) {
+          case 'video': videos.push(link); break;
+          case 'article': articles.push(link); break;
+          case 'document': documents.push(link); break;
+          case 'data': dataLinks.push(link); break;
+          case 'image': images.push(link); break;
+          case 'social': social.push(link); break;
+          case 'podcast': podcasts.push(link); break;
+          default: articles.push(link);
+        }
+      });
+    });
+
+    return { videos, articles, documents, data: dataLinks, images, social, podcasts };
+  };
 
   const handleRecentSearchClick = (searchQuery: string) => {
     setQuery(searchQuery);
@@ -521,6 +552,217 @@ export default function DarkSearchPage() {
                   )}
                 </div>
 
+                {/* AGGREGATED RESOURCES - Prominent at top */}
+                {(() => {
+                  const allLinks = getAllLinks();
+                  const hasAnyLinks = allLinks.videos.length > 0 || allLinks.articles.length > 0 || allLinks.documents.length > 0 || allLinks.data.length > 0;
+
+                  if (!hasAnyLinks) return null;
+
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="glass"
+                      style={{
+                        borderRadius: "16px",
+                        padding: "24px",
+                        marginBottom: "24px",
+                      }}
+                    >
+                      <h3 style={{ fontSize: "20px", fontWeight: 700, color: "var(--foreground)", marginBottom: "20px" }}>
+                        📚 All Resources & Links
+                      </h3>
+
+                      {/* Videos */}
+                      {allLinks.videos.length > 0 && (
+                        <div style={{ marginBottom: "20px" }}>
+                          <h4 style={{ fontSize: "15px", fontWeight: 600, color: "rgb(239, 68, 68)", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <Video style={{ width: "18px", height: "18px" }} />
+                            Videos ({allLinks.videos.length})
+                          </h4>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {allLinks.videos.map((link, i) => (
+                              <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                                style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "8px", backgroundColor: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", textDecoration: "none" }}>
+                                <Video style={{ width: "16px", height: "16px", color: "rgb(239, 68, 68)", flexShrink: 0 }} />
+                                <span style={{ fontSize: "14px", color: "var(--foreground)", flex: 1 }}>{link.title}</span>
+                                <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Articles */}
+                      {allLinks.articles.length > 0 && (
+                        <div style={{ marginBottom: "20px" }}>
+                          <h4 style={{ fontSize: "15px", fontWeight: 600, color: "rgb(59, 130, 246)", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <FileText style={{ width: "18px", height: "18px" }} />
+                            Articles ({allLinks.articles.length})
+                          </h4>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {allLinks.articles.map((link, i) => (
+                              <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                                style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "8px", backgroundColor: "rgba(59, 130, 246, 0.1)", border: "1px solid rgba(59, 130, 246, 0.2)", textDecoration: "none" }}>
+                                <FileText style={{ width: "16px", height: "16px", color: "rgb(59, 130, 246)", flexShrink: 0 }} />
+                                <span style={{ fontSize: "14px", color: "var(--foreground)", flex: 1 }}>{link.title}</span>
+                                <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Documents */}
+                      {allLinks.documents.length > 0 && (
+                        <div style={{ marginBottom: "20px" }}>
+                          <h4 style={{ fontSize: "15px", fontWeight: 600, color: "rgb(168, 85, 247)", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <File style={{ width: "18px", height: "18px" }} />
+                            Documents ({allLinks.documents.length})
+                          </h4>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {allLinks.documents.map((link, i) => (
+                              <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                                style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "8px", backgroundColor: "rgba(168, 85, 247, 0.1)", border: "1px solid rgba(168, 85, 247, 0.2)", textDecoration: "none" }}>
+                                <File style={{ width: "16px", height: "16px", color: "rgb(168, 85, 247)", flexShrink: 0 }} />
+                                <span style={{ fontSize: "14px", color: "var(--foreground)", flex: 1 }}>{link.title}</span>
+                                <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Data */}
+                      {allLinks.data.length > 0 && (
+                        <div>
+                          <h4 style={{ fontSize: "15px", fontWeight: 600, color: "rgb(34, 197, 94)", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <BarChart3 style={{ width: "18px", height: "18px" }} />
+                            Data & Research ({allLinks.data.length})
+                          </h4>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {allLinks.data.map((link, i) => (
+                              <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                                style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "8px", backgroundColor: "rgba(34, 197, 94, 0.1)", border: "1px solid rgba(34, 197, 94, 0.2)", textDecoration: "none" }}>
+                                <BarChart3 style={{ width: "16px", height: "16px", color: "rgb(34, 197, 94)", flexShrink: 0 }} />
+                                <span style={{ fontSize: "14px", color: "var(--foreground)", flex: 1 }}>{link.title}</span>
+                                <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })()}
+
+                {/* Social Media Highlights - MOVED UP */}
+                {report.socialMediaHighlights && report.socialMediaHighlights.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    className="glass"
+                    style={{
+                      borderRadius: "16px",
+                      padding: "24px",
+                      marginBottom: "24px",
+                    }}
+                  >
+                    <h3 style={{ fontSize: "20px", fontWeight: 700, color: "var(--foreground)", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+                      <AtSign style={{ width: "24px", height: "24px", color: "rgb(29, 161, 242)" }} />
+                      Social Media Highlights
+                    </h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {report.socialMediaHighlights.map((post, index) => (
+                        <a
+                          key={index}
+                          href={post.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "block",
+                            padding: "16px",
+                            borderRadius: "12px",
+                            backgroundColor: "rgba(29, 161, 242, 0.1)",
+                            border: "1px solid rgba(29, 161, 242, 0.2)",
+                            textDecoration: "none",
+                            transition: "all 0.2s ease",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                            <span style={{ fontSize: "12px", color: "rgb(29, 161, 242)", fontWeight: 600 }}>{post.platform}</span>
+                            <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>•</span>
+                            <span style={{ fontSize: "14px", color: "var(--foreground)", fontWeight: 600 }}>{post.author}</span>
+                            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)", marginLeft: "auto" }} />
+                          </div>
+                          <p style={{ fontSize: "14px", color: "var(--foreground)", lineHeight: 1.6, margin: 0 }}>
+                            {post.content}
+                          </p>
+                        </a>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Podcast References - MOVED UP */}
+                {report.podcastReferences && report.podcastReferences.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="glass"
+                    style={{
+                      borderRadius: "16px",
+                      padding: "24px",
+                      marginBottom: "24px",
+                    }}
+                  >
+                    <h3 style={{ fontSize: "20px", fontWeight: 700, color: "var(--foreground)", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+                      <Headphones style={{ width: "24px", height: "24px", color: "rgb(139, 92, 246)" }} />
+                      Podcast Episodes
+                    </h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {report.podcastReferences.map((podcast, index) => (
+                        <a
+                          key={index}
+                          href={podcast.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "block",
+                            padding: "16px",
+                            borderRadius: "12px",
+                            backgroundColor: "rgba(139, 92, 246, 0.1)",
+                            border: "1px solid rgba(139, 92, 246, 0.2)",
+                            textDecoration: "none",
+                            transition: "all 0.2s ease",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+                            <Headphones style={{ width: "16px", height: "16px", color: "rgb(139, 92, 246)" }} />
+                            <span style={{ fontSize: "15px", color: "var(--foreground)", fontWeight: 600 }}>{podcast.title}</span>
+                            <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>•</span>
+                            <span style={{ fontSize: "14px", color: "rgb(139, 92, 246)", fontWeight: 500 }}>{podcast.episode}</span>
+                            {podcast.timestamp && (
+                              <>
+                                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>•</span>
+                                <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>@ {podcast.timestamp}</span>
+                              </>
+                            )}
+                            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)", marginLeft: "auto" }} />
+                          </div>
+                          <p style={{ fontSize: "14px", color: "var(--foreground-muted)", lineHeight: 1.6, margin: 0 }}>
+                            {podcast.summary}
+                          </p>
+                        </a>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* Sections */}
                 {report.sections.map((section, index) => (
                   <motion.div
@@ -678,106 +920,6 @@ export default function DarkSearchPage() {
                   </motion.div>
                 )}
 
-                {/* Social Media Highlights */}
-                {report.socialMediaHighlights && report.socialMediaHighlights.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="glass"
-                    style={{
-                      borderRadius: "16px",
-                      padding: "24px",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <h3 style={{ fontSize: "17px", fontWeight: 600, color: "var(--foreground)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                      <AtSign style={{ width: "20px", height: "20px", color: "rgb(29, 161, 242)" }} />
-                      Social Media Highlights
-                    </h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {report.socialMediaHighlights.map((post, index) => (
-                        <a
-                          key={index}
-                          href={post.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: "block",
-                            padding: "16px",
-                            borderRadius: "12px",
-                            backgroundColor: "rgba(29, 161, 242, 0.1)",
-                            border: "1px solid rgba(29, 161, 242, 0.2)",
-                            textDecoration: "none",
-                            transition: "all 0.2s ease",
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                            <span style={{ fontSize: "12px", color: "rgb(29, 161, 242)", fontWeight: 500 }}>{post.platform}</span>
-                            <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>•</span>
-                            <span style={{ fontSize: "13px", color: "var(--foreground)", fontWeight: 500 }}>{post.author}</span>
-                          </div>
-                          <p style={{ fontSize: "14px", color: "var(--foreground)", lineHeight: 1.6, margin: 0, fontStyle: "italic" }}>
-                            &ldquo;{post.content}&rdquo;
-                          </p>
-                        </a>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Podcast References */}
-                {report.podcastReferences && report.podcastReferences.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className="glass"
-                    style={{
-                      borderRadius: "16px",
-                      padding: "24px",
-                    }}
-                  >
-                    <h3 style={{ fontSize: "17px", fontWeight: 600, color: "var(--foreground)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                      <Headphones style={{ width: "20px", height: "20px", color: "rgb(139, 92, 246)" }} />
-                      Podcast References
-                    </h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {report.podcastReferences.map((podcast, index) => (
-                        <a
-                          key={index}
-                          href={podcast.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: "block",
-                            padding: "16px",
-                            borderRadius: "12px",
-                            backgroundColor: "rgba(139, 92, 246, 0.1)",
-                            border: "1px solid rgba(139, 92, 246, 0.2)",
-                            textDecoration: "none",
-                            transition: "all 0.2s ease",
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
-                            <span style={{ fontSize: "14px", color: "var(--foreground)", fontWeight: 600 }}>{podcast.title}</span>
-                            <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>•</span>
-                            <span style={{ fontSize: "13px", color: "rgb(139, 92, 246)" }}>{podcast.episode}</span>
-                            {podcast.timestamp && (
-                              <>
-                                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>•</span>
-                                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>{podcast.timestamp}</span>
-                              </>
-                            )}
-                          </div>
-                          <p style={{ fontSize: "14px", color: "var(--foreground-muted)", lineHeight: 1.6, margin: 0 }}>
-                            {podcast.summary}
-                          </p>
-                        </a>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
