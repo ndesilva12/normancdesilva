@@ -47,23 +47,32 @@ IMPORTANT ETHICAL GUIDELINES:
 
 SEARCH METHODOLOGY - Be thorough and creative:
 
-1. **Direct Public Profiles**:
+1. **EMAIL FORMAT DISCOVERY (HIGHEST PRIORITY)**:
+   - First, identify the target's organization/company domain (e.g., omahaproductions.com)
+   - Search for "email @domain.com" (e.g., "email @omahaproductions.com") to find leaked/published emails
+   - Check Hunter.io, ContactOut, RocketReach, Snov.io results which often show email formats
+   - Determine the most likely email format used by the organization:
+     * firstname.lastname@domain.com
+     * firstname@domain.com
+     * f.lastname@domain.com
+     * firstnamelastname@domain.com
+     * first.last@domain.com
+   - Look for ANY email from the same domain to reverse-engineer the format
+   - Search for the person's name + "email" + company name
+   - Check press releases, news articles, and conference materials for published emails
+   - ALWAYS provide your best guess at their email with confidence level and reasoning
+
+2. **Direct Public Profiles**:
    - Search for X (Twitter) accounts matching the name
    - Look for LinkedIn profiles (public information only)
    - Search Instagram, Facebook, and other social media
    - Check personal websites or blogs
 
-2. **Professional Context**:
+3. **Professional Context**:
    - Identify current and past employers/organizations
    - Find company websites and "About" or "Team" pages
    - Look for press releases, news articles, or interviews mentioning them
    - Search conference speaker pages, podcast appearances
-
-3. **Email Discovery**:
-   - Identify organizations they're affiliated with
-   - Research common email formats for those organizations (firstname.lastname@, f.lastname@, etc.)
-   - Check if they've published email addresses in papers, articles, or public forums
-   - Look for email patterns from colleagues at same organization
 
 4. **Phone Discovery**:
    - Check business directories
@@ -88,17 +97,17 @@ OUTPUT FORMAT (JSON):
           "value": "actual contact value",
           "confidence": "high|medium|low|speculative",
           "source": "where this was found or how it was derived",
-          "notes": "any relevant notes"
+          "notes": "any relevant notes (for emails, explain the format pattern discovered)"
         }
       ],
-      "reasoning": "Explain your research methodology and findings",
-      "additionalNotes": "Any other useful context"
+      "reasoning": "Explain your research methodology - especially how you determined the email format",
+      "additionalNotes": "Include: 1) Company domain, 2) Email format pattern discovered, 3) How you determined it"
     }
   ],
-  "summary": "Brief summary of findings and recommended approach for contact"
+  "summary": "Brief summary including the most likely email format and how to verify it"
 }
 
-Be creative, thorough, and persistent in your search. Think like a professional researcher.`;
+CRITICAL: Always include at least one email guess with your reasoning. Even a speculative email based on common patterns is valuable. Explain how you determined the format.`;
 }
 
 export function getTargetSearchPrompt(query: string): string {
@@ -114,31 +123,45 @@ IMPORTANT ETHICAL GUIDELINES:
 
 SEARCH METHODOLOGY - Think strategically:
 
-1. **Understand the Objective**:
+1. **EMAIL FORMAT DISCOVERY (HIGHEST PRIORITY)**:
+   - Identify the target organization's domain (e.g., walmart.com, amazon.com)
+   - Search for "email @domain.com" to find the company's email format
+   - Check Hunter.io, ContactOut, RocketReach, Snov.io for email patterns
+   - Determine the format used:
+     * firstname.lastname@domain.com
+     * firstname@domain.com
+     * f.lastname@domain.com
+     * firstnamelastname@domain.com
+   - Find ANY email from the company to reverse-engineer the pattern
+   - For executives: search their name + "email" + company
+   - ALWAYS provide email guesses for key contacts with confidence levels
+
+2. **Understand the Objective**:
    - What is the user trying to achieve?
    - What type of person/department would handle this?
    - What level of authority is needed?
 
-2. **Identify Relevant Organizations**:
+3. **Identify Relevant Organizations**:
    - What companies/organizations are involved?
    - What departments handle this type of request?
    - Are there regulatory bodies or third parties that could help?
 
-3. **Find Key Decision Makers**:
+4. **Find Key Decision Makers**:
    - Search for executives, managers, or specialists in relevant areas
    - Look for "Customer Service", "PR", "Executive Office" contacts
    - Find ombudsmen, customer advocates, or escalation contacts
+   - For each person found, attempt to derive their email using the discovered format
 
-4. **Discover Contact Methods**:
-   - Direct email addresses (research email formats)
+5. **Discover Contact Methods**:
+   - Direct email addresses (apply the discovered email format)
    - Executive assistant contacts
    - Social media accounts (X, LinkedIn for professional outreach)
    - Customer service channels (phone, chat, email)
    - Corporate headquarters addresses
    - Better Business Bureau or regulatory complaint channels
 
-5. **Alternative Approaches**:
-   - Executive email carpet bomb (contacting multiple executives)
+6. **Alternative Approaches**:
+   - Executive email carpet bomb (contacting multiple executives using the email format)
    - Social media public mentions (companies monitor these)
    - Regulatory complaints (FTC, state AG, industry regulators)
    - Media/journalist contacts for escalation
@@ -156,17 +179,17 @@ OUTPUT FORMAT (JSON):
           "value": "actual contact value",
           "confidence": "high|medium|low|speculative",
           "source": "where this was found or how it was derived",
-          "notes": "any relevant notes"
+          "notes": "for emails: explain the format pattern (e.g., 'Company uses firstname.lastname@ format')"
         }
       ],
-      "reasoning": "Why this contact is relevant to the objective",
-      "additionalNotes": "Best approach for this contact"
+      "reasoning": "Why this contact is relevant AND how you determined their email format",
+      "additionalNotes": "Include: 1) Company email format pattern, 2) How to verify, 3) Best approach"
     }
   ],
-  "summary": "Strategic summary: recommended approach, order of contacts, and tips for achieving the objective"
+  "summary": "Strategic summary including: 1) The company's email format, 2) Recommended contacts in priority order, 3) Tips for achieving the objective"
 }
 
-Think strategically about the best path to achieve the user's goal. Provide multiple options at different escalation levels.`;
+CRITICAL: For every person identified, attempt to provide their email by applying the discovered email format. Even speculative emails are valuable - just mark confidence appropriately and explain your reasoning.`;
 }
 
 // API configuration for each AI source
