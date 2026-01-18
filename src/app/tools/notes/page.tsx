@@ -475,51 +475,63 @@ function NotesContent() {
 
     setSavingFullPage(true);
     try {
-      // Delete all existing blocks in parallel with timeout
-      const deletePromises = pageContent.map((block) =>
-        Promise.race([
-          fetch(`/api/notion/block?blockId=${block.id}`, {
+      // Step 1: Delete all existing blocks sequentially to avoid rate limiting
+      for (const block of pageContent) {
+        try {
+          const deleteResponse = await fetch(`/api/notion/block?blockId=${block.id}`, {
             method: "DELETE",
-          }).then(res => {
-            if (!res.ok) throw new Error(`Failed to delete block ${block.id}`);
-            return res;
-          }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Delete timeout")), 10000)
-          ),
-        ]).catch((err) => {
-          console.warn(`Failed to delete block ${block.id}:`, err);
-          return null; // Continue even if delete fails
-        })
-      );
+          });
+          if (!deleteResponse.ok) {
+            console.warn(`Failed to delete block ${block.id}`);
+          }
+        } catch (deleteErr) {
+          console.warn(`Error deleting block ${block.id}:`, deleteErr);
+          // Continue with other blocks
+        }
+      }
 
-      await Promise.all(deletePromises);
+      // Step 2: Parse and append new content
+      const lines = fullPageContent.split("\n");
+      const nonEmptyLines = lines.filter((line) => line.trim());
 
-      // Append new content as paragraphs (sequential to maintain order)
-      const paragraphs = fullPageContent.split("\n").filter((line) => line.trim());
-
-      for (const paragraph of paragraphs) {
-        const response = await Promise.race([
-          fetch("/api/notion", {
+      // If there's no content, add a placeholder
+      if (nonEmptyLines.length === 0) {
+        try {
+          await fetch("/api/notion", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               action: "append",
               pageId: selectedPage.id,
-              content: paragraph.trim(),
+              content: " ",
             }),
-          }),
-          new Promise<Response>((_, reject) =>
-            setTimeout(() => reject(new Error("Append timeout")), 10000)
-          ),
-        ]);
-
-        if (!response.ok) {
-          console.warn(`Failed to append paragraph`);
+          });
+        } catch (appendErr) {
+          console.warn("Failed to append placeholder:", appendErr);
+        }
+      } else {
+        // Append each line as a new block
+        for (const line of nonEmptyLines) {
+          try {
+            const appendResponse = await fetch("/api/notion", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "append",
+                pageId: selectedPage.id,
+                content: line.trim(),
+              }),
+            });
+            if (!appendResponse.ok) {
+              console.warn(`Failed to append line`);
+            }
+          } catch (appendErr) {
+            console.warn("Error appending line:", appendErr);
+          }
         }
       }
 
-      // Refresh the page content
+      // Step 3: Refresh the page content
       await fetchPageContent(selectedPage.id);
       setFullPageEditMode(false);
     } catch (err) {
