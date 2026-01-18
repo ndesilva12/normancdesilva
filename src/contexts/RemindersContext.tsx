@@ -22,6 +22,22 @@ function getStorageKey(userId: string | undefined): string {
   return userId ? `${REMINDERS_STORAGE_KEY_PREFIX}${userId}` : "";
 }
 
+// Helper to remove undefined values from objects (Firestore doesn't accept undefined)
+function cleanForFirestore<T extends object>(obj: T): T {
+  const cleaned = { ...obj };
+  Object.keys(cleaned).forEach((key) => {
+    if ((cleaned as Record<string, unknown>)[key] === undefined) {
+      delete (cleaned as Record<string, unknown>)[key];
+    }
+  });
+  return cleaned;
+}
+
+// Clean an array of reminders for Firestore
+function cleanRemindersForFirestore(reminders: ReminderItem[]): ReminderItem[] {
+  return reminders.map(reminder => cleanForFirestore(reminder));
+}
+
 interface RemindersContextValue {
   reminders: ReminderItem[];
   incompleteReminders: ReminderItem[];
@@ -70,8 +86,8 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
               try {
                 const localReminders = JSON.parse(stored);
                 setReminders(localReminders);
-                // Migrate localStorage data to Firestore
-                setDoc(userDocRef, { reminders: localReminders }, { merge: true });
+                // Migrate localStorage data to Firestore (clean undefined values)
+                setDoc(userDocRef, { reminders: cleanRemindersForFirestore(localReminders) }, { merge: true });
               } catch {
                 setReminders([]);
               }
@@ -119,11 +135,11 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     const storageKey = getStorageKey(user.uid);
     localStorage.setItem(storageKey, JSON.stringify(updated));
 
-    // Save to Firestore for cross-device sync
+    // Save to Firestore for cross-device sync (clean undefined values)
     if (db) {
       try {
         const userDocRef = doc(db, "users", user.uid);
-        await setDoc(userDocRef, { reminders: updated }, { merge: true });
+        await setDoc(userDocRef, { reminders: cleanRemindersForFirestore(updated) }, { merge: true });
       } catch (error) {
         console.error("Failed to save reminders to Firestore:", error);
       }
@@ -146,7 +162,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(storageKey, JSON.stringify(updated));
         if (db) {
           const userDocRef = doc(db, "users", user.uid);
-          setDoc(userDocRef, { reminders: updated }, { merge: true }).catch(err =>
+          setDoc(userDocRef, { reminders: cleanRemindersForFirestore(updated) }, { merge: true }).catch(err =>
             console.error("Failed to save reminders to Firestore:", err)
           );
         }
@@ -166,7 +182,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(storageKey, JSON.stringify(updated));
         if (db) {
           const userDocRef = doc(db, "users", user.uid);
-          setDoc(userDocRef, { reminders: updated }, { merge: true }).catch(err =>
+          setDoc(userDocRef, { reminders: cleanRemindersForFirestore(updated) }, { merge: true }).catch(err =>
             console.error("Failed to save reminders to Firestore:", err)
           );
         }
@@ -184,7 +200,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(storageKey, JSON.stringify(updated));
         if (db) {
           const userDocRef = doc(db, "users", user.uid);
-          setDoc(userDocRef, { reminders: updated }, { merge: true }).catch(err =>
+          setDoc(userDocRef, { reminders: cleanRemindersForFirestore(updated) }, { merge: true }).catch(err =>
             console.error("Failed to save reminders to Firestore:", err)
           );
         }
