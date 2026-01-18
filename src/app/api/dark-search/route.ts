@@ -290,6 +290,12 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       }
     }
 
+    // Log grounding info for debugging
+    console.log(`Dark Search [${mode}]: Found ${groundedLinks.length} grounded links from Google Search`);
+    if (groundedLinks.length === 0) {
+      console.log("Grounding metadata:", JSON.stringify(groundingMetadata, null, 2));
+    }
+
     // Strip markdown code blocks if present
     const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
@@ -320,41 +326,34 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       });
     }
 
-    // Merge grounded links with any links from the response
-    // Prioritize grounded links (real URLs) over generated ones
-    const existingLinks = report.links || [];
-    const allLinks = [...groundedLinks];
+    // ALWAYS use grounded links - these are the ONLY real, verified URLs
+    // LLM-generated links in the JSON are hallucinated and should be ignored
 
-    // Add any links from sections that might be grounded
+    // For sections in long mode, replace any LLM links with grounded ones where possible
     if (report.sections) {
       for (const section of report.sections) {
         if (section.links) {
-          // Check if section links match any grounded URLs
-          for (const link of section.links) {
-            const isGrounded = groundedLinks.some(gl => gl.url === link.url);
-            if (isGrounded) {
-              // Keep grounded link
-            } else {
-              // Check if it looks like a real URL pattern from grounding
-              const matchingGrounded = groundedLinks.find(gl =>
-                gl.title.toLowerCase().includes(link.title.toLowerCase().slice(0, 20)) ||
-                link.title.toLowerCase().includes(gl.title.toLowerCase().slice(0, 20))
-              );
-              if (matchingGrounded) {
-                link.url = matchingGrounded.url; // Replace with grounded URL
-              }
+          // Replace section links with grounded links that match by title similarity
+          section.links = section.links.map(link => {
+            const matchingGrounded = groundedLinks.find(gl =>
+              gl.title.toLowerCase().includes(link.title.toLowerCase().slice(0, 15)) ||
+              link.title.toLowerCase().includes(gl.title.toLowerCase().slice(0, 15))
+            );
+            if (matchingGrounded) {
+              return matchingGrounded; // Use the real grounded URL
             }
-          }
+            // Check if we have a grounded link for this type
+            const sameTypeGrounded = groundedLinks.find(gl => gl.type === link.type);
+            if (sameTypeGrounded) {
+              return sameTypeGrounded;
+            }
+            return null; // Remove hallucinated links
+          }).filter((link): link is { title: string; url: string; type: string } => link !== null);
         }
       }
     }
 
-    // For short/links mode, ensure we use grounded links
-    const finalLinks = mode !== "long"
-      ? (groundedLinks.length > 0 ? groundedLinks : existingLinks)
-      : existingLinks;
-
-    // Add metadata
+    // Add metadata - ALWAYS use grounded links for the links field
     const fullReport: DarkSearchReport = {
       topic: query,
       mode,
@@ -365,9 +364,11 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       unansweredQuestions: report.unansweredQuestions || [],
       socialMediaHighlights: report.socialMediaHighlights || [],
       podcastReferences: report.podcastReferences || [],
-      links: finalLinks.length > 0 ? finalLinks : groundedLinks,
+      links: groundedLinks, // ALWAYS use grounded links - these are verified real URLs
       timestamp: Date.now(),
     };
+
+    console.log(`Dark Search [${mode}]: Returning ${groundedLinks.length} verified links`);
 
     return NextResponse.json({ report: fullReport });
   } catch (error) {
