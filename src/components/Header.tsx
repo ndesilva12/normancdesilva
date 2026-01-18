@@ -74,7 +74,7 @@ export function Header({
         zIndex: 100,
         width: "100%",
         backdropFilter: "blur(20px)",
-        backgroundColor: "rgba(10, 10, 15, 0.85)",
+        backgroundColor: "var(--header-bg)",
         borderBottom: "1px solid var(--glass-border)",
       }}
     >

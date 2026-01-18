@@ -16,6 +16,7 @@ import {
   Trash2,
   Loader2,
   RefreshCw,
+  Pipette,
 } from "lucide-react";
 import { useSettings, THEME_COLORS, TIMEZONES, ThemeMode, TimeFormat } from "@/contexts/SettingsContext";
 
@@ -32,6 +33,14 @@ export function SettingsPopup() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("appearance");
   const [googleAccounts, setGoogleAccounts] = useState<GoogleAccount[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [customColor, setCustomColor] = useState(settings.themeColor);
+
+  // Sync custom color with settings
+  useEffect(() => {
+    setCustomColor(settings.themeColor);
+  }, [settings.themeColor]);
+
+  const isCustomColor = !THEME_COLORS.some(c => c.value === settings.themeColor);
 
   // Fetch connected Google accounts when integrations tab is shown
   useEffect(() => {
@@ -298,6 +307,78 @@ export function SettingsPopup() {
                           <span style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>{color.name}</span>
                         </button>
                       ))}
+                    </div>
+
+                    {/* Custom Color Picker */}
+                    <div style={{ marginTop: "16px", padding: "16px", borderRadius: "10px", backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid var(--glass-border)" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 500, color: "var(--foreground)", marginBottom: "12px" }}>
+                        <Pipette style={{ width: "14px", height: "14px" }} />
+                        Custom Color
+                      </label>
+                      <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type="color"
+                            value={customColor}
+                            onChange={(e) => {
+                              setCustomColor(e.target.value);
+                              updateSettings({ themeColor: e.target.value });
+                            }}
+                            style={{
+                              width: "48px",
+                              height: "48px",
+                              border: "none",
+                              borderRadius: "10px",
+                              cursor: "pointer",
+                              backgroundColor: "transparent",
+                            }}
+                          />
+                          {isCustomColor && (
+                            <div style={{
+                              position: "absolute",
+                              bottom: "2px",
+                              right: "2px",
+                              width: "16px",
+                              height: "16px",
+                              borderRadius: "50%",
+                              backgroundColor: "var(--accent)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}>
+                              <Check style={{ width: "10px", height: "10px", color: "#000" }} />
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <input
+                            type="text"
+                            value={customColor}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCustomColor(val);
+                              if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                                updateSettings({ themeColor: val });
+                              }
+                            }}
+                            placeholder="#00d4ff"
+                            style={{
+                              width: "100%",
+                              padding: "10px 12px",
+                              borderRadius: "8px",
+                              backgroundColor: "rgba(255, 255, 255, 0.05)",
+                              border: "1px solid var(--glass-border)",
+                              color: "var(--foreground)",
+                              fontSize: "13px",
+                              fontFamily: "monospace",
+                              outline: "none",
+                            }}
+                          />
+                          <p style={{ fontSize: "11px", color: "var(--foreground-muted)", marginTop: "4px" }}>
+                            Enter any hex color code
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -3,6 +3,7 @@
 export type SearchSource =
   | "duck"
   | "google"
+  | "news"
   | "wikipedia"
   | "grokipedia"
   | "x"
@@ -26,6 +27,7 @@ export interface SearchSourceConfig {
 export const SEARCH_SOURCES: SearchSourceConfig[] = [
   { id: "duck", name: "DuckDuckGo", description: "Private web search", icon: "🦆", type: "web" },
   { id: "google", name: "Google", description: "Google search", icon: "🔍", type: "web" },
+  { id: "news", name: "Google News", description: "Search Google News", icon: "📰", type: "web" },
   { id: "wikipedia", name: "Wikipedia", description: "Search Wikipedia", icon: "📚", type: "web" },
   { id: "grokipedia", name: "Grokipedia", description: "Search Grokipedia", icon: "🧠", type: "web" },
   { id: "x", name: "X / Twitter", description: "Search X posts", icon: "𝕏", type: "web" },
@@ -72,6 +74,8 @@ export function getSearchUrl(source: SearchSource, query: string): string {
       return `https://duckduckgo.com/?q=${encodedQuery}`;
     case "google":
       return `https://www.google.com/search?q=${encodedQuery}`;
+    case "news":
+      return `https://news.google.com/search?q=${encodedQuery}`;
     case "wikipedia":
       return `https://en.wikipedia.org/wiki/Special:Search?search=${encodedQuery}`;
     case "grokipedia":

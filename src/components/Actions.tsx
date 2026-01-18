@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
-  CheckSquare,
   Plus,
   X,
   Calendar,
@@ -13,32 +12,14 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useReminders, ReminderItem } from "@/contexts/RemindersContext";
 
-export interface ReminderItem {
-  id: string;
-  label: string;
-  date?: string; // YYYY-MM-DD
-  time?: string; // HH:MM
-  webAlarm: boolean;
-  calendarEventId?: string; // If synced to Google Calendar
-  completed: boolean;
-  alarmTriggered: boolean;
-}
-
-// Legacy export for backwards compatibility
+// Re-export types for backwards compatibility
+export type { ReminderItem } from "@/contexts/RemindersContext";
 export type ActionItem = ReminderItem;
 
-const REMINDERS_STORAGE_KEY_PREFIX = "dashboard-reminders-";
-// Legacy key for backwards compatibility
+// Legacy exports for backwards compatibility
 export const ACTIONS_STORAGE_KEY = "dashboard-actions";
-
-// Helper to get user-specific storage key
-function getStorageKey(userId: string | undefined): string {
-  return userId ? `${REMINDERS_STORAGE_KEY_PREFIX}${userId}` : "";
-}
-
-// For internal use
-type Reminder = ReminderItem;
 
 // Generate alarm sound using Web Audio API
 function playAlarmSound(audioContext: AudioContext, duration: number = 3000) {
@@ -79,47 +60,25 @@ interface RemindersProps {
 // Export as both Reminders and Actions for backwards compatibility
 export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultCollapsed = true, onExpandChange, compact = false }: RemindersProps) {
   const { user } = useAuth();
-  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const { reminders, addReminder, removeReminder, toggleComplete, saveReminders } = useReminders();
   const [isExpanded, setIsExpanded] = useState(!defaultCollapsed);
 
   // Notify parent of expand state changes
   useEffect(() => {
     onExpandChange?.(isExpanded);
   }, [isExpanded, onExpandChange]);
+
   const [newLabel, setNewLabel] = useState("");
   const [newDate, setNewDate] = useState("");
   const [newTime, setNewTime] = useState("");
   const [newWebAlarm, setNewWebAlarm] = useState(false);
   const [addToCalendar, setAddToCalendar] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const [activeAlarm, setActiveAlarm] = useState<Reminder | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<Reminder | null>(null);
+  const [activeAlarm, setActiveAlarm] = useState<ReminderItem | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<ReminderItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
-
-  // Load reminders from localStorage (user-specific)
-  useEffect(() => {
-    if (!user) {
-      setReminders([]);
-      return;
-    }
-    const storageKey = getStorageKey(user.uid);
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      try {
-        setReminders(JSON.parse(stored));
-      } catch {
-        setReminders([]);
-      }
-    }
-  }, [user]);
-
-  const saveRemindersToStorage = useCallback((updated: Reminder[]) => {
-    if (!user) return;
-    const storageKey = getStorageKey(user.uid);
-    localStorage.setItem(storageKey, JSON.stringify(updated));
-  }, [user]);
 
   // Check for web alarms
   useEffect(() => {
@@ -128,40 +87,35 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
       const currentDate = now.toISOString().split("T")[0];
       const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 
-      setReminders(currentReminders => {
-        let hasTriggered = false;
-        const updated = currentReminders.map((reminder) => {
-          if (
-            reminder.webAlarm &&
-            !reminder.alarmTriggered &&
-            !reminder.completed &&
-            reminder.date === currentDate &&
-            reminder.time === currentTime
-          ) {
-            if (!hasTriggered) {
-              setActiveAlarm(reminder);
-              if (!audioContextRef.current) {
-                audioContextRef.current = new AudioContext();
-              }
-              oscillatorRef.current = playAlarmSound(audioContextRef.current, 5000);
-              hasTriggered = true;
-            }
-            return { ...reminder, alarmTriggered: true };
-          }
-          return reminder;
-        });
-        if (hasTriggered) {
-          saveRemindersToStorage(updated);
+      const triggeredReminder = reminders.find(
+        (reminder) =>
+          reminder.webAlarm &&
+          !reminder.alarmTriggered &&
+          !reminder.completed &&
+          reminder.date === currentDate &&
+          reminder.time === currentTime
+      );
+
+      if (triggeredReminder) {
+        setActiveAlarm(triggeredReminder);
+        if (!audioContextRef.current) {
+          audioContextRef.current = new AudioContext();
         }
-        return hasTriggered ? updated : currentReminders;
-      });
+        oscillatorRef.current = playAlarmSound(audioContextRef.current, 5000);
+
+        // Mark as triggered
+        const updated = reminders.map((r) =>
+          r.id === triggeredReminder.id ? { ...r, alarmTriggered: true } : r
+        );
+        saveReminders(updated);
+      }
     };
 
     const interval = setInterval(checkAlarms, 1000);
     return () => clearInterval(interval);
-  }, [saveRemindersToStorage]);
+  }, [reminders, saveReminders]);
 
-  const addReminder = async () => {
+  const handleAddReminder = async () => {
     if (!newLabel.trim()) return;
 
     // If adding to calendar, date and time are required
@@ -172,15 +126,7 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
 
     setIsAdding(true);
 
-    const reminder: Reminder = {
-      id: Date.now().toString(),
-      label: newLabel.trim(),
-      date: newDate || undefined,
-      time: newTime || undefined,
-      webAlarm: newWebAlarm && !!newDate && !!newTime,
-      completed: false,
-      alarmTriggered: false,
-    };
+    let calendarEventId: string | undefined;
 
     // Add to Google Calendar if requested
     if (addToCalendar && isGoogleConnected) {
@@ -189,16 +135,16 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            summary: reminder.label,
-            date: reminder.date,
-            time: reminder.time,
-            reminderMinutes: 10, // Default 10 min reminder
+            summary: newLabel.trim(),
+            date: newDate,
+            time: newTime,
+            reminderMinutes: 10,
           }),
         });
 
         if (response.ok) {
           const data = await response.json();
-          reminder.calendarEventId = data.event.id;
+          calendarEventId = data.event.id;
         } else {
           const error = await response.json();
           console.error("Failed to add to calendar:", error);
@@ -209,11 +155,14 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
       }
     }
 
-    setReminders(currentReminders => {
-      const updated = [...currentReminders, reminder];
-      saveRemindersToStorage(updated);
-      return updated;
+    addReminder({
+      label: newLabel.trim(),
+      date: newDate || undefined,
+      time: newTime || undefined,
+      webAlarm: newWebAlarm && !!newDate && !!newTime,
+      calendarEventId,
     });
+
     setNewLabel("");
     setNewDate("");
     setNewTime("");
@@ -222,15 +171,15 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
     setIsAdding(false);
   };
 
-  const initiateDelete = (reminder: Reminder) => {
+  const initiateDelete = (reminder: ReminderItem) => {
     if (reminder.calendarEventId) {
       setDeleteConfirm(reminder);
     } else {
-      removeReminder(reminder, false);
+      handleRemoveReminder(reminder, false);
     }
   };
 
-  const removeReminder = async (reminder: Reminder, removeFromCalendar: boolean) => {
+  const handleRemoveReminder = async (reminder: ReminderItem, removeFromCalendar: boolean) => {
     setIsDeleting(true);
 
     if (removeFromCalendar && reminder.calendarEventId) {
@@ -243,23 +192,9 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
       }
     }
 
-    setReminders(currentReminders => {
-      const updated = currentReminders.filter((r) => r.id !== reminder.id);
-      saveRemindersToStorage(updated);
-      return updated;
-    });
+    removeReminder(reminder.id);
     setDeleteConfirm(null);
     setIsDeleting(false);
-  };
-
-  const toggleComplete = (id: string) => {
-    setReminders(currentReminders => {
-      const updated = currentReminders.map((r) =>
-        r.id === id ? { ...r, completed: !r.completed } : r
-      );
-      saveRemindersToStorage(updated);
-      return updated;
-    });
   };
 
   const dismissAlarm = () => {
@@ -400,7 +335,7 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
             </p>
             <div style={{ display: "flex", gap: "12px" }}>
               <button
-                onClick={() => removeReminder(deleteConfirm, true)}
+                onClick={() => handleRemoveReminder(deleteConfirm, true)}
                 disabled={isDeleting}
                 style={{
                   flex: 1,
@@ -418,7 +353,7 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
                 {isDeleting ? "Removing..." : "Yes, remove from both"}
               </button>
               <button
-                onClick={() => removeReminder(deleteConfirm, false)}
+                onClick={() => handleRemoveReminder(deleteConfirm, false)}
                 disabled={isDeleting}
                 style={{
                   flex: 1,
@@ -504,12 +439,12 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
             padding: "16px",
             zIndex: 9999,
             boxShadow: "0 10px 40px rgba(0, 0, 0, 0.7)",
-            backgroundColor: "#1c1c1c",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            backgroundColor: "var(--dropdown-bg, #1c1c1c)",
+            border: "1px solid var(--glass-border)",
           }}
         >
             {/* Google Calendar Connection */}
-            {!isGoogleConnected && (
+            {!isGoogleConnected && onConnectGoogle && (
               <button
                 onClick={onConnectGoogle}
                 style={{
@@ -540,7 +475,7 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
                 placeholder="New reminder..."
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addReminder()}
+                onKeyDown={(e) => e.key === "Enter" && handleAddReminder()}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -620,7 +555,7 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
               </div>
 
               <button
-                onClick={addReminder}
+                onClick={handleAddReminder}
                 disabled={!newLabel.trim() || isAdding || (addToCalendar && (!newDate || !newTime))}
                 style={{
                   display: "flex",

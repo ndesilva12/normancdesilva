@@ -96,6 +96,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // Helper to convert hex to RGB
+  const hexToRgb = (hex: string): string => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (result) {
+      return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`;
+    }
+    return "0, 212, 255"; // Default cyan
+  };
+
   // Apply theme to document
   useEffect(() => {
     const root = document.documentElement;
@@ -103,10 +112,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     // Apply theme mode
     root.setAttribute("data-theme", settings.themeMode);
 
-    // Apply theme color
-    const color = THEME_COLORS.find(c => c.value === settings.themeColor) || THEME_COLORS[0];
-    root.style.setProperty("--accent", color.value);
-    root.style.setProperty("--accent-rgb", color.rgb);
+    // Apply theme color (support both preset and custom colors)
+    const presetColor = THEME_COLORS.find(c => c.value === settings.themeColor);
+    if (presetColor) {
+      root.style.setProperty("--accent", presetColor.value);
+      root.style.setProperty("--accent-rgb", presetColor.rgb);
+    } else {
+      // Custom color - compute RGB
+      root.style.setProperty("--accent", settings.themeColor);
+      root.style.setProperty("--accent-rgb", hexToRgb(settings.themeColor));
+    }
   }, [settings.themeMode, settings.themeColor]);
 
   // Load settings from Firestore with real-time sync
