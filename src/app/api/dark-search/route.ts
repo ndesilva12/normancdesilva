@@ -238,7 +238,12 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
         ],
         temperature: 0.8,
         max_tokens: maxTokens,
-        search: true, // Enable live web search to get real, verified links
+        search_parameters: {
+          mode: "on", // Enable live web search to get real, verified links
+          sources: ["web", "x", "news"], // Search web, X/Twitter, and news
+          return_citations: true, // Include citations for verification
+          max_search_results: 20, // Get more results for comprehensive research
+        },
       }),
     });
 
