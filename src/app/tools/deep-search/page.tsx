@@ -21,6 +21,9 @@ import {
   MessageSquare,
   Eye,
   Clock,
+  MessageCircle,
+  Headphones,
+  AtSign,
 } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
@@ -39,6 +42,21 @@ interface ReportSection {
   links?: ReportLink[];
 }
 
+interface SocialMediaHighlight {
+  platform: string;
+  author: string;
+  content: string;
+  url: string;
+}
+
+interface PodcastReference {
+  title: string;
+  episode: string;
+  timestamp?: string;
+  summary: string;
+  url: string;
+}
+
 interface DeepSearchReport {
   topic: string;
   briefOverview: string;
@@ -47,6 +65,8 @@ interface DeepSearchReport {
   counterintuitiveInsights: string[];
   expertDebates: string[];
   underreportedAngles: string[];
+  socialMediaHighlights: SocialMediaHighlight[];
+  podcastReferences: PodcastReference[];
   timestamp: number;
 }
 
@@ -56,6 +76,8 @@ const LINK_ICONS: Record<string, typeof Video> = {
   document: File,
   data: BarChart3,
   image: Image,
+  social: MessageCircle,
+  podcast: Headphones,
 };
 
 const LINK_COLORS: Record<string, string> = {
@@ -64,6 +86,8 @@ const LINK_COLORS: Record<string, string> = {
   document: "168, 85, 247", // purple
   data: "34, 197, 94", // green
   image: "249, 115, 22", // orange
+  social: "29, 161, 242", // twitter blue
+  podcast: "139, 92, 246", // violet
 };
 
 export default function DeepSearchPage() {
@@ -665,6 +689,7 @@ export default function DeepSearchPage() {
                     style={{
                       borderRadius: "16px",
                       padding: "24px",
+                      marginBottom: "16px",
                     }}
                   >
                     <h3 style={{ fontSize: "17px", fontWeight: 600, color: "var(--foreground)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
@@ -678,6 +703,107 @@ export default function DeepSearchPage() {
                         </li>
                       ))}
                     </ul>
+                  </motion.div>
+                )}
+
+                {/* Social Media Highlights */}
+                {report.socialMediaHighlights && report.socialMediaHighlights.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="glass"
+                    style={{
+                      borderRadius: "16px",
+                      padding: "24px",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <h3 style={{ fontSize: "17px", fontWeight: 600, color: "var(--foreground)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <AtSign style={{ width: "20px", height: "20px", color: "rgb(29, 161, 242)" }} />
+                      Expert Social Media Insights
+                    </h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {report.socialMediaHighlights.map((post, index) => (
+                        <a
+                          key={index}
+                          href={post.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "block",
+                            padding: "16px",
+                            borderRadius: "12px",
+                            backgroundColor: "rgba(29, 161, 242, 0.1)",
+                            border: "1px solid rgba(29, 161, 242, 0.2)",
+                            textDecoration: "none",
+                            transition: "all 0.2s ease",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                            <span style={{ fontSize: "12px", color: "rgb(29, 161, 242)", fontWeight: 500 }}>{post.platform}</span>
+                            <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>•</span>
+                            <span style={{ fontSize: "13px", color: "var(--foreground)", fontWeight: 500 }}>{post.author}</span>
+                          </div>
+                          <p style={{ fontSize: "14px", color: "var(--foreground)", lineHeight: 1.6, margin: 0, fontStyle: "italic" }}>
+                            &ldquo;{post.content}&rdquo;
+                          </p>
+                        </a>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Podcast References */}
+                {report.podcastReferences && report.podcastReferences.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                    className="glass"
+                    style={{
+                      borderRadius: "16px",
+                      padding: "24px",
+                    }}
+                  >
+                    <h3 style={{ fontSize: "17px", fontWeight: 600, color: "var(--foreground)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Headphones style={{ width: "20px", height: "20px", color: "rgb(139, 92, 246)" }} />
+                      Expert Podcast Discussions
+                    </h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {report.podcastReferences.map((podcast, index) => (
+                        <a
+                          key={index}
+                          href={podcast.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "block",
+                            padding: "16px",
+                            borderRadius: "12px",
+                            backgroundColor: "rgba(139, 92, 246, 0.1)",
+                            border: "1px solid rgba(139, 92, 246, 0.2)",
+                            textDecoration: "none",
+                            transition: "all 0.2s ease",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+                            <span style={{ fontSize: "14px", color: "var(--foreground)", fontWeight: 600 }}>{podcast.title}</span>
+                            <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>•</span>
+                            <span style={{ fontSize: "13px", color: "rgb(139, 92, 246)" }}>{podcast.episode}</span>
+                            {podcast.timestamp && (
+                              <>
+                                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>•</span>
+                                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>{podcast.timestamp}</span>
+                              </>
+                            )}
+                          </div>
+                          <p style={{ fontSize: "14px", color: "var(--foreground-muted)", lineHeight: 1.6, margin: 0 }}>
+                            {podcast.summary}
+                          </p>
+                        </a>
+                      ))}
+                    </div>
                   </motion.div>
                 )}
               </motion.div>

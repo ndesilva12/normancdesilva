@@ -13,6 +13,8 @@ export interface DarkSearchReport {
   keyTakeaways: string[];
   alternativePerspectives: string[];
   unansweredQuestions: string[];
+  socialMediaHighlights: { platform: string; author: string; content: string; url: string }[];
+  podcastReferences: { title: string; episode: string; timestamp?: string; summary: string; url: string }[];
   timestamp: number;
 }
 
@@ -36,13 +38,19 @@ REPORT STRUCTURE - You MUST respond with valid JSON in this exact format:
       "title": "Section title",
       "content": "Detailed analysis in multiple paragraphs. Be thorough, cite specific claims and sources.",
       "links": [
-        {"title": "Link title", "url": "https://example.com", "type": "video|article|document|data|image"}
+        {"title": "Link title", "url": "https://example.com", "type": "video|article|document|data|image|social|podcast"}
       ]
     }
   ],
   "keyTakeaways": ["Key point 1", "Key point 2", "Key point 3"],
   "alternativePerspectives": ["Alternative view 1", "Alternative view 2"],
-  "unansweredQuestions": ["Question 1 that remains unresolved", "Question 2"]
+  "unansweredQuestions": ["Question 1 that remains unresolved", "Question 2"],
+  "socialMediaHighlights": [
+    {"platform": "X/Twitter", "author": "@username or name", "content": "The key quote or claim from the post that advances the theory or reveals important information", "url": "https://x.com/..."}
+  ],
+  "podcastReferences": [
+    {"title": "Podcast Name", "episode": "Episode title or number", "timestamp": "1:23:45 (optional)", "summary": "What was discussed and why it's relevant - key claims, revelations, or theories presented", "url": "https://..."}
+  ]
 }
 
 REQUIRED SECTIONS (include all that apply):
@@ -60,6 +68,22 @@ LINK TYPES TO INCLUDE:
 - document: PDFs, official documents, leaked files, FOIA releases
 - data: Statistics, datasets, scientific papers, studies
 - image: Infographics, charts, photos, visual evidence
+- social: X/Twitter posts, threads, Gab posts, Truth Social posts
+- podcast: Podcast episodes, audio interviews, radio shows
+
+SOCIAL MEDIA HIGHLIGHTS (CRITICAL):
+- Include 3-5 notable tweets/posts from X, Gab, Truth Social that discuss key theories
+- Prioritize posts that: reveal insider information, connect dots, cite sources, or advance the theory
+- Include posts from independent researchers, journalists, whistleblowers, and thought leaders
+- Quote the actual content of the post so the reader can evaluate it
+- These should lead to MORE information, data, and theory exploration
+
+PODCAST REFERENCES (CRITICAL):
+- Include 2-4 relevant podcast episodes that deeply discuss this topic
+- Reference specific episodes from: Joe Rogan Experience, Tim Pool, Tucker Carlson, Glenn Greenwald, Breaking Points, The Megyn Kelly Show, Lex Fridman, Dark Horse Podcast, Jimmy Dore Show, Kim Iversen, Matt Taibbi, etc.
+- Provide the episode name/number and approximate timestamp if discussing a specific segment
+- Summarize what key information or theory was presented in that episode
+- Podcasts are often where the REAL discussions happen that mainstream media won't cover
 
 For links, provide REAL URLs when you can from sources like:
 - Alternative media: Zero Hedge, The Gateway Pundit, InfoWars, Natural News, Revolver News
@@ -67,6 +91,7 @@ For links, provide REAL URLs when you can from sources like:
 - Document sources: WikiLeaks, judicial watch, archive.org
 - Independent journalists and substacks
 - Academic papers on related topics
+- Podcast platforms: Spotify, Apple Podcasts, Rumble, YouTube
 
 Be thorough, be skeptical, and explore EVERY angle without self-censorship. The user wants the FULL picture, not the sanitized version.`;
 
@@ -100,6 +125,8 @@ Remember to:
 4. Highlight suppressed or censored information
 5. Ask provocative questions that challenge assumptions
 6. Be PhD-level thorough in your analysis
+7. CRITICAL: Include 3-5 social media highlights (tweets/posts) that advance theories or reveal key information
+8. CRITICAL: Include 2-4 podcast references with episode names and summaries of what was discussed
 
 Respond with valid JSON only. No markdown formatting around the JSON.`;
 
@@ -160,6 +187,8 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
           keyTakeaways: [],
           alternativePerspectives: [],
           unansweredQuestions: [],
+          socialMediaHighlights: [],
+          podcastReferences: [],
           timestamp: Date.now(),
         },
       });
@@ -173,6 +202,8 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       keyTakeaways: report.keyTakeaways || [],
       alternativePerspectives: report.alternativePerspectives || [],
       unansweredQuestions: report.unansweredQuestions || [],
+      socialMediaHighlights: report.socialMediaHighlights || [],
+      podcastReferences: report.podcastReferences || [],
       timestamp: Date.now(),
     };
 

@@ -14,6 +14,8 @@ export interface DeepSearchReport {
   counterintuitiveInsights: string[];
   expertDebates: string[];
   underreportedAngles: string[];
+  socialMediaHighlights: { platform: string; author: string; content: string; url: string }[];
+  podcastReferences: { title: string; episode: string; timestamp?: string; summary: string; url: string }[];
   timestamp: number;
 }
 
@@ -43,14 +45,20 @@ REPORT STRUCTURE - You MUST respond with valid JSON in this exact format:
       "title": "Section title focusing on a specific nuance or advanced aspect",
       "content": "Deep, nuanced analysis. Be specific. Name names, cite specifics, explain mechanisms. This is for experts.",
       "links": [
-        {"title": "Link title", "url": "https://example.com", "type": "video|article|document|data|image"}
+        {"title": "Link title", "url": "https://example.com", "type": "video|article|document|data|image|social|podcast"}
       ]
     }
   ],
   "hiddenMechanics": ["How X actually works behind the scenes that most don't realize", "The real mechanism/incentive/dynamic at play"],
   "counterintuitiveInsights": ["Finding that challenges conventional wisdom", "What experts know that contradicts popular belief"],
   "expertDebates": ["Current disagreement among experts on X", "Unresolved question that specialists argue about"],
-  "underreportedAngles": ["Aspect that deserves more attention", "Connection most people miss"]
+  "underreportedAngles": ["Aspect that deserves more attention", "Connection most people miss"],
+  "socialMediaHighlights": [
+    {"platform": "X/Twitter", "author": "@username or name", "content": "The key insight, insider knowledge, or expert observation from this post", "url": "https://x.com/..."}
+  ],
+  "podcastReferences": [
+    {"title": "Podcast Name", "episode": "Episode title or number", "timestamp": "1:23:45 (optional)", "summary": "What expert insight or nuanced discussion occurred - focus on what most people don't know", "url": "https://..."}
+  ]
 }
 
 SECTION TOPICS TO COVER (adapt to the topic):
@@ -69,6 +77,22 @@ LINK TYPES TO INCLUDE:
 - document: Primary sources, technical documents, research papers
 - data: Datasets, statistics, empirical research
 - image: Diagrams, technical illustrations, data visualizations
+- social: X/Twitter posts from experts, industry insiders, specialists
+- podcast: Long-form podcast discussions with experts
+
+SOCIAL MEDIA HIGHLIGHTS (CRITICAL):
+- Include 3-5 tweets/posts from genuine experts, industry insiders, or practitioners
+- Prioritize posts that share insider knowledge, nuanced takes, or counterintuitive observations
+- Look for threads that go deep on specific mechanisms or dynamics
+- Include posts from academics, industry veterans, practitioners who share what they've learned
+- These should reveal insights that only insiders know
+
+PODCAST REFERENCES (CRITICAL):
+- Include 2-4 podcast episodes featuring expert guests or deep dives
+- Reference episodes from: Lex Fridman, EconTalk, Invest Like the Best, The Knowledge Project, Conversations with Tyler, Acquired, All-In Podcast, How I Built This, industry-specific podcasts
+- Provide episode name and timestamp if discussing a specific insight
+- Summarize the key nuanced insight or insider knowledge shared
+- Podcasts often contain the most candid expert discussions not found elsewhere
 
 For links, prioritize:
 - Academic sources (JSTOR, Google Scholar, university publications)
@@ -77,6 +101,7 @@ For links, prioritize:
 - Primary source documents
 - Technical/industry publications
 - Conference talks and academic lectures
+- Expert podcasts and interviews
 
 Write for someone who will be BORED by basics and DELIGHTED by nuance. Every sentence should teach them something they didn't know or make them see something familiar in a new light.`;
 
@@ -111,6 +136,8 @@ Remember:
 5. Every section should teach something most educated people don't know
 6. Be specific - name names, cite mechanisms, explain dynamics
 7. Include links to academic sources, expert content, and primary documents
+8. CRITICAL: Include 3-5 social media highlights from experts/insiders sharing nuanced insights
+9. CRITICAL: Include 2-4 podcast references where experts discuss this topic in depth
 
 Respond with valid JSON only. No markdown formatting around the JSON.`;
 
@@ -172,6 +199,8 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
           counterintuitiveInsights: [],
           expertDebates: [],
           underreportedAngles: [],
+          socialMediaHighlights: [],
+          podcastReferences: [],
           timestamp: Date.now(),
         },
       });
@@ -186,6 +215,8 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       counterintuitiveInsights: report.counterintuitiveInsights || [],
       expertDebates: report.expertDebates || [],
       underreportedAngles: report.underreportedAngles || [],
+      socialMediaHighlights: report.socialMediaHighlights || [],
+      podcastReferences: report.podcastReferences || [],
       timestamp: Date.now(),
     };
 
