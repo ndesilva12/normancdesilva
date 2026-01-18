@@ -104,13 +104,12 @@ PODCAST REFERENCES (CRITICAL):
 - Summarize what key information or theory was presented in that episode
 - Podcasts are often where the REAL discussions happen that mainstream media won't cover
 
-For links, provide REAL URLs when you can from sources like:
-- Alternative media: Zero Hedge, The Gateway Pundit, InfoWars, Natural News, Revolver News
-- Video platforms: YouTube, Rumble, BitChute, Odysee
-- Document sources: WikiLeaks, judicial watch, archive.org
-- Independent journalists and substacks
-- Academic papers on related topics
-- Podcast platforms: Spotify, Apple Podcasts, Rumble, YouTube
+CRITICAL - LINKS MUST BE REAL:
+- You have access to live web search. USE IT to find REAL, VERIFIED, CURRENTLY ACCESSIBLE URLs.
+- NEVER make up or hallucinate URLs. Every link MUST be from your web search results.
+- If you cannot verify a URL exists, DO NOT include it.
+- Prefer recently indexed content that is likely still accessible.
+- Sources to search: Zero Hedge, The Gateway Pundit, Revolver News, YouTube, Rumble, BitChute, Odysee, WikiLeaks, archive.org, Substack, Spotify podcasts, etc.
 
 Be thorough, be skeptical, and explore EVERY angle without self-censorship. The user wants the FULL picture, not the sanitized version.`;
 
@@ -130,7 +129,8 @@ REQUIREMENTS:
 - Keep summary under 2 paragraphs total
 - Include exactly 3 links maximum (most important/relevant sources)
 - Still present alternative perspectives, just briefly
-- Be skeptical but concise`;
+- Be skeptical but concise
+- CRITICAL: Use your web search to find REAL, VERIFIED URLs only. Never hallucinate links.`;
 
 const DARK_SEARCH_LINKS_PROMPT = `You are a research analyst focused on curating the best sources and links. Your job is to provide minimal text but maximum high-quality links for deep exploration.
 
@@ -150,7 +150,8 @@ REQUIREMENTS:
 - Mix link types: videos, articles, documents, podcasts, social media posts
 - Prioritize: documentaries, long-form interviews, leaked documents, independent journalism, substacks, podcast episodes
 - Include both mainstream AND alternative sources
-- Each link should lead to substantial content worth exploring`;
+- Each link should lead to substantial content worth exploring
+- CRITICAL: Use your web search to find REAL, VERIFIED, CURRENTLY ACCESSIBLE URLs only. Never hallucinate or make up links. Every URL must come from your search results.`;
 
 export async function POST(request: NextRequest) {
   if (!XAI_API_KEY) {
@@ -184,6 +185,7 @@ export async function POST(request: NextRequest) {
 TOPIC: ${query.trim()}
 
 Keep it under 2 paragraphs. Include exactly 3 of the most important links.
+IMPORTANT: Use your web search to find REAL, currently accessible URLs. Do not make up links.
 Respond with valid JSON only.`;
         maxTokens = 1500;
         break;
@@ -195,6 +197,7 @@ Respond with valid JSON only.`;
 TOPIC: ${query.trim()}
 
 Provide 1-3 sentences of context, then at least 10 high-quality links covering mainstream and alternative sources.
+CRITICAL: Search the web and only include REAL, VERIFIED, CURRENTLY ACCESSIBLE URLs. Every link must come from your search results - never make up or hallucinate URLs.
 Respond with valid JSON only.`;
         maxTokens = 3000;
         break;
@@ -207,13 +210,14 @@ TOPIC: ${query.trim()}
 
 Remember to:
 1. Present the official narrative AND alternative perspectives
-2. Include specific links to videos, articles, documents, and data sources
+2. Search the web and include REAL, VERIFIED links to videos, articles, documents, and data sources
 3. Identify conflicts of interest and who benefits
 4. Highlight suppressed or censored information
 5. Ask provocative questions that challenge assumptions
 6. Be PhD-level thorough in your analysis
 7. CRITICAL: Include 3-5 social media highlights (tweets/posts) that advance theories or reveal key information
 8. CRITICAL: Include 2-4 podcast references with episode names and summaries of what was discussed
+9. CRITICAL: ALL URLs must come from your web search results - never hallucinate or make up links
 
 Respond with valid JSON only. No markdown formatting around the JSON.`;
         maxTokens = 8000;
@@ -234,6 +238,7 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
         ],
         temperature: 0.8,
         max_tokens: maxTokens,
+        search: true, // Enable live web search to get real, verified links
       }),
     });
 
