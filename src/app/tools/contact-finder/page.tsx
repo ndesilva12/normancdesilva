@@ -308,6 +308,31 @@ function ContactResultCard({ result, index }: { result: ContactResult; index: nu
             </div>
           )}
 
+          {/* Personalization Hooks */}
+          {result.personalizationHooks && result.personalizationHooks.length > 0 && (
+            <div style={{ marginBottom: "16px" }}>
+              <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "8px" }}>
+                Personalization Hooks (for email openers)
+              </div>
+              <div
+                style={{
+                  padding: "12px",
+                  backgroundColor: "rgba(var(--accent-rgb), 0.05)",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(var(--accent-rgb), 0.1)",
+                }}
+              >
+                <ul style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {result.personalizationHooks.map((hook, i) => (
+                    <li key={i} style={{ fontSize: "13px", color: "var(--foreground)", lineHeight: 1.5 }}>
+                      {hook}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* Reasoning */}
           {result.reasoning && (
             <div style={{ marginBottom: "12px" }}>

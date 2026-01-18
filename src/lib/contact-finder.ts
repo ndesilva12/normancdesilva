@@ -17,6 +17,7 @@ export interface ContactResult {
   title?: string;
   organization?: string;
   contacts: ContactMethod[];
+  personalizationHooks?: string[];
   reasoning?: string;
   additionalNotes?: string;
 }
@@ -84,6 +85,14 @@ SEARCH METHODOLOGY - Be thorough and creative:
    - Identify their agent, publicist, or representative if public figure
    - Look for "Contact" or "Booking" information
 
+6. **PERSONALIZATION RESEARCH (REQUIRED)**:
+   - Find 2-3 interesting facts or recent work for each contact person
+   - Look for: recent interviews, podcast appearances, published articles, awards, speaking engagements
+   - Check their social media for recent posts about projects or achievements
+   - Find quotes or opinions they've shared publicly
+   - These should be useful for personalizing an introductory email opener
+   - Keep them short, factual, and interesting - not formatted as email text
+
 OUTPUT FORMAT (JSON):
 {
   "results": [
@@ -100,6 +109,11 @@ OUTPUT FORMAT (JSON):
           "notes": "any relevant notes (for emails, explain the format pattern discovered)"
         }
       ],
+      "personalizationHooks": [
+        "Recently appeared on [Podcast Name] discussing [topic] - shared insight about [specific point]",
+        "Published article in [Publication] about [topic] in [month/year]",
+        "Known for [specific achievement or viewpoint]"
+      ],
       "reasoning": "Explain your research methodology - especially how you determined the email format",
       "additionalNotes": "Include: 1) Company domain, 2) Email format pattern discovered, 3) How you determined it"
     }
@@ -107,7 +121,9 @@ OUTPUT FORMAT (JSON):
   "summary": "Brief summary including the most likely email format and how to verify it"
 }
 
-CRITICAL: Always include at least one email guess with your reasoning. Even a speculative email based on common patterns is valuable. Explain how you determined the format.`;
+CRITICAL REQUIREMENTS:
+1. Always include at least one email guess with your reasoning. Even a speculative email based on common patterns is valuable.
+2. Always include 2-3 personalizationHooks for each person - these are facts/recent work useful for email openers.`;
 }
 
 export function getTargetSearchPrompt(query: string): string {
@@ -166,6 +182,14 @@ SEARCH METHODOLOGY - Think strategically:
    - Regulatory complaints (FTC, state AG, industry regulators)
    - Media/journalist contacts for escalation
 
+7. **PERSONALIZATION RESEARCH (REQUIRED)**:
+   - For each key person identified, find 2-3 interesting facts or recent work
+   - Look for: recent interviews, podcast appearances, published articles, promotions, speaking engagements
+   - Check their LinkedIn activity, company press releases, or news mentions
+   - Find quotes, opinions, or initiatives they've championed
+   - These should be useful for personalizing an introductory email opener
+   - Keep them short, factual, and interesting - not formatted as email text
+
 OUTPUT FORMAT (JSON):
 {
   "results": [
@@ -182,6 +206,11 @@ OUTPUT FORMAT (JSON):
           "notes": "for emails: explain the format pattern (e.g., 'Company uses firstname.lastname@ format')"
         }
       ],
+      "personalizationHooks": [
+        "Recently promoted to [role] in [month/year] after leading [initiative]",
+        "Quoted in [publication] about [topic] - emphasized [key point]",
+        "Known for championing [specific initiative or value] at the company"
+      ],
       "reasoning": "Why this contact is relevant AND how you determined their email format",
       "additionalNotes": "Include: 1) Company email format pattern, 2) How to verify, 3) Best approach"
     }
@@ -189,7 +218,9 @@ OUTPUT FORMAT (JSON):
   "summary": "Strategic summary including: 1) The company's email format, 2) Recommended contacts in priority order, 3) Tips for achieving the objective"
 }
 
-CRITICAL: For every person identified, attempt to provide their email by applying the discovered email format. Even speculative emails are valuable - just mark confidence appropriately and explain your reasoning.`;
+CRITICAL REQUIREMENTS:
+1. For every person identified, attempt to provide their email by applying the discovered email format. Even speculative emails are valuable.
+2. Always include 2-3 personalizationHooks for each person - these are facts/recent work useful for email openers.`;
 }
 
 // API configuration for each AI source
