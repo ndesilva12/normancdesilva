@@ -106,16 +106,16 @@ body {
 
 .glass-hover:hover {
   background: var(--glass-hover);
-  border-color: rgba(6, 182, 212, 0.2);
+  border-color: rgba(var(--accent-rgb), 0.2);
 }
 
 /* Accent glow effect */
 .accent-glow {
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.15);
 }
 
 .accent-glow-strong {
-  box-shadow: 0 0 30px rgba(6, 182, 212, 0.25), 0 0 60px rgba(6, 182, 212, 0.1);
+  box-shadow: 0 0 30px rgba(var(--accent-rgb), 0.25), 0 0 60px rgba(var(--accent-rgb), 0.1);
 }
 
 /* Text gradient */
@@ -136,7 +136,7 @@ body {
 
 /* Radial gradient overlay */
 .bg-radial {
-  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(6, 182, 212, 0.1), transparent);
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(var(--accent-rgb), 0.1), transparent);
 }
 
 /* Custom scrollbar */
@@ -160,7 +160,7 @@ body {
 
 /* Selection color */
 ::selection {
-  background: rgba(6, 182, 212, 0.3);
+  background: rgba(var(--accent-rgb), 0.3);
   color: var(--foreground);
 }
 

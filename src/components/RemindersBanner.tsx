@@ -318,8 +318,8 @@ export function RemindersBanner() {
               gap: "8px",
               padding: "8px 12px",
               borderRadius: "8px",
-              backgroundColor: "rgba(6, 182, 212, 0.1)",
-              border: "1px solid rgba(6, 182, 212, 0.2)",
+              backgroundColor: "rgba(var(--accent-rgb), 0.1)",
+              border: "1px solid rgba(var(--accent-rgb), 0.2)",
             }}
           >
             <button
