@@ -475,26 +475,48 @@ function NotesContent() {
 
     setSavingFullPage(true);
     try {
-      // First, delete all existing blocks
-      for (const block of pageContent) {
-        await fetch(`/api/notion/block?blockId=${block.id}`, {
-          method: "DELETE",
-        });
-      }
+      // Delete all existing blocks in parallel with timeout
+      const deletePromises = pageContent.map((block) =>
+        Promise.race([
+          fetch(`/api/notion/block?blockId=${block.id}`, {
+            method: "DELETE",
+          }).then(res => {
+            if (!res.ok) throw new Error(`Failed to delete block ${block.id}`);
+            return res;
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Delete timeout")), 10000)
+          ),
+        ]).catch((err) => {
+          console.warn(`Failed to delete block ${block.id}:`, err);
+          return null; // Continue even if delete fails
+        })
+      );
 
-      // Then append the new content as paragraphs
+      await Promise.all(deletePromises);
+
+      // Append new content as paragraphs (sequential to maintain order)
       const paragraphs = fullPageContent.split("\n").filter((line) => line.trim());
 
       for (const paragraph of paragraphs) {
-        await fetch("/api/notion", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "append",
-            pageId: selectedPage.id,
-            content: paragraph.trim(),
+        const response = await Promise.race([
+          fetch("/api/notion", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "append",
+              pageId: selectedPage.id,
+              content: paragraph.trim(),
+            }),
           }),
-        });
+          new Promise<Response>((_, reject) =>
+            setTimeout(() => reject(new Error("Append timeout")), 10000)
+          ),
+        ]);
+
+        if (!response.ok) {
+          console.warn(`Failed to append paragraph`);
+        }
       }
 
       // Refresh the page content
@@ -502,6 +524,7 @@ function NotesContent() {
       setFullPageEditMode(false);
     } catch (err) {
       console.error("Error saving full page edit:", err);
+      alert("Failed to save changes. Please try again.");
     } finally {
       setSavingFullPage(false);
     }

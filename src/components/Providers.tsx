@@ -6,6 +6,7 @@ import { LayoutProvider } from "@/contexts/LayoutContext";
 import { RemindersProvider } from "@/contexts/RemindersContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { NewsSourcesProvider } from "@/contexts/NewsSourcesContext";
+import { RecentSearchesProvider } from "@/contexts/RecentSearchesContext";
 import { SettingsPopup } from "@/components/SettingsPopup";
 
 interface ProvidersProps {
@@ -16,14 +17,16 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <AuthProvider>
       <SettingsProvider>
-        <RemindersProvider>
-          <NewsSourcesProvider>
-            <LayoutProvider>
-              {children}
-              <SettingsPopup />
-            </LayoutProvider>
-          </NewsSourcesProvider>
-        </RemindersProvider>
+        <RecentSearchesProvider>
+          <RemindersProvider>
+            <NewsSourcesProvider>
+              <LayoutProvider>
+                {children}
+                <SettingsPopup />
+              </LayoutProvider>
+            </NewsSourcesProvider>
+          </RemindersProvider>
+        </RecentSearchesProvider>
       </SettingsProvider>
     </AuthProvider>
   );

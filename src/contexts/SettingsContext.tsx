@@ -63,13 +63,42 @@ export const TIMEZONES = [
   { value: "Australia/Sydney", label: "Sydney (AEST/AEDT)" },
 ];
 
+export interface SearchSourceSettings {
+  enabledSources: string[]; // List of enabled source IDs
+  defaultSourceShort: string; // Default for queries < 6 words
+  defaultSourceLong: string; // Default for queries >= 6 words
+}
+
+export interface RecentSearchesSettings {
+  enabledTools: string[]; // List of tool IDs that should show recent searches
+  maxRecentItems: number; // Max number of recent items to show per tool
+}
+
+// Tool IDs for recent searches
+export const TOOL_IDS = [
+  "search", "notes", "emails", "calendar", "contacts", "files",
+  "market", "news", "trending", "visuals", "business-info",
+  "deep-search", "dark-search", "contact-finder", "company-politics",
+  "spotify", "image-lookup", "visual-rosters"
+] as const;
+
+export type ToolId = typeof TOOL_IDS[number];
+
 export interface UserSettings {
   themeMode: ThemeMode;
   themeColor: string;
   timezone: string;
   timeFormat: TimeFormat;
   connectedEmails: string[];
+  searchSources: SearchSourceSettings;
+  recentSearches: RecentSearchesSettings;
 }
+
+// All available search sources for default settings
+const ALL_SEARCH_SOURCES = [
+  "duck", "google", "news", "wikipedia", "grokipedia", "x",
+  "youtube", "rumble", "trends", "amazon", "grok", "gemini", "claude", "chatgpt"
+];
 
 const DEFAULT_SETTINGS: UserSettings = {
   themeMode: "dark",
@@ -77,6 +106,15 @@ const DEFAULT_SETTINGS: UserSettings = {
   timezone: "auto",
   timeFormat: "12h",
   connectedEmails: [],
+  searchSources: {
+    enabledSources: ALL_SEARCH_SOURCES,
+    defaultSourceShort: "duck", // Default for short queries
+    defaultSourceLong: "grok", // Default for long queries (AI better for detailed questions)
+  },
+  recentSearches: {
+    enabledTools: [...TOOL_IDS], // All tools enabled by default
+    maxRecentItems: 5,
+  },
 };
 
 interface SettingsContextValue {

@@ -377,10 +377,12 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
 
       {/* Header button - always visible */}
       <div
-        className="glass"
         style={{
           borderRadius: "10px",
           overflow: "hidden",
+          background: "rgba(var(--accent-rgb), 0.08)",
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(var(--accent-rgb), 0.15)",
         }}
       >
         <button

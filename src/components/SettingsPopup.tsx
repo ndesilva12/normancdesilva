@@ -17,10 +17,34 @@ import {
   Loader2,
   RefreshCw,
   Pipette,
+  Search,
 } from "lucide-react";
-import { useSettings, THEME_COLORS, TIMEZONES, ThemeMode, TimeFormat } from "@/contexts/SettingsContext";
+import { useSettings, THEME_COLORS, TIMEZONES, ThemeMode, TimeFormat, TOOL_IDS, ToolId } from "@/contexts/SettingsContext";
+import { SEARCH_SOURCES, SearchSource } from "@/lib/search-service";
 
-type SettingsTab = "appearance" | "time" | "integrations";
+// Tool display names for settings
+const TOOL_NAMES: Record<ToolId, string> = {
+  "search": "Main Search",
+  "notes": "Notes",
+  "emails": "Emails",
+  "calendar": "Calendar",
+  "contacts": "Contacts",
+  "files": "Files",
+  "market": "Market",
+  "news": "News",
+  "trending": "Trending",
+  "visuals": "Visuals",
+  "business-info": "Business Info",
+  "deep-search": "Deep Search",
+  "dark-search": "Dark Search",
+  "contact-finder": "Contact Finder",
+  "company-politics": "Company Politics",
+  "spotify": "Spotify",
+  "image-lookup": "Image Lookup",
+  "visual-rosters": "Visual Rosters",
+};
+
+type SettingsTab = "appearance" | "time" | "search" | "integrations";
 
 interface GoogleAccount {
   email: string;
@@ -109,8 +133,58 @@ export function SettingsPopup() {
   const tabs: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
     { id: "appearance", label: "Appearance", icon: Palette },
     { id: "time", label: "Time & Date", icon: Clock },
+    { id: "search", label: "Search", icon: Search },
     { id: "integrations", label: "Integrations", icon: Link2 },
   ];
+
+  // Helper to toggle a search source
+  const toggleSearchSource = (sourceId: string) => {
+    const currentEnabled = settings.searchSources?.enabledSources || SEARCH_SOURCES.map(s => s.id);
+    const newEnabled = currentEnabled.includes(sourceId)
+      ? currentEnabled.filter(id => id !== sourceId)
+      : [...currentEnabled, sourceId];
+
+    updateSettings({
+      searchSources: {
+        ...settings.searchSources,
+        enabledSources: newEnabled,
+      }
+    });
+  };
+
+  const isSourceEnabled = (sourceId: string) => {
+    return (settings.searchSources?.enabledSources || SEARCH_SOURCES.map(s => s.id)).includes(sourceId);
+  };
+
+  // Helper to toggle recent searches for a tool
+  const toggleRecentSearchesTool = (toolId: ToolId) => {
+    const currentEnabled = settings.recentSearches?.enabledTools || [...TOOL_IDS];
+    const newEnabled = currentEnabled.includes(toolId)
+      ? currentEnabled.filter(id => id !== toolId)
+      : [...currentEnabled, toolId];
+
+    updateSettings({
+      recentSearches: {
+        ...settings.recentSearches,
+        enabledTools: newEnabled,
+        maxRecentItems: settings.recentSearches?.maxRecentItems || 5,
+      }
+    });
+  };
+
+  const isRecentSearchesEnabled = (toolId: ToolId) => {
+    return (settings.recentSearches?.enabledTools || [...TOOL_IDS]).includes(toolId);
+  };
+
+  const toggleAllRecentSearches = (enable: boolean) => {
+    updateSettings({
+      recentSearches: {
+        ...settings.recentSearches,
+        enabledTools: enable ? [...TOOL_IDS] : [],
+        maxRecentItems: settings.recentSearches?.maxRecentItems || 5,
+      }
+    });
+  };
 
   return (
     <AnimatePresence>
@@ -443,6 +517,294 @@ export function SettingsPopup() {
                           {format === "12h" ? "12-hour (AM/PM)" : "24-hour"}
                         </button>
                       ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Search Tab */}
+              {activeTab === "search" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                  {/* Enabled Search Sources */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+                      <Search style={{ width: "16px", height: "16px", display: "inline", marginRight: "8px", verticalAlign: "middle" }} />
+                      Enabled Search Sources
+                    </label>
+                    <p style={{ fontSize: "13px", color: "var(--foreground-muted)", marginBottom: "16px" }}>
+                      Select which search sources are available in the search bar.
+                    </p>
+
+                    {/* Web Sources */}
+                    <div style={{ marginBottom: "16px" }}>
+                      <h4 style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" }}>
+                        Web Sources
+                      </h4>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "8px" }}>
+                        {SEARCH_SOURCES.filter(s => s.type === "web").map((source) => (
+                          <button
+                            key={source.id}
+                            onClick={() => toggleSearchSource(source.id)}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              padding: "10px 12px",
+                              borderRadius: "8px",
+                              backgroundColor: isSourceEnabled(source.id) ? "rgba(var(--accent-rgb), 0.15)" : "rgba(255, 255, 255, 0.03)",
+                              border: isSourceEnabled(source.id) ? "1px solid var(--accent)" : "1px solid var(--glass-border)",
+                              cursor: "pointer",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            <span style={{ fontSize: "16px" }}>{source.icon}</span>
+                            <span style={{
+                              fontSize: "13px",
+                              fontWeight: 500,
+                              color: isSourceEnabled(source.id) ? "var(--accent)" : "var(--foreground-muted)",
+                            }}>
+                              {source.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* AI Sources */}
+                    <div>
+                      <h4 style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" }}>
+                        AI Sources
+                      </h4>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "8px" }}>
+                        {SEARCH_SOURCES.filter(s => s.type === "ai").map((source) => (
+                          <button
+                            key={source.id}
+                            onClick={() => toggleSearchSource(source.id)}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              padding: "10px 12px",
+                              borderRadius: "8px",
+                              backgroundColor: isSourceEnabled(source.id) ? "rgba(var(--accent-rgb), 0.15)" : "rgba(255, 255, 255, 0.03)",
+                              border: isSourceEnabled(source.id) ? "1px solid var(--accent)" : "1px solid var(--glass-border)",
+                              cursor: "pointer",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            <span style={{ fontSize: "16px" }}>{source.icon}</span>
+                            <span style={{
+                              fontSize: "13px",
+                              fontWeight: 500,
+                              color: isSourceEnabled(source.id) ? "var(--accent)" : "var(--foreground-muted)",
+                            }}>
+                              {source.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Default Sources */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+                      Default Search Source
+                    </label>
+                    <p style={{ fontSize: "13px", color: "var(--foreground-muted)", marginBottom: "16px" }}>
+                      Set default search source based on query length.
+                    </p>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {/* Short queries */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <span style={{ fontSize: "13px", color: "var(--foreground)", minWidth: "130px" }}>
+                          Short queries (&lt;6 words):
+                        </span>
+                        <select
+                          value={settings.searchSources?.defaultSourceShort || "duck"}
+                          onChange={(e) => updateSettings({
+                            searchSources: {
+                              ...settings.searchSources,
+                              defaultSourceShort: e.target.value,
+                            }
+                          })}
+                          style={{
+                            flex: 1,
+                            padding: "10px 14px",
+                            borderRadius: "8px",
+                            backgroundColor: "rgba(255, 255, 255, 0.05)",
+                            border: "1px solid var(--glass-border)",
+                            color: "var(--foreground)",
+                            fontSize: "13px",
+                            cursor: "pointer",
+                            outline: "none",
+                          }}
+                        >
+                          {SEARCH_SOURCES.filter(s => isSourceEnabled(s.id)).map((source) => (
+                            <option key={source.id} value={source.id} style={{ backgroundColor: "#1a1a1a" }}>
+                              {source.icon} {source.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Long queries */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <span style={{ fontSize: "13px", color: "var(--foreground)", minWidth: "130px" }}>
+                          Long queries (6+ words):
+                        </span>
+                        <select
+                          value={settings.searchSources?.defaultSourceLong || "grok"}
+                          onChange={(e) => updateSettings({
+                            searchSources: {
+                              ...settings.searchSources,
+                              defaultSourceLong: e.target.value,
+                            }
+                          })}
+                          style={{
+                            flex: 1,
+                            padding: "10px 14px",
+                            borderRadius: "8px",
+                            backgroundColor: "rgba(255, 255, 255, 0.05)",
+                            border: "1px solid var(--glass-border)",
+                            color: "var(--foreground)",
+                            fontSize: "13px",
+                            cursor: "pointer",
+                            outline: "none",
+                          }}
+                        >
+                          {SEARCH_SOURCES.filter(s => isSourceEnabled(s.id)).map((source) => (
+                            <option key={source.id} value={source.id} style={{ backgroundColor: "#1a1a1a" }}>
+                              {source.icon} {source.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "12px", fontStyle: "italic" }}>
+                      Tip: AI sources like Grok or Claude are better for detailed questions, while web sources are better for quick lookups.
+                    </p>
+                  </div>
+
+                  {/* Recent Searches Settings */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+                      Recent Searches
+                    </label>
+                    <p style={{ fontSize: "13px", color: "var(--foreground-muted)", marginBottom: "16px" }}>
+                      Show recent search history in selected tools for quick access.
+                    </p>
+
+                    {/* Toggle All / None */}
+                    <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                      <button
+                        onClick={() => toggleAllRecentSearches(true)}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(255, 255, 255, 0.05)",
+                          border: "1px solid var(--glass-border)",
+                          color: "var(--foreground-muted)",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Enable All
+                      </button>
+                      <button
+                        onClick={() => toggleAllRecentSearches(false)}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(255, 255, 255, 0.05)",
+                          border: "1px solid var(--glass-border)",
+                          color: "var(--foreground-muted)",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Disable All
+                      </button>
+                    </div>
+
+                    {/* Tool toggles grid */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "8px" }}>
+                      {TOOL_IDS.map((toolId) => (
+                        <button
+                          key={toolId}
+                          onClick={() => toggleRecentSearchesTool(toolId)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "8px 10px",
+                            borderRadius: "8px",
+                            backgroundColor: isRecentSearchesEnabled(toolId) ? "rgba(var(--accent-rgb), 0.15)" : "rgba(255, 255, 255, 0.03)",
+                            border: isRecentSearchesEnabled(toolId) ? "1px solid var(--accent)" : "1px solid var(--glass-border)",
+                            cursor: "pointer",
+                            transition: "all 0.15s",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "14px",
+                              height: "14px",
+                              borderRadius: "4px",
+                              backgroundColor: isRecentSearchesEnabled(toolId) ? "var(--accent)" : "transparent",
+                              border: isRecentSearchesEnabled(toolId) ? "none" : "2px solid var(--foreground-muted)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            {isRecentSearchesEnabled(toolId) && (
+                              <Check style={{ width: "10px", height: "10px", color: "var(--background)" }} />
+                            )}
+                          </div>
+                          <span style={{
+                            fontSize: "12px",
+                            fontWeight: 500,
+                            color: isRecentSearchesEnabled(toolId) ? "var(--accent)" : "var(--foreground-muted)",
+                          }}>
+                            {TOOL_NAMES[toolId]}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Max recent items */}
+                    <div style={{ marginTop: "16px", display: "flex", alignItems: "center", gap: "12px" }}>
+                      <span style={{ fontSize: "13px", color: "var(--foreground)" }}>
+                        Max items per tool:
+                      </span>
+                      <select
+                        value={settings.recentSearches?.maxRecentItems || 5}
+                        onChange={(e) => updateSettings({
+                          recentSearches: {
+                            ...settings.recentSearches,
+                            enabledTools: settings.recentSearches?.enabledTools || [...TOOL_IDS],
+                            maxRecentItems: parseInt(e.target.value),
+                          }
+                        })}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(255, 255, 255, 0.05)",
+                          border: "1px solid var(--glass-border)",
+                          color: "var(--foreground)",
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          outline: "none",
+                        }}
+                      >
+                        {[3, 5, 10, 15, 20].map(num => (
+                          <option key={num} value={num} style={{ backgroundColor: "#1a1a1a" }}>
+                            {num}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>

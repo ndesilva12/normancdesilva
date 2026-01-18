@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, FormEvent, useCallback, useRef } from "react";
+import { useState, useEffect, FormEvent, useCallback, useRef, useMemo } from "react";
 import { Search, ExternalLink, X, Loader2, TrendingUp, ChevronDown } from "lucide-react";
 import {
   SearchSource,
@@ -10,6 +10,9 @@ import {
   SearchResult,
   WebSearchResultItem,
 } from "@/lib/search-service";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useRecentSearches } from "@/contexts/RecentSearchesContext";
+import { RecentSearchesInline } from "@/components/RecentSearches";
 
 interface TrendingSearch {
   title: string;
@@ -47,8 +50,9 @@ interface ConversationState {
 }
 
 export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
+  const { settings } = useSettings();
+  const { addRecentSearch } = useRecentSearches();
   const [query, setQuery] = useState("");
-  const [selectedSources, setSelectedSources] = useState<SearchSource[]>(["duck"]);
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [trends, setTrends] = useState<TrendingSearch[]>([]);
@@ -57,23 +61,42 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [userManuallySelected, setUserManuallySelected] = useState(false);
 
+  // Get enabled sources from settings (with fallback)
+  const enabledSourceIds = useMemo(() => {
+    return settings.searchSources?.enabledSources || SEARCH_SOURCES.map(s => s.id);
+  }, [settings.searchSources?.enabledSources]);
+
+  // Filter SEARCH_SOURCES to only show enabled ones
+  const enabledSources = useMemo(() => {
+    return SEARCH_SOURCES.filter(s => enabledSourceIds.includes(s.id));
+  }, [enabledSourceIds]);
+
+  // Get default sources from settings
+  const defaultSourceShort = settings.searchSources?.defaultSourceShort || "duck";
+  const defaultSourceLong = settings.searchSources?.defaultSourceLong || "grok";
+
+  // Initialize selectedSources with default
+  const [selectedSources, setSelectedSources] = useState<SearchSource[]>([defaultSourceShort as SearchSource]);
+
   // Conversation state for follow-up messages
   const [conversations, setConversations] = useState<ConversationState>({});
   const [followUpInputs, setFollowUpInputs] = useState<{ [source: string]: string }>({});
   const [sendingFollowUp, setSendingFollowUp] = useState<{ [source: string]: boolean }>({});
 
-  // Auto-switch to Grok when query exceeds 6 words
+  // Auto-switch source based on query length using settings defaults
   useEffect(() => {
     if (userManuallySelected) return; // Don't auto-switch if user manually selected
 
     const wordCount = query.trim().split(/\s+/).filter(w => w.length > 0).length;
+    const shortDefault = defaultSourceShort as SearchSource;
+    const longDefault = defaultSourceLong as SearchSource;
 
-    if (wordCount >= 6 && selectedSources[0] === "duck") {
-      setSelectedSources(["grok"]);
-    } else if (wordCount < 6 && selectedSources[0] === "grok" && !userManuallySelected) {
-      setSelectedSources(["duck"]);
+    if (wordCount >= 6 && selectedSources[0] === shortDefault) {
+      setSelectedSources([longDefault]);
+    } else if (wordCount < 6 && selectedSources[0] === longDefault && !userManuallySelected) {
+      setSelectedSources([shortDefault]);
     }
-  }, [query, selectedSources, userManuallySelected]);
+  }, [query, selectedSources, userManuallySelected, defaultSourceShort, defaultSourceLong]);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -137,34 +160,45 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
     setUserManuallySelected(true); // User manually selected, disable auto-switch
   };
 
-  // Check if all AI sources are selected
-  const allAISelected = AI_SOURCES.every((s) => selectedSources.includes(s)) && selectedSources.length === AI_SOURCES.length;
+  // Check if all enabled AI sources are selected
+  const allAISelected = useMemo(() => {
+    const enabledAIIds = enabledSources.filter(s => s.type === "ai").map(s => s.id);
+    return enabledAIIds.length > 0 && enabledAIIds.every((s) => selectedSources.includes(s as SearchSource)) && selectedSources.length === enabledAIIds.length;
+  }, [enabledSources, selectedSources]);
 
   // Check if multiple non-AI sources selected (multi-mode)
   const isMultiMode = selectedSources.length > 1 && !allAISelected;
 
-  // Toggle all AI sources (replaces current selection with all AI)
+  // Toggle all AI sources (replaces current selection with all enabled AI)
   const toggleAllAI = () => {
     setUserManuallySelected(true);
+    const enabledAIIds = enabledSources.filter(s => s.type === "ai").map(s => s.id) as SearchSource[];
     if (allAISelected) {
-      // If AI is already selected, switch to first web source
-      setSelectedSources(["duck"]);
+      // If AI is already selected, switch to default source
+      setSelectedSources([defaultSourceShort as SearchSource]);
     } else {
-      // Select all AI sources only
-      setSelectedSources([...AI_SOURCES]);
+      // Select all enabled AI sources only
+      setSelectedSources([...enabledAIIds]);
     }
   };
 
-  // Enable multi-select mode with web sources
-  const WEB_SOURCES: SearchSource[] = ["duck", "google", "wikipedia", "grokipedia", "x", "youtube", "rumble", "trends", "amazon"];
-  const allWebSelected = WEB_SOURCES.every((s) => selectedSources.includes(s)) && selectedSources.length === WEB_SOURCES.length;
+  // Enable multi-select mode with web sources (only enabled ones)
+  const enabledWebSources = useMemo(() => {
+    return enabledSources.filter(s => s.type === "web").map(s => s.id) as SearchSource[];
+  }, [enabledSources]);
+
+  const enabledAISources = useMemo(() => {
+    return enabledSources.filter(s => s.type === "ai").map(s => s.id) as SearchSource[];
+  }, [enabledSources]);
+
+  const allWebSelected = enabledWebSources.length > 0 && enabledWebSources.every((s) => selectedSources.includes(s)) && selectedSources.length === enabledWebSources.length;
 
   const toggleAllWeb = () => {
     setUserManuallySelected(true);
     if (allWebSelected) {
-      setSelectedSources(["duck"]);
+      setSelectedSources([defaultSourceShort as SearchSource]);
     } else {
-      setSelectedSources([...WEB_SOURCES]);
+      setSelectedSources([...enabledWebSources]);
     }
   };
 
@@ -188,6 +222,9 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
     if (!query.trim() || selectedSources.length === 0) return;
+
+    // Add to recent searches
+    addRecentSearch("search", query.trim());
 
     // Single source handling - open directly for web sources
     if (selectedSources.length === 1) {
@@ -307,7 +344,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
     setConversations({});
     setFollowUpInputs({});
     setUserManuallySelected(false); // Reset manual selection to enable auto-switch again
-    setSelectedSources(["duck"]); // Reset to default source
+    setSelectedSources([defaultSourceShort as SearchSource]); // Reset to default source
     if (onResultsChange) onResultsChange([]);
   };
 
@@ -925,6 +962,14 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
         </div>
       )}
 
+      {/* Recent Searches */}
+      <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}>
+        <RecentSearchesInline
+          toolId="search"
+          onSelect={(recentQuery) => setQuery(recentQuery)}
+        />
+      </div>
+
       <form onSubmit={handleSearch}>
         {/* Search Bar */}
         <div
@@ -1113,7 +1158,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
                   All AI Models
                   {allAISelected && <span style={{ fontSize: "12px" }}>✓</span>}
                 </button>
-                {SEARCH_SOURCES.map((source) => (
+                {enabledSources.map((source) => (
                   <button
                     key={source.id}
                     type="button"
@@ -1156,55 +1201,59 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               gap: "6px",
             }}
           >
-            {/* All AI Button - First */}
-            <button
-              type="button"
-              onClick={toggleAllAI}
-              className={!allAISelected ? "glass" : ""}
-              style={{
-                whiteSpace: "nowrap",
-                borderRadius: "9999px",
-                padding: "5px 12px",
-                fontSize: "12px",
-                fontWeight: 600,
-                border: "none",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                backgroundColor: allAISelected
-                  ? "var(--accent)"
-                  : "transparent",
-                color: allAISelected
-                  ? "var(--background)"
-                  : "var(--foreground-muted)",
-              }}
-            >
-              AI
-            </button>
-            {/* All Web Button */}
-            <button
-              type="button"
-              onClick={toggleAllWeb}
-              className={!allWebSelected ? "glass" : ""}
-              style={{
-                whiteSpace: "nowrap",
-                borderRadius: "9999px",
-                padding: "5px 12px",
-                fontSize: "12px",
-                fontWeight: 600,
-                border: "none",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                backgroundColor: allWebSelected
-                  ? "var(--accent)"
-                  : "transparent",
-                color: allWebSelected
-                  ? "var(--background)"
-                  : "var(--foreground-muted)",
-              }}
-            >
-              Web
-            </button>
-            {SEARCH_SOURCES.map((source) => (
+            {/* All AI Button - First (only show if there are enabled AI sources) */}
+            {enabledAISources.length > 0 && (
+              <button
+                type="button"
+                onClick={toggleAllAI}
+                className={!allAISelected ? "glass" : ""}
+                style={{
+                  whiteSpace: "nowrap",
+                  borderRadius: "9999px",
+                  padding: "5px 12px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  backgroundColor: allAISelected
+                    ? "var(--accent)"
+                    : "transparent",
+                  color: allAISelected
+                    ? "var(--background)"
+                    : "var(--foreground-muted)",
+                }}
+              >
+                AI
+              </button>
+            )}
+            {/* All Web Button (only show if there are enabled web sources) */}
+            {enabledWebSources.length > 0 && (
+              <button
+                type="button"
+                onClick={toggleAllWeb}
+                className={!allWebSelected ? "glass" : ""}
+                style={{
+                  whiteSpace: "nowrap",
+                  borderRadius: "9999px",
+                  padding: "5px 12px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  backgroundColor: allWebSelected
+                    ? "var(--accent)"
+                    : "transparent",
+                  color: allWebSelected
+                    ? "var(--background)"
+                    : "var(--foreground-muted)",
+                }}
+              >
+                Web
+              </button>
+            )}
+            {enabledSources.map((source) => (
               <button
                 key={source.id}
                 type="button"
