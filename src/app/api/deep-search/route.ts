@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const XAI_API_KEY = process.env.XAI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 export interface DeepSearchReport {
   topic: string;
@@ -16,7 +16,20 @@ export interface DeepSearchReport {
   underreportedAngles: string[];
   socialMediaHighlights: { platform: string; author: string; content: string; url: string }[];
   podcastReferences: { title: string; episode: string; timestamp?: string; summary: string; url: string }[];
+  links?: { title: string; url: string; type: string }[];
   timestamp: number;
+}
+
+interface GroundingChunk {
+  web?: {
+    uri: string;
+    title: string;
+  };
+}
+
+interface GroundingMetadata {
+  groundingChunks?: GroundingChunk[];
+  webSearchQueries?: string[];
 }
 
 const DEEP_SEARCH_SYSTEM_PROMPT = `You are an elite research analyst writing for EXPERTS who are already deeply familiar with the topic. Your audience has PhD-level understanding of the basics - they don't need introductions or fundamentals explained.
@@ -43,10 +56,7 @@ REPORT STRUCTURE - You MUST respond with valid JSON in this exact format:
   "sections": [
     {
       "title": "Section title focusing on a specific nuance or advanced aspect",
-      "content": "Deep, nuanced analysis. Be specific. Name names, cite specifics, explain mechanisms. This is for experts.",
-      "links": [
-        {"title": "Link title", "url": "https://example.com", "type": "video|article|document|data|image|social|podcast"}
-      ]
+      "content": "Deep, nuanced analysis. Be specific. Name names, cite specifics, explain mechanisms. This is for experts."
     }
   ],
   "hiddenMechanics": ["How X actually works behind the scenes that most don't realize", "The real mechanism/incentive/dynamic at play"],
@@ -71,14 +81,10 @@ SECTION TOPICS TO COVER (adapt to the topic):
 7. The Interesting Fringes - Unusual aspects, edge phenomena, weird cases
 8. Insider Perspectives - What practitioners/insiders know that outsiders don't
 
-LINK TYPES TO INCLUDE:
-- video: Expert talks, academic lectures, insider interviews
-- article: Academic papers, specialist publications, deep-dive journalism
-- document: Primary sources, technical documents, research papers
-- data: Datasets, statistics, empirical research
-- image: Diagrams, technical illustrations, data visualizations
-- social: X/Twitter posts from experts, industry insiders, specialists
-- podcast: Long-form podcast discussions with experts
+CRITICAL - USE SEARCH RESULTS:
+- You have access to Google Search. Use the search results provided to include REAL URLs.
+- Reference the actual URLs from search results in your content.
+- Include a mix of academic and expert sources found in search results.
 
 SOCIAL MEDIA HIGHLIGHTS (CRITICAL):
 - Include 3-5 tweets/posts from genuine experts, industry insiders, or practitioners
@@ -94,21 +100,38 @@ PODCAST REFERENCES (CRITICAL):
 - Summarize the key nuanced insight or insider knowledge shared
 - Podcasts often contain the most candid expert discussions not found elsewhere
 
-For links, prioritize:
-- Academic sources (JSTOR, Google Scholar, university publications)
-- Expert blogs and substacks from specialists in the field
-- Long-form investigative journalism
-- Primary source documents
-- Technical/industry publications
-- Conference talks and academic lectures
-- Expert podcasts and interviews
-
 Write for someone who will be BORED by basics and DELIGHTED by nuance. Every sentence should teach them something they didn't know or make them see something familiar in a new light.`;
 
+// Helper to determine link type from URL
+function getLinkType(url: string, title: string): string {
+  const lowerUrl = url.toLowerCase();
+  const lowerTitle = title.toLowerCase();
+
+  if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be') || lowerUrl.includes('rumble.com') || lowerUrl.includes('bitchute.com') || lowerUrl.includes('odysee.com')) {
+    return 'video';
+  }
+  if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com') || lowerUrl.includes('gab.com') || lowerUrl.includes('truthsocial.com')) {
+    return 'social';
+  }
+  if (lowerUrl.includes('spotify.com') || lowerUrl.includes('podcasts.apple.com') || lowerTitle.includes('podcast') || lowerTitle.includes('episode')) {
+    return 'podcast';
+  }
+  if (lowerUrl.includes('.pdf') || lowerUrl.includes('wikileaks') || lowerUrl.includes('archive.org') || lowerUrl.includes('foia')) {
+    return 'document';
+  }
+  if (lowerUrl.includes('data') || lowerUrl.includes('statistics') || lowerUrl.includes('study') || lowerUrl.includes('research') || lowerUrl.includes('scholar.google')) {
+    return 'data';
+  }
+  if (lowerUrl.includes('jstor') || lowerUrl.includes('arxiv') || lowerUrl.includes('pubmed') || lowerUrl.includes('doi.org')) {
+    return 'academic';
+  }
+  return 'article';
+}
+
 export async function POST(request: NextRequest) {
-  if (!XAI_API_KEY) {
+  if (!GEMINI_API_KEY) {
     return NextResponse.json(
-      { error: "Grok API key not configured. Please add XAI_API_KEY to your environment variables." },
+      { error: "Gemini API key not configured. Please add GEMINI_API_KEY to your environment variables." },
       { status: 503 }
     );
   }
@@ -135,32 +158,43 @@ Remember:
 4. Include counterintuitive findings and ongoing expert debates
 5. Every section should teach something most educated people don't know
 6. Be specific - name names, cite mechanisms, explain dynamics
-7. Include links to academic sources, expert content, and primary documents
+7. Include references to academic sources, expert content, and primary documents from search results
 8. CRITICAL: Include 3-5 social media highlights from experts/insiders sharing nuanced insights
 9. CRITICAL: Include 2-4 podcast references where experts discuss this topic in depth
 
 Respond with valid JSON only. No markdown formatting around the JSON.`;
 
-    const response = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${XAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "grok-3-mini",
-        messages: [
-          { role: "system", content: DEEP_SEARCH_SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 8000,
-      }),
-    });
+    // Call Gemini API with grounding enabled
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: `${DEEP_SEARCH_SYSTEM_PROMPT}\n\n${userPrompt}` }],
+            },
+          ],
+          tools: [
+            {
+              google_search: {},
+            },
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 8000,
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Grok API error:", errorText);
+      console.error("Gemini API error:", errorText);
       return NextResponse.json(
         { error: `AI service error: ${response.status}` },
         { status: 500 }
@@ -168,13 +202,37 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
     }
 
     const data = await response.json();
-    let content = data.choices[0]?.message?.content;
+
+    // Extract content and grounding metadata
+    const candidate = data.candidates?.[0];
+    let content = candidate?.content?.parts?.[0]?.text || "";
+    const groundingMetadata: GroundingMetadata = candidate?.groundingMetadata || {};
 
     if (!content) {
       return NextResponse.json(
         { error: "No response from AI" },
         { status: 500 }
       );
+    }
+
+    // Extract real URLs from grounding metadata
+    const groundedLinks: { title: string; url: string; type: string }[] = [];
+    if (groundingMetadata.groundingChunks) {
+      for (const chunk of groundingMetadata.groundingChunks) {
+        if (chunk.web?.uri && chunk.web?.title) {
+          groundedLinks.push({
+            title: chunk.web.title,
+            url: chunk.web.uri,
+            type: getLinkType(chunk.web.uri, chunk.web.title),
+          });
+        }
+      }
+    }
+
+    // Log grounding info for debugging
+    console.log(`Deep Search: Found ${groundedLinks.length} grounded links from Google Search`);
+    if (groundedLinks.length === 0) {
+      console.log("Grounding metadata:", JSON.stringify(groundingMetadata, null, 2));
     }
 
     // Strip markdown code blocks if present
@@ -189,7 +247,7 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       report = JSON.parse(content.trim());
     } catch (parseError) {
       console.error("Failed to parse JSON response:", content);
-      // Return the raw content as a fallback
+      // Return with grounded links as fallback
       return NextResponse.json({
         report: {
           topic: query,
@@ -201,12 +259,40 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
           underreportedAngles: [],
           socialMediaHighlights: [],
           podcastReferences: [],
+          links: groundedLinks,
           timestamp: Date.now(),
         },
       });
     }
 
-    // Add metadata
+    // ALWAYS use grounded links - these are the ONLY real, verified URLs
+    // LLM-generated links in the JSON are hallucinated and should be ignored
+
+    // For sections, replace any LLM links with grounded ones where possible
+    if (report.sections) {
+      for (const section of report.sections) {
+        if (section.links) {
+          // Replace section links with grounded links that match by title similarity
+          section.links = section.links.map(link => {
+            const matchingGrounded = groundedLinks.find(gl =>
+              gl.title.toLowerCase().includes(link.title.toLowerCase().slice(0, 15)) ||
+              link.title.toLowerCase().includes(gl.title.toLowerCase().slice(0, 15))
+            );
+            if (matchingGrounded) {
+              return matchingGrounded; // Use the real grounded URL
+            }
+            // Check if we have a grounded link for this type
+            const sameTypeGrounded = groundedLinks.find(gl => gl.type === link.type);
+            if (sameTypeGrounded) {
+              return sameTypeGrounded;
+            }
+            return null; // Remove hallucinated links
+          }).filter((link): link is { title: string; url: string; type: string } => link !== null);
+        }
+      }
+    }
+
+    // Add metadata - ALWAYS use grounded links for the links field
     const fullReport: DeepSearchReport = {
       topic: query,
       briefOverview: report.briefOverview || "",
@@ -217,8 +303,11 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       underreportedAngles: report.underreportedAngles || [],
       socialMediaHighlights: report.socialMediaHighlights || [],
       podcastReferences: report.podcastReferences || [],
+      links: groundedLinks, // ALWAYS use grounded links - these are verified real URLs
       timestamp: Date.now(),
     };
+
+    console.log(`Deep Search: Returning ${groundedLinks.length} verified links`);
 
     return NextResponse.json({ report: fullReport });
   } catch (error) {

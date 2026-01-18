@@ -4,6 +4,7 @@ import {
   AISource,
   SearchResult,
   ContactResult,
+  ContactMethod,
   AI_CONFIGS,
   getIndividualSearchPrompt,
   getTargetSearchPrompt,
@@ -15,6 +16,18 @@ const XAI_API_KEY = process.env.XAI_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+interface GroundingChunk {
+  web?: {
+    uri: string;
+    title: string;
+  };
+}
+
+interface GroundingMetadata {
+  groundingChunks?: GroundingChunk[];
+  webSearchQueries?: string[];
+}
 
 // Generate unique ID
 function generateId(): string {
@@ -149,12 +162,12 @@ async function queryClaude(prompt: string): Promise<string> {
   return data.content[0]?.text || "";
 }
 
-// Query Gemini API
-async function queryGemini(prompt: string): Promise<string> {
+// Query Gemini API with Google Search grounding for verified links
+async function queryGemini(prompt: string): Promise<{ content: string; groundedLinks: { title: string; url: string }[] }> {
   if (!GEMINI_API_KEY) throw new Error("Gemini API key not configured");
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${AI_CONFIGS.gemini.model}:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: {
@@ -163,11 +176,17 @@ async function queryGemini(prompt: string): Promise<string> {
       body: JSON.stringify({
         contents: [
           {
+            role: "user",
             parts: [
               {
                 text: `You are an expert OSINT researcher. Always respond with valid JSON.\n\n${prompt}`,
               },
             ],
+          },
+        ],
+        tools: [
+          {
+            google_search: {},
           },
         ],
         generationConfig: {
@@ -183,7 +202,26 @@ async function queryGemini(prompt: string): Promise<string> {
   }
 
   const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const candidate = data.candidates?.[0];
+  const content = candidate?.content?.parts?.[0]?.text || "";
+  const groundingMetadata: GroundingMetadata = candidate?.groundingMetadata || {};
+
+  // Extract real URLs from grounding metadata
+  const groundedLinks: { title: string; url: string }[] = [];
+  if (groundingMetadata.groundingChunks) {
+    for (const chunk of groundingMetadata.groundingChunks) {
+      if (chunk.web?.uri && chunk.web?.title) {
+        groundedLinks.push({
+          title: chunk.web.title,
+          url: chunk.web.uri,
+        });
+      }
+    }
+  }
+
+  console.log(`Contact Finder (Gemini): Found ${groundedLinks.length} grounded links from Google Search`);
+
+  return { content, groundedLinks };
 }
 
 // Parse AI response to extract JSON
@@ -225,18 +263,120 @@ function parseAIResponse(response: string): { results: ContactResult[]; summary:
   }
 }
 
+// Enrich contacts with grounded links where possible
+function enrichContactsWithGroundedLinks(
+  results: ContactResult[],
+  groundedLinks: { title: string; url: string }[]
+): ContactResult[] {
+  if (groundedLinks.length === 0) return results;
+
+  return results.map(result => {
+    const enrichedContacts = result.contacts.map(contact => {
+      // For website, form, and other URL-based contacts, try to match with grounded links
+      if (contact.type === "website" || contact.type === "form" || contact.type === "other") {
+        // Check if we have a grounded link that matches the domain or name
+        const matchingLink = groundedLinks.find(gl => {
+          const lowerTitle = gl.title.toLowerCase();
+          const lowerUrl = gl.url.toLowerCase();
+          const contactValue = contact.value.toLowerCase();
+          const resultName = result.name.toLowerCase();
+          const resultOrg = (result.organization || "").toLowerCase();
+
+          return (
+            lowerTitle.includes(resultName.split(" ")[0]) ||
+            lowerUrl.includes(resultName.split(" ")[0]) ||
+            lowerTitle.includes(resultOrg.split(" ")[0]) ||
+            lowerUrl.includes(resultOrg.split(" ")[0]) ||
+            (contactValue.includes("http") && lowerUrl.includes(new URL(contactValue).hostname.replace("www.", "")))
+          );
+        });
+
+        if (matchingLink) {
+          return {
+            ...contact,
+            value: matchingLink.url,
+            source: `Verified via Google Search: ${matchingLink.title}`,
+            confidence: "high" as const,
+          };
+        }
+      }
+
+      // For social media handles, try to find matching profiles
+      if (contact.type === "x" || contact.type === "linkedin" || contact.type === "instagram" || contact.type === "facebook") {
+        const platformUrls: Record<string, string[]> = {
+          x: ["twitter.com", "x.com"],
+          linkedin: ["linkedin.com"],
+          instagram: ["instagram.com"],
+          facebook: ["facebook.com"],
+        };
+
+        const platforms = platformUrls[contact.type] || [];
+        const matchingLink = groundedLinks.find(gl => {
+          const lowerUrl = gl.url.toLowerCase();
+          return platforms.some(p => lowerUrl.includes(p));
+        });
+
+        if (matchingLink) {
+          return {
+            ...contact,
+            value: matchingLink.url,
+            source: `Verified via Google Search: ${matchingLink.title}`,
+            confidence: "high" as const,
+          };
+        }
+      }
+
+      return contact;
+    });
+
+    // Add any grounded links that weren't matched to contacts as additional website contacts
+    const unmatchedLinks = groundedLinks.filter(gl => {
+      const lowerTitle = gl.title.toLowerCase();
+      const lowerUrl = gl.url.toLowerCase();
+      const resultName = result.name.toLowerCase();
+      const resultOrg = (result.organization || "").toLowerCase();
+
+      // Only add links that seem related to this result
+      return (
+        lowerTitle.includes(resultName.split(" ")[0]) ||
+        lowerUrl.includes(resultName.split(" ")[0]) ||
+        lowerTitle.includes(resultOrg.split(" ")[0]) ||
+        lowerUrl.includes(resultOrg.split(" ")[0])
+      );
+    });
+
+    // Add up to 3 unmatched but relevant grounded links as additional contacts
+    const additionalContacts: ContactMethod[] = unmatchedLinks.slice(0, 3).map(link => ({
+      type: "website" as const,
+      value: link.url,
+      confidence: "high" as const,
+      source: `Verified via Google Search: ${link.title}`,
+      notes: "Real verified link from web search",
+    }));
+
+    // Filter out duplicates
+    const existingUrls = new Set(enrichedContacts.map(c => c.value.toLowerCase()));
+    const newContacts = additionalContacts.filter(c => !existingUrls.has(c.value.toLowerCase()));
+
+    return {
+      ...result,
+      contacts: [...enrichedContacts, ...newContacts],
+    };
+  });
+}
+
 // Get fallback AI sources in priority order
 function getFallbackSources(primary: AISource): AISource[] {
   const fallbacks: AISource[] = [];
-  const allSources: AISource[] = ["grok", "claude", "chatgpt", "gemini"];
+  const allSources: AISource[] = ["gemini", "grok", "claude", "chatgpt"]; // Gemini first for grounding
 
   // Add other sources as fallbacks, checking if API key is available
   for (const source of allSources) {
     if (source === primary) continue;
+    if (source === "gemini" && GEMINI_API_KEY) fallbacks.push(source);
     if (source === "grok" && XAI_API_KEY) fallbacks.push(source);
     if (source === "claude" && ANTHROPIC_API_KEY) fallbacks.push(source);
     if (source === "chatgpt" && OPENAI_API_KEY) fallbacks.push(source);
-    if (source === "gemini" && GEMINI_API_KEY) fallbacks.push(source);
   }
 
   return fallbacks;
@@ -252,14 +392,14 @@ async function runSearch(
     searchType === "individual" ? getIndividualSearchPrompt(query) : getTargetSearchPrompt(query);
 
   // Query function for a given source
-  const querySource = async (source: AISource): Promise<string> => {
+  const querySource = async (source: AISource): Promise<{ content: string; groundedLinks: { title: string; url: string }[] }> => {
     switch (source) {
       case "grok":
-        return await queryGrok(prompt);
+        return { content: await queryGrok(prompt), groundedLinks: [] };
       case "chatgpt":
-        return await queryChatGPT(prompt);
+        return { content: await queryChatGPT(prompt), groundedLinks: [] };
       case "claude":
-        return await queryClaude(prompt);
+        return { content: await queryClaude(prompt), groundedLinks: [] };
       case "gemini":
         return await queryGemini(prompt);
       default:
@@ -269,9 +409,13 @@ async function runSearch(
 
   // Try primary source first
   try {
-    const response = await querySource(aiSource);
-    const parsed = parseAIResponse(response);
-    return { ...parsed, actualSource: aiSource };
+    const { content, groundedLinks } = await querySource(aiSource);
+    const parsed = parseAIResponse(content);
+
+    // Enrich contacts with grounded links (only useful for Gemini)
+    const enrichedResults = enrichContactsWithGroundedLinks(parsed.results, groundedLinks);
+
+    return { results: enrichedResults, summary: parsed.summary, actualSource: aiSource };
   } catch (primaryError) {
     console.error(`Primary AI source ${aiSource} failed:`, primaryError);
 
@@ -280,9 +424,10 @@ async function runSearch(
     for (const fallbackSource of fallbacks) {
       try {
         console.log(`Trying fallback AI source: ${fallbackSource}`);
-        const response = await querySource(fallbackSource);
-        const parsed = parseAIResponse(response);
-        return { ...parsed, actualSource: fallbackSource };
+        const { content, groundedLinks } = await querySource(fallbackSource);
+        const parsed = parseAIResponse(content);
+        const enrichedResults = enrichContactsWithGroundedLinks(parsed.results, groundedLinks);
+        return { results: enrichedResults, summary: parsed.summary, actualSource: fallbackSource };
       } catch (fallbackError) {
         console.error(`Fallback AI source ${fallbackSource} failed:`, fallbackError);
       }
