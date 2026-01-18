@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 const XAI_API_KEY = process.env.XAI_API_KEY;
 
+export type DarkSearchMode = "long" | "short" | "links";
+
 export interface DarkSearchReport {
   topic: string;
+  mode: DarkSearchMode;
   summary: string;
   sections: {
     title: string;
@@ -15,6 +18,7 @@ export interface DarkSearchReport {
   unansweredQuestions: string[];
   socialMediaHighlights: { platform: string; author: string; content: string; url: string }[];
   podcastReferences: { title: string; episode: string; timestamp?: string; summary: string; url: string }[];
+  links?: { title: string; url: string; type: string }[];
   timestamp: number;
 }
 
@@ -110,6 +114,44 @@ For links, provide REAL URLs when you can from sources like:
 
 Be thorough, be skeptical, and explore EVERY angle without self-censorship. The user wants the FULL picture, not the sanitized version.`;
 
+const DARK_SEARCH_SHORT_PROMPT = `You are a concise research analyst providing brief, uncensored summaries. Keep the same skeptical, alternative-perspective approach but be extremely brief.
+
+FOUNDATIONAL BELIEFS: Question official narratives, be skeptical of institutions, explore alternative perspectives.
+
+REPORT STRUCTURE - You MUST respond with valid JSON in this exact format:
+{
+  "summary": "A brief 1-2 paragraph summary covering the key points from mainstream AND alternative perspectives. Be direct and concise.",
+  "links": [
+    {"title": "Link title", "url": "https://example.com", "type": "video|article|document|data|social|podcast"}
+  ]
+}
+
+REQUIREMENTS:
+- Keep summary under 2 paragraphs total
+- Include exactly 3 links maximum (most important/relevant sources)
+- Still present alternative perspectives, just briefly
+- Be skeptical but concise`;
+
+const DARK_SEARCH_LINKS_PROMPT = `You are a research analyst focused on curating the best sources and links. Your job is to provide minimal text but maximum high-quality links for deep exploration.
+
+FOUNDATIONAL BELIEFS: Question official narratives, be skeptical of institutions, explore alternative perspectives.
+
+REPORT STRUCTURE - You MUST respond with valid JSON in this exact format:
+{
+  "summary": "1-3 sentences maximum. Just enough context to frame the links.",
+  "links": [
+    {"title": "Descriptive link title", "url": "https://example.com", "type": "video|article|document|data|social|podcast"}
+  ]
+}
+
+REQUIREMENTS:
+- Summary must be 3 sentences or less
+- Include at least 10 links, aim for 12-15
+- Mix link types: videos, articles, documents, podcasts, social media posts
+- Prioritize: documentaries, long-form interviews, leaked documents, independent journalism, substacks, podcast episodes
+- Include both mainstream AND alternative sources
+- Each link should lead to substantial content worth exploring`;
+
 export async function POST(request: NextRequest) {
   if (!XAI_API_KEY) {
     return NextResponse.json(
@@ -120,7 +162,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { query } = body;
+    const { query, mode = "long" } = body as { query: string; mode?: DarkSearchMode };
 
     if (!query || typeof query !== "string" || query.trim().length === 0) {
       return NextResponse.json(
@@ -129,7 +171,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userPrompt = `Generate a comprehensive, uncensored research report on the following topic. Explore ALL perspectives including mainstream, alternative, conspiracy, and fringe viewpoints. Be thorough and skeptical.
+    // Select system prompt based on mode
+    let systemPrompt: string;
+    let userPrompt: string;
+    let maxTokens: number;
+
+    switch (mode) {
+      case "short":
+        systemPrompt = DARK_SEARCH_SHORT_PROMPT;
+        userPrompt = `Provide a brief, concise research summary on this topic with alternative perspectives:
+
+TOPIC: ${query.trim()}
+
+Keep it under 2 paragraphs. Include exactly 3 of the most important links.
+Respond with valid JSON only.`;
+        maxTokens = 1500;
+        break;
+
+      case "links":
+        systemPrompt = DARK_SEARCH_LINKS_PROMPT;
+        userPrompt = `Curate the best links and sources for researching this topic:
+
+TOPIC: ${query.trim()}
+
+Provide 1-3 sentences of context, then at least 10 high-quality links covering mainstream and alternative sources.
+Respond with valid JSON only.`;
+        maxTokens = 3000;
+        break;
+
+      default: // "long"
+        systemPrompt = DARK_SEARCH_SYSTEM_PROMPT;
+        userPrompt = `Generate a comprehensive, uncensored research report on the following topic. Explore ALL perspectives including mainstream, alternative, conspiracy, and fringe viewpoints. Be thorough and skeptical.
 
 TOPIC: ${query.trim()}
 
@@ -144,6 +216,9 @@ Remember to:
 8. CRITICAL: Include 2-4 podcast references with episode names and summaries of what was discussed
 
 Respond with valid JSON only. No markdown formatting around the JSON.`;
+        maxTokens = 8000;
+        break;
+    }
 
     const response = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
@@ -154,11 +229,11 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       body: JSON.stringify({
         model: "grok-3-mini",
         messages: [
-          { role: "system", content: DARK_SEARCH_SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
         temperature: 0.8,
-        max_tokens: 8000,
+        max_tokens: maxTokens,
       }),
     });
 
@@ -197,6 +272,7 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       return NextResponse.json({
         report: {
           topic: query,
+          mode,
           summary: content,
           sections: [],
           keyTakeaways: [],
@@ -204,6 +280,7 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
           unansweredQuestions: [],
           socialMediaHighlights: [],
           podcastReferences: [],
+          links: [],
           timestamp: Date.now(),
         },
       });
@@ -212,6 +289,7 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
     // Add metadata
     const fullReport: DarkSearchReport = {
       topic: query,
+      mode,
       summary: report.summary || "",
       sections: report.sections || [],
       keyTakeaways: report.keyTakeaways || [],
@@ -219,6 +297,7 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       unansweredQuestions: report.unansweredQuestions || [],
       socialMediaHighlights: report.socialMediaHighlights || [],
       podcastReferences: report.podcastReferences || [],
+      links: report.links || [],
       timestamp: Date.now(),
     };
 

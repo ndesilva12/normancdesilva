@@ -23,6 +23,9 @@ import {
   MessageCircle,
   Headphones,
   AtSign,
+  FileSearch,
+  Link2,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
@@ -57,8 +60,11 @@ interface PodcastReference {
   url: string;
 }
 
+type DarkSearchMode = "long" | "short" | "links";
+
 interface DarkSearchReport {
   topic: string;
+  mode: DarkSearchMode;
   summary: string;
   sections: ReportSection[];
   keyTakeaways: string[];
@@ -66,6 +72,7 @@ interface DarkSearchReport {
   unansweredQuestions: string[];
   socialMediaHighlights: SocialMediaHighlight[];
   podcastReferences: PodcastReference[];
+  links?: ReportLink[];
   timestamp: number;
 }
 
@@ -91,6 +98,7 @@ const LINK_COLORS: Record<string, string> = {
 
 export default function DarkSearchPage() {
   const [query, setQuery] = useState("");
+  const [mode, setMode] = useState<DarkSearchMode>("long");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<DarkSearchReport | null>(null);
@@ -115,7 +123,7 @@ export default function DarkSearchPage() {
       const response = await fetch("/api/dark-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: q.trim() }),
+        body: JSON.stringify({ query: q.trim(), mode }),
       });
 
       const data = await response.json();
@@ -134,7 +142,7 @@ export default function DarkSearchPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [query, addRecentSearch, saveDarkSearchReport]);
+  }, [query, mode, addRecentSearch, saveDarkSearchReport]);
 
   // Aggregate all links from all sections
   const getAllLinks = () => {
@@ -311,6 +319,90 @@ export default function DarkSearchPage() {
               marginBottom: "24px",
             }}
           >
+            {/* Mode Selector */}
+            <div style={{ marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                <span style={{ fontSize: "13px", color: "var(--foreground-muted)", fontWeight: 500 }}>Output Mode</span>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  onClick={() => setMode("long")}
+                  disabled={isLoading}
+                  style={{
+                    flex: 1,
+                    padding: "12px 16px",
+                    borderRadius: "10px",
+                    backgroundColor: mode === "long" ? "rgba(var(--accent-rgb), 0.2)" : "rgba(0, 0, 0, 0.2)",
+                    border: mode === "long" ? "2px solid var(--accent)" : "1px solid rgba(var(--accent-rgb), 0.2)",
+                    color: mode === "long" ? "var(--accent)" : "var(--foreground-muted)",
+                    fontSize: "14px",
+                    fontWeight: mode === "long" ? 600 : 400,
+                    cursor: isLoading ? "not-allowed" : "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "6px",
+                    transition: "all 0.2s ease",
+                    opacity: isLoading ? 0.5 : 1,
+                  }}
+                >
+                  <BookOpen style={{ width: "20px", height: "20px" }} />
+                  <span>Long</span>
+                  <span style={{ fontSize: "11px", opacity: 0.7 }}>Full report</span>
+                </button>
+                <button
+                  onClick={() => setMode("short")}
+                  disabled={isLoading}
+                  style={{
+                    flex: 1,
+                    padding: "12px 16px",
+                    borderRadius: "10px",
+                    backgroundColor: mode === "short" ? "rgba(var(--accent-rgb), 0.2)" : "rgba(0, 0, 0, 0.2)",
+                    border: mode === "short" ? "2px solid var(--accent)" : "1px solid rgba(var(--accent-rgb), 0.2)",
+                    color: mode === "short" ? "var(--accent)" : "var(--foreground-muted)",
+                    fontSize: "14px",
+                    fontWeight: mode === "short" ? 600 : 400,
+                    cursor: isLoading ? "not-allowed" : "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "6px",
+                    transition: "all 0.2s ease",
+                    opacity: isLoading ? 0.5 : 1,
+                  }}
+                >
+                  <FileSearch style={{ width: "20px", height: "20px" }} />
+                  <span>Short</span>
+                  <span style={{ fontSize: "11px", opacity: 0.7 }}>2 paragraphs, 3 links</span>
+                </button>
+                <button
+                  onClick={() => setMode("links")}
+                  disabled={isLoading}
+                  style={{
+                    flex: 1,
+                    padding: "12px 16px",
+                    borderRadius: "10px",
+                    backgroundColor: mode === "links" ? "rgba(var(--accent-rgb), 0.2)" : "rgba(0, 0, 0, 0.2)",
+                    border: mode === "links" ? "2px solid var(--accent)" : "1px solid rgba(var(--accent-rgb), 0.2)",
+                    color: mode === "links" ? "var(--accent)" : "var(--foreground-muted)",
+                    fontSize: "14px",
+                    fontWeight: mode === "links" ? 600 : 400,
+                    cursor: isLoading ? "not-allowed" : "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "6px",
+                    transition: "all 0.2s ease",
+                    opacity: isLoading ? 0.5 : 1,
+                  }}
+                >
+                  <Link2 style={{ width: "20px", height: "20px" }} />
+                  <span>Links</span>
+                  <span style={{ fontSize: "11px", opacity: 0.7 }}>3 sentences, 10+ links</span>
+                </button>
+              </div>
+            </div>
+
             <div style={{ display: "flex", gap: "12px" }}>
               <input
                 type="text"
@@ -525,15 +617,68 @@ export default function DarkSearchPage() {
                   <div style={{ marginBottom: "24px" }}>
                     <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--accent)", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
                       <Eye style={{ width: "18px", height: "18px" }} />
-                      Executive Summary
+                      {report.mode === "links" ? "Overview" : report.mode === "short" ? "Summary" : "Executive Summary"}
                     </h3>
                     <p style={{ fontSize: "15px", color: "var(--foreground)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
                       {report.summary}
                     </p>
                   </div>
 
-                  {/* Key Takeaways */}
-                  {report.keyTakeaways.length > 0 && (
+                  {/* Direct Links for Short/Links modes */}
+                  {(report.mode === "short" || report.mode === "links") && report.links && report.links.length > 0 && (
+                    <div
+                      style={{
+                        padding: "20px",
+                        borderRadius: "12px",
+                        backgroundColor: "rgba(var(--accent-rgb), 0.05)",
+                        border: "1px solid rgba(var(--accent-rgb), 0.1)",
+                      }}
+                    >
+                      <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--accent)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Link2 style={{ width: "18px", height: "18px" }} />
+                        {report.mode === "links" ? `Resources (${report.links.length})` : "Key Resources"}
+                      </h3>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        {report.links.map((link, index) => {
+                          const Icon = LINK_ICONS[link.type] || FileText;
+                          const colorRgb = LINK_COLORS[link.type] || "var(--accent-rgb)";
+                          return (
+                            <a
+                              key={index}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "12px",
+                                padding: "14px 18px",
+                                borderRadius: "10px",
+                                backgroundColor: `rgba(${colorRgb}, 0.1)`,
+                                border: `1px solid rgba(${colorRgb}, 0.2)`,
+                                textDecoration: "none",
+                                transition: "all 0.2s ease",
+                              }}
+                            >
+                              <Icon style={{ width: "20px", height: "20px", color: `rgb(${colorRgb})`, flexShrink: 0 }} />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)", margin: 0 }}>
+                                  {link.title}
+                                </p>
+                                <p style={{ fontSize: "12px", color: "var(--foreground-muted)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {link.url}
+                                </p>
+                              </div>
+                              <ExternalLink style={{ width: "16px", height: "16px", color: "var(--foreground-muted)", flexShrink: 0 }} />
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Key Takeaways - only for long mode */}
+                  {report.mode === "long" && report.keyTakeaways.length > 0 && (
                     <div
                       style={{
                         padding: "20px",
@@ -557,8 +702,8 @@ export default function DarkSearchPage() {
                   )}
                 </div>
 
-                {/* AGGREGATED RESOURCES - Prominent at top */}
-                {(() => {
+                {/* AGGREGATED RESOURCES - Prominent at top (long mode only) */}
+                {report.mode === "long" && (() => {
                   const allLinks = getAllLinks();
                   const hasAnyLinks = allLinks.videos.length > 0 || allLinks.articles.length > 0 || allLinks.documents.length > 0 || allLinks.data.length > 0;
 
@@ -663,8 +808,8 @@ export default function DarkSearchPage() {
                   );
                 })()}
 
-                {/* Social Media Highlights - MOVED UP */}
-                {report.socialMediaHighlights && report.socialMediaHighlights.length > 0 && (
+                {/* Social Media Highlights - long mode only */}
+                {report.mode === "long" && report.socialMediaHighlights && report.socialMediaHighlights.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -712,8 +857,8 @@ export default function DarkSearchPage() {
                   </motion.div>
                 )}
 
-                {/* Podcast References - MOVED UP */}
-                {report.podcastReferences && report.podcastReferences.length > 0 && (
+                {/* Podcast References - long mode only */}
+                {report.mode === "long" && report.podcastReferences && report.podcastReferences.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -768,8 +913,8 @@ export default function DarkSearchPage() {
                   </motion.div>
                 )}
 
-                {/* Sections */}
-                {report.sections.map((section, index) => (
+                {/* Sections - long mode only */}
+                {report.mode === "long" && report.sections.map((section, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, y: 20 }}
@@ -871,8 +1016,8 @@ export default function DarkSearchPage() {
                   </motion.div>
                 ))}
 
-                {/* Alternative Perspectives */}
-                {report.alternativePerspectives.length > 0 && (
+                {/* Alternative Perspectives - long mode only */}
+                {report.mode === "long" && report.alternativePerspectives.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -898,8 +1043,8 @@ export default function DarkSearchPage() {
                   </motion.div>
                 )}
 
-                {/* Unanswered Questions */}
-                {report.unansweredQuestions.length > 0 && (
+                {/* Unanswered Questions - long mode only */}
+                {report.mode === "long" && report.unansweredQuestions.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
