@@ -28,6 +28,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { useRecentSearches } from "@/contexts/RecentSearchesContext";
+import { useSearchReports } from "@/contexts/SearchReportsContext";
 
 interface ReportLink {
   title: string;
@@ -95,6 +96,7 @@ export default function DarkSearchPage() {
   const [report, setReport] = useState<DarkSearchReport | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
   const { addRecentSearch, getRecentSearches, isToolEnabled } = useRecentSearches();
+  const { saveDarkSearchReport } = useSearchReports();
 
   const recentSearches = getRecentSearches("dark-search");
   const showRecentSearches = isToolEnabled("dark-search") && recentSearches.length > 0 && !query && !report;
@@ -124,12 +126,15 @@ export default function DarkSearchPage() {
 
       setReport(data.report);
       addRecentSearch("dark-search", q.trim());
+
+      // Save to Firestore
+      saveDarkSearchReport(data.report);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
-  }, [query, addRecentSearch]);
+  }, [query, addRecentSearch, saveDarkSearchReport]);
 
   // Aggregate all links from all sections
   const getAllLinks = () => {

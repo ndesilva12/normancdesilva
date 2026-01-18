@@ -29,6 +29,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { useRecentSearches } from "@/contexts/RecentSearchesContext";
+import { useSearchReports } from "@/contexts/SearchReportsContext";
 
 interface ReportLink {
   title: string;
@@ -97,6 +98,7 @@ export default function DeepSearchPage() {
   const [report, setReport] = useState<DeepSearchReport | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
   const { addRecentSearch, getRecentSearches, isToolEnabled } = useRecentSearches();
+  const { saveDeepSearchReport } = useSearchReports();
 
   const recentSearches = getRecentSearches("deep-search");
   const showRecentSearches = isToolEnabled("deep-search") && recentSearches.length > 0 && !query && !report;
@@ -125,12 +127,15 @@ export default function DeepSearchPage() {
 
       setReport(data.report);
       addRecentSearch("deep-search", q.trim());
+
+      // Save to Firestore
+      saveDeepSearchReport(data.report);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
-  }, [query, addRecentSearch]);
+  }, [query, addRecentSearch, saveDeepSearchReport]);
 
   const handleRecentSearchClick = (searchQuery: string) => {
     setQuery(searchQuery);
