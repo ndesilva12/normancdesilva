@@ -4,7 +4,6 @@ import {
   AISource,
   SearchResult,
   ContactResult,
-  ContactMethod,
   AI_CONFIGS,
   getIndividualSearchPrompt,
   getTargetSearchPrompt,
@@ -263,31 +262,49 @@ function parseAIResponse(response: string): { results: ContactResult[]; summary:
   }
 }
 
-// Enrich contacts with grounded links where possible
+// Check if URL is a valid, usable link (not a redirect/tracking URL)
+function isValidUrl(url: string): boolean {
+  const lowerUrl = url.toLowerCase();
+  // Filter out Google/Vertex AI redirect URLs and tracking links
+  if (lowerUrl.includes('vertexaisearch.cloud.google.com')) return false;
+  if (lowerUrl.includes('google.com/url')) return false;
+  if (lowerUrl.includes('googleapis.com')) return false;
+  if (lowerUrl.includes('/redirect')) return false;
+  return true;
+}
+
+// Enrich contacts with grounded links - ONLY verify existing URL contacts, don't add new ones
+// Priority: Keep AI-generated emails, social handles, and contact info intact
 function enrichContactsWithGroundedLinks(
   results: ContactResult[],
   groundedLinks: { title: string; url: string }[]
 ): ContactResult[] {
-  if (groundedLinks.length === 0) return results;
+  // Filter to only valid, usable URLs
+  const validGroundedLinks = groundedLinks.filter(gl => isValidUrl(gl.url));
+
+  if (validGroundedLinks.length === 0) return results;
+
+  console.log(`Contact Finder: Using ${validGroundedLinks.length} valid grounded links (filtered from ${groundedLinks.length})`);
 
   return results.map(result => {
     const enrichedContacts = result.contacts.map(contact => {
-      // For website, form, and other URL-based contacts, try to match with grounded links
-      if (contact.type === "website" || contact.type === "form" || contact.type === "other") {
-        // Check if we have a grounded link that matches the domain or name
-        const matchingLink = groundedLinks.find(gl => {
+      // ONLY verify website/form contacts - leave emails, phones, social handles alone
+      // The AI's email guesses and social handles are valuable even if unverified
+      if (contact.type === "website" || contact.type === "form") {
+        // Try to find a matching grounded link
+        const matchingLink = validGroundedLinks.find(gl => {
           const lowerTitle = gl.title.toLowerCase();
           const lowerUrl = gl.url.toLowerCase();
-          const contactValue = contact.value.toLowerCase();
           const resultName = result.name.toLowerCase();
           const resultOrg = (result.organization || "").toLowerCase();
 
+          // Match by organization or person name in the URL/title
+          const nameMatch = resultName.split(" ")[0];
+          const orgMatch = resultOrg.split(" ")[0];
+
           return (
-            lowerTitle.includes(resultName.split(" ")[0]) ||
-            lowerUrl.includes(resultName.split(" ")[0]) ||
-            lowerTitle.includes(resultOrg.split(" ")[0]) ||
-            lowerUrl.includes(resultOrg.split(" ")[0]) ||
-            (contactValue.includes("http") && lowerUrl.includes(new URL(contactValue).hostname.replace("www.", "")))
+            (nameMatch.length > 2 && (lowerTitle.includes(nameMatch) || lowerUrl.includes(nameMatch))) ||
+            (orgMatch.length > 2 && (lowerTitle.includes(orgMatch) || lowerUrl.includes(orgMatch)))
           );
         });
 
@@ -295,72 +312,19 @@ function enrichContactsWithGroundedLinks(
           return {
             ...contact,
             value: matchingLink.url,
-            source: `Verified via Google Search: ${matchingLink.title}`,
+            source: `Verified: ${matchingLink.title}`,
             confidence: "high" as const,
           };
         }
       }
 
-      // For social media handles, try to find matching profiles
-      if (contact.type === "x" || contact.type === "linkedin" || contact.type === "instagram" || contact.type === "facebook") {
-        const platformUrls: Record<string, string[]> = {
-          x: ["twitter.com", "x.com"],
-          linkedin: ["linkedin.com"],
-          instagram: ["instagram.com"],
-          facebook: ["facebook.com"],
-        };
-
-        const platforms = platformUrls[contact.type] || [];
-        const matchingLink = groundedLinks.find(gl => {
-          const lowerUrl = gl.url.toLowerCase();
-          return platforms.some(p => lowerUrl.includes(p));
-        });
-
-        if (matchingLink) {
-          return {
-            ...contact,
-            value: matchingLink.url,
-            source: `Verified via Google Search: ${matchingLink.title}`,
-            confidence: "high" as const,
-          };
-        }
-      }
-
+      // Return all other contacts unchanged - emails, phones, social handles, etc.
       return contact;
     });
 
-    // Add any grounded links that weren't matched to contacts as additional website contacts
-    const unmatchedLinks = groundedLinks.filter(gl => {
-      const lowerTitle = gl.title.toLowerCase();
-      const lowerUrl = gl.url.toLowerCase();
-      const resultName = result.name.toLowerCase();
-      const resultOrg = (result.organization || "").toLowerCase();
-
-      // Only add links that seem related to this result
-      return (
-        lowerTitle.includes(resultName.split(" ")[0]) ||
-        lowerUrl.includes(resultName.split(" ")[0]) ||
-        lowerTitle.includes(resultOrg.split(" ")[0]) ||
-        lowerUrl.includes(resultOrg.split(" ")[0])
-      );
-    });
-
-    // Add up to 3 unmatched but relevant grounded links as additional contacts
-    const additionalContacts: ContactMethod[] = unmatchedLinks.slice(0, 3).map(link => ({
-      type: "website" as const,
-      value: link.url,
-      confidence: "high" as const,
-      source: `Verified via Google Search: ${link.title}`,
-      notes: "Real verified link from web search",
-    }));
-
-    // Filter out duplicates
-    const existingUrls = new Set(enrichedContacts.map(c => c.value.toLowerCase()));
-    const newContacts = additionalContacts.filter(c => !existingUrls.has(c.value.toLowerCase()));
-
     return {
       ...result,
-      contacts: [...enrichedContacts, ...newContacts],
+      contacts: enrichedContacts,
     };
   });
 }
