@@ -369,7 +369,7 @@ export default function Home() {
             width: "100%",
             maxWidth: "1200px",
             margin: "0 auto",
-            padding: "24px 24px 100px 24px",
+            padding: isMobile ? "16px 12px 80px 12px" : "24px 24px 100px 24px",
             boxSizing: "border-box",
             overflow: "hidden",
           }}
