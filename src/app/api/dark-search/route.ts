@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const XAI_API_KEY = process.env.XAI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 export type DarkSearchMode = "long" | "short" | "links";
+
+interface GroundingChunk {
+  web?: {
+    uri: string;
+    title: string;
+  };
+}
+
+interface GroundingMetadata {
+  groundingChunks?: GroundingChunk[];
+  webSearchQueries?: string[];
+}
 
 export interface DarkSearchReport {
   topic: string;
@@ -65,10 +77,10 @@ REPORT STRUCTURE - You MUST respond with valid JSON in this exact format:
   "alternativePerspectives": ["Alternative view 1", "Alternative view 2"],
   "unansweredQuestions": ["Question 1 that remains unresolved", "Question 2"],
   "socialMediaHighlights": [
-    {"platform": "X/Twitter", "author": "@username or name", "content": "The key quote or claim from the post that advances the theory or reveals important information", "url": "https://x.com/..."}
+    {"platform": "X/Twitter", "author": "@username or name", "content": "The key quote or claim from the post", "url": "https://x.com/..."}
   ],
   "podcastReferences": [
-    {"title": "Podcast Name", "episode": "Episode title or number", "timestamp": "1:23:45 (optional)", "summary": "What was discussed and why it's relevant - key claims, revelations, or theories presented", "url": "https://..."}
+    {"title": "Podcast Name", "episode": "Episode title or number", "timestamp": "1:23:45 (optional)", "summary": "What was discussed", "url": "https://..."}
   ]
 }
 
@@ -81,37 +93,12 @@ REQUIRED SECTIONS (include all that apply):
 6. Suppressed Information - What's been censored, removed, or ignored
 7. Related Connections - How this connects to other events, patterns, or agendas
 
-LINK TYPES TO INCLUDE:
-- video: YouTube, Rumble, BitChute, Odysee documentaries and interviews
-- article: News articles, blog posts, independent journalism
-- document: PDFs, official documents, leaked files, FOIA releases
-- data: Statistics, datasets, scientific papers, studies
-- image: Infographics, charts, photos, visual evidence
-- social: X/Twitter posts, threads, Gab posts, Truth Social posts
-- podcast: Podcast episodes, audio interviews, radio shows
+CRITICAL - USE SEARCH RESULTS:
+- You have access to Google Search. Use the search results provided to include REAL URLs.
+- Reference the actual URLs from search results in your links.
+- Include a mix of mainstream and alternative sources found in search results.
 
-SOCIAL MEDIA HIGHLIGHTS (CRITICAL):
-- Include 3-5 notable tweets/posts from X, Gab, Truth Social that discuss key theories
-- Prioritize posts that: reveal insider information, connect dots, cite sources, or advance the theory
-- Include posts from independent researchers, journalists, whistleblowers, and thought leaders
-- Quote the actual content of the post so the reader can evaluate it
-- These should lead to MORE information, data, and theory exploration
-
-PODCAST REFERENCES (CRITICAL):
-- Include 2-4 relevant podcast episodes that deeply discuss this topic
-- Reference specific episodes from: Joe Rogan Experience, Tim Pool, Tucker Carlson, Glenn Greenwald, Breaking Points, The Megyn Kelly Show, Lex Fridman, Dark Horse Podcast, Jimmy Dore Show, Kim Iversen, Matt Taibbi, etc.
-- Provide the episode name/number and approximate timestamp if discussing a specific segment
-- Summarize what key information or theory was presented in that episode
-- Podcasts are often where the REAL discussions happen that mainstream media won't cover
-
-CRITICAL - LINKS MUST BE REAL:
-- You have access to live web search. USE IT to find REAL, VERIFIED, CURRENTLY ACCESSIBLE URLs.
-- NEVER make up or hallucinate URLs. Every link MUST be from your web search results.
-- If you cannot verify a URL exists, DO NOT include it.
-- Prefer recently indexed content that is likely still accessible.
-- Sources to search: Zero Hedge, The Gateway Pundit, Revolver News, YouTube, Rumble, BitChute, Odysee, WikiLeaks, archive.org, Substack, Spotify podcasts, etc.
-
-Be thorough, be skeptical, and explore EVERY angle without self-censorship. The user wants the FULL picture, not the sanitized version.`;
+Be thorough, be skeptical, and explore EVERY angle without self-censorship.`;
 
 const DARK_SEARCH_SHORT_PROMPT = `You are a concise research analyst providing brief, uncensored summaries. Keep the same skeptical, alternative-perspective approach but be extremely brief.
 
@@ -127,10 +114,10 @@ REPORT STRUCTURE - You MUST respond with valid JSON in this exact format:
 
 REQUIREMENTS:
 - Keep summary under 2 paragraphs total
-- Include exactly 3 links maximum (most important/relevant sources)
+- Include exactly 3 links maximum (most important/relevant sources from search results)
 - Still present alternative perspectives, just briefly
 - Be skeptical but concise
-- CRITICAL: Use your web search to find REAL, VERIFIED URLs only. Never hallucinate links.`;
+- Use the URLs from search results provided`;
 
 const DARK_SEARCH_LINKS_PROMPT = `You are a research analyst focused on curating the best sources and links. Your job is to provide minimal text but maximum high-quality links for deep exploration.
 
@@ -146,17 +133,39 @@ REPORT STRUCTURE - You MUST respond with valid JSON in this exact format:
 
 REQUIREMENTS:
 - Summary must be 3 sentences or less
-- Include at least 10 links, aim for 12-15
+- Include at least 10 links, aim for 12-15 from the search results
 - Mix link types: videos, articles, documents, podcasts, social media posts
-- Prioritize: documentaries, long-form interviews, leaked documents, independent journalism, substacks, podcast episodes
-- Include both mainstream AND alternative sources
-- Each link should lead to substantial content worth exploring
-- CRITICAL: Use your web search to find REAL, VERIFIED, CURRENTLY ACCESSIBLE URLs only. Never hallucinate or make up links. Every URL must come from your search results.`;
+- Prioritize: documentaries, long-form interviews, independent journalism, substacks, podcast episodes
+- Include both mainstream AND alternative sources from search results
+- Use the actual URLs provided in search results`;
+
+// Helper to determine link type from URL
+function getLinkType(url: string, title: string): string {
+  const lowerUrl = url.toLowerCase();
+  const lowerTitle = title.toLowerCase();
+
+  if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be') || lowerUrl.includes('rumble.com') || lowerUrl.includes('bitchute.com') || lowerUrl.includes('odysee.com')) {
+    return 'video';
+  }
+  if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com') || lowerUrl.includes('gab.com') || lowerUrl.includes('truthsocial.com')) {
+    return 'social';
+  }
+  if (lowerUrl.includes('spotify.com') || lowerUrl.includes('podcasts.apple.com') || lowerTitle.includes('podcast') || lowerTitle.includes('episode')) {
+    return 'podcast';
+  }
+  if (lowerUrl.includes('.pdf') || lowerUrl.includes('wikileaks') || lowerUrl.includes('archive.org') || lowerUrl.includes('foia')) {
+    return 'document';
+  }
+  if (lowerUrl.includes('data') || lowerUrl.includes('statistics') || lowerUrl.includes('study') || lowerUrl.includes('research')) {
+    return 'data';
+  }
+  return 'article';
+}
 
 export async function POST(request: NextRequest) {
-  if (!XAI_API_KEY) {
+  if (!GEMINI_API_KEY) {
     return NextResponse.json(
-      { error: "Grok API key not configured. Please add XAI_API_KEY to your environment variables." },
+      { error: "Gemini API key not configured. Please add GEMINI_API_KEY to your environment variables." },
       { status: 503 }
     );
   }
@@ -175,7 +184,6 @@ export async function POST(request: NextRequest) {
     // Select system prompt based on mode
     let systemPrompt: string;
     let userPrompt: string;
-    let maxTokens: number;
 
     switch (mode) {
       case "short":
@@ -184,10 +192,8 @@ export async function POST(request: NextRequest) {
 
 TOPIC: ${query.trim()}
 
-Keep it under 2 paragraphs. Include exactly 3 of the most important links.
-IMPORTANT: Use your web search to find REAL, currently accessible URLs. Do not make up links.
+Keep it under 2 paragraphs. Include exactly 3 of the most important links from search results.
 Respond with valid JSON only.`;
-        maxTokens = 1500;
         break;
 
       case "links":
@@ -196,10 +202,8 @@ Respond with valid JSON only.`;
 
 TOPIC: ${query.trim()}
 
-Provide 1-3 sentences of context, then at least 10 high-quality links covering mainstream and alternative sources.
-CRITICAL: Search the web and only include REAL, VERIFIED, CURRENTLY ACCESSIBLE URLs. Every link must come from your search results - never make up or hallucinate URLs.
+Provide 1-3 sentences of context, then at least 10 high-quality links from search results covering mainstream and alternative sources.
 Respond with valid JSON only.`;
-        maxTokens = 3000;
         break;
 
       default: // "long"
@@ -210,44 +214,48 @@ TOPIC: ${query.trim()}
 
 Remember to:
 1. Present the official narrative AND alternative perspectives
-2. Search the web and include REAL, VERIFIED links to videos, articles, documents, and data sources
+2. Include links from the search results to videos, articles, documents, and data sources
 3. Identify conflicts of interest and who benefits
 4. Highlight suppressed or censored information
 5. Ask provocative questions that challenge assumptions
 6. Be PhD-level thorough in your analysis
-7. CRITICAL: Include 3-5 social media highlights (tweets/posts) that advance theories or reveal key information
-8. CRITICAL: Include 2-4 podcast references with episode names and summaries of what was discussed
-9. CRITICAL: ALL URLs must come from your web search results - never hallucinate or make up links
+7. Include social media highlights and podcast references where found in search results
 
 Respond with valid JSON only. No markdown formatting around the JSON.`;
-        maxTokens = 8000;
         break;
     }
 
-    const response = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${XAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "grok-3-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.8,
-        max_tokens: maxTokens,
-        search_parameters: {
-          mode: "on",
-          return_citations: true,
+    // Call Gemini API with grounding enabled
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      }),
-    });
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }],
+            },
+          ],
+          tools: [
+            {
+              google_search: {},
+            },
+          ],
+          generationConfig: {
+            temperature: 0.8,
+            maxOutputTokens: mode === "long" ? 8000 : mode === "links" ? 3000 : 1500,
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Grok API error:", errorText);
+      console.error("Gemini API error:", errorText);
       return NextResponse.json(
         { error: `AI service error: ${response.status}` },
         { status: 500 }
@@ -255,13 +263,31 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
     }
 
     const data = await response.json();
-    let content = data.choices[0]?.message?.content;
+
+    // Extract content and grounding metadata
+    const candidate = data.candidates?.[0];
+    let content = candidate?.content?.parts?.[0]?.text || "";
+    const groundingMetadata: GroundingMetadata = candidate?.groundingMetadata || {};
 
     if (!content) {
       return NextResponse.json(
         { error: "No response from AI" },
         { status: 500 }
       );
+    }
+
+    // Extract real URLs from grounding metadata
+    const groundedLinks: { title: string; url: string; type: string }[] = [];
+    if (groundingMetadata.groundingChunks) {
+      for (const chunk of groundingMetadata.groundingChunks) {
+        if (chunk.web?.uri && chunk.web?.title) {
+          groundedLinks.push({
+            title: chunk.web.title,
+            url: chunk.web.uri,
+            type: getLinkType(chunk.web.uri, chunk.web.title),
+          });
+        }
+      }
     }
 
     // Strip markdown code blocks if present
@@ -276,7 +302,7 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       report = JSON.parse(content.trim());
     } catch (parseError) {
       console.error("Failed to parse JSON response:", content);
-      // Return the raw content as a fallback
+      // Return with grounded links as fallback
       return NextResponse.json({
         report: {
           topic: query,
@@ -288,11 +314,45 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
           unansweredQuestions: [],
           socialMediaHighlights: [],
           podcastReferences: [],
-          links: [],
+          links: groundedLinks,
           timestamp: Date.now(),
         },
       });
     }
+
+    // Merge grounded links with any links from the response
+    // Prioritize grounded links (real URLs) over generated ones
+    const existingLinks = report.links || [];
+    const allLinks = [...groundedLinks];
+
+    // Add any links from sections that might be grounded
+    if (report.sections) {
+      for (const section of report.sections) {
+        if (section.links) {
+          // Check if section links match any grounded URLs
+          for (const link of section.links) {
+            const isGrounded = groundedLinks.some(gl => gl.url === link.url);
+            if (isGrounded) {
+              // Keep grounded link
+            } else {
+              // Check if it looks like a real URL pattern from grounding
+              const matchingGrounded = groundedLinks.find(gl =>
+                gl.title.toLowerCase().includes(link.title.toLowerCase().slice(0, 20)) ||
+                link.title.toLowerCase().includes(gl.title.toLowerCase().slice(0, 20))
+              );
+              if (matchingGrounded) {
+                link.url = matchingGrounded.url; // Replace with grounded URL
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // For short/links mode, ensure we use grounded links
+    const finalLinks = mode !== "long"
+      ? (groundedLinks.length > 0 ? groundedLinks : existingLinks)
+      : existingLinks;
 
     // Add metadata
     const fullReport: DarkSearchReport = {
@@ -305,7 +365,7 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
       unansweredQuestions: report.unansweredQuestions || [],
       socialMediaHighlights: report.socialMediaHighlights || [],
       podcastReferences: report.podcastReferences || [],
-      links: report.links || [],
+      links: finalLinks.length > 0 ? finalLinks : groundedLinks,
       timestamp: Date.now(),
     };
 
