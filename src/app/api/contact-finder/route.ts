@@ -16,6 +16,91 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+// Fetch and extract text content from a URL
+async function fetchWebsiteContent(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ContactFinder/1.0)',
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+      signal: AbortSignal.timeout(10000), // 10 second timeout
+    });
+
+    if (!response.ok) return null;
+
+    const html = await response.text();
+
+    // Basic HTML to text conversion - strip tags, normalize whitespace
+    const text = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+      .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+      .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Limit to first 15000 chars to avoid token limits
+    return text.slice(0, 15000);
+  } catch (error) {
+    console.error(`Failed to fetch ${url}:`, error);
+    return null;
+  }
+}
+
+// Try to find and fetch the team/about page from a website
+async function fetchTeamPageContent(baseUrl: string): Promise<{ url: string; content: string } | null> {
+  // Common paths for team/about pages
+  const teamPaths = [
+    '/about',
+    '/team',
+    '/about-us',
+    '/our-team',
+    '/people',
+    '/staff',
+    '/leadership',
+    '/about/team',
+    '/company',
+    '/company/team',
+    '/who-we-are',
+  ];
+
+  // Normalize base URL
+  const base = baseUrl.replace(/\/$/, '');
+
+  // First try the homepage
+  const homepageContent = await fetchWebsiteContent(base);
+
+  // Try each team path
+  for (const path of teamPaths) {
+    const fullUrl = `${base}${path}`;
+    const content = await fetchWebsiteContent(fullUrl);
+    if (content && content.length > 500) {
+      // Check if it looks like a team page (has names/titles)
+      const hasNames = /(?:CEO|Founder|Director|Manager|President|Partner|Producer|Executive)/i.test(content);
+      if (hasNames) {
+        console.log(`Found team page at: ${fullUrl}`);
+        return { url: fullUrl, content };
+      }
+    }
+  }
+
+  // Return homepage content if no team page found
+  if (homepageContent) {
+    return { url: base, content: homepageContent };
+  }
+
+  return null;
+}
+
 interface GroundingChunk {
   web?: {
     uri: string;
@@ -346,12 +431,159 @@ function getFallbackSources(primary: AISource): AISource[] {
   return fallbacks;
 }
 
-// Main search function with fallback
+// Step 1: Use Gemini to find the company website URL
+async function findCompanyWebsite(query: string): Promise<{ url: string; domain: string } | null> {
+  if (!GEMINI_API_KEY) return null;
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: `What is the official website URL for "${query}"? Return ONLY the URL, nothing else. Example: https://example.com` }],
+            },
+          ],
+          tools: [{ google_search: {} }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 100 },
+        }),
+      }
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const candidate = data.candidates?.[0];
+    const text = candidate?.content?.parts?.[0]?.text || "";
+    const groundingMetadata = candidate?.groundingMetadata || {};
+
+    // Try to extract URL from grounding chunks first (most reliable)
+    if (groundingMetadata.groundingChunks) {
+      for (const chunk of groundingMetadata.groundingChunks) {
+        if (chunk.web?.uri && isValidUrl(chunk.web.uri)) {
+          const url = chunk.web.uri;
+          const domain = new URL(url).hostname.replace('www.', '');
+          console.log(`Found company website via grounding: ${url}`);
+          return { url, domain };
+        }
+      }
+    }
+
+    // Try to extract URL from response text
+    const urlMatch = text.match(/https?:\/\/[^\s]+/);
+    if (urlMatch && isValidUrl(urlMatch[0])) {
+      const url = urlMatch[0].replace(/[.,;:!?)]+$/, ''); // Remove trailing punctuation
+      const domain = new URL(url).hostname.replace('www.', '');
+      return { url, domain };
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Failed to find company website:", error);
+    return null;
+  }
+}
+
+// Generate prompt with actual website content included
+function getEnhancedTargetPrompt(query: string, websiteUrl: string, websiteContent: string): string {
+  return `You are an expert OSINT researcher. I need to find contacts at a company.
+
+TARGET: ${query}
+VERIFIED WEBSITE: ${websiteUrl}
+
+ACTUAL CONTENT FROM THE COMPANY WEBSITE (extracted team/about page):
+---
+${websiteContent}
+---
+
+Based on the ACTUAL WEBSITE CONTENT above, extract:
+1. Real names and titles of people who work there
+2. Any email addresses or email format patterns you can see
+3. Any contact information visible
+
+DO NOT make up fictional people. Only include people whose names appear in the website content above.
+
+For each real person found, you can SPECULATE their email using the company domain and common email formats (firstname.lastname@, firstname@, etc.), but mark it as speculative.
+
+OUTPUT FORMAT (JSON):
+{
+  "results": [
+    {
+      "name": "[Company Name] - Official Website",
+      "title": "Verified Company Domain",
+      "organization": "[Company Name]",
+      "contacts": [{ "type": "website", "value": "${websiteUrl}", "confidence": "high", "source": "Verified", "notes": "Official website" }],
+      "personalizationHooks": [],
+      "reasoning": "Verified company website",
+      "additionalNotes": "Email format: [pattern if found]"
+    },
+    {
+      "name": "Real Person Name FROM WEBSITE CONTENT",
+      "title": "Their Title FROM WEBSITE CONTENT",
+      "organization": "[Company]",
+      "contacts": [
+        { "type": "email", "value": "speculated.email@domain.com", "confidence": "speculative", "source": "Speculated from name + domain", "notes": "Format: firstname.lastname@domain" }
+      ],
+      "personalizationHooks": ["Any facts about them from the website content"],
+      "reasoning": "Found on company website at ${websiteUrl}",
+      "additionalNotes": ""
+    }
+  ],
+  "summary": "Found X real people on company website. Email format: [pattern]. Domain: [domain]"
+}
+
+Respond with valid JSON only.`;
+}
+
+// Main search function with website scraping for target searches
 async function runSearch(
   query: string,
   searchType: SearchType,
   aiSource: AISource
 ): Promise<{ results: ContactResult[]; summary: string; actualSource?: AISource }> {
+
+  // For target searches, try to actually fetch the company website first
+  if (searchType === "target") {
+    console.log(`Target search for: ${query} - attempting to fetch actual website...`);
+
+    // Step 1: Find the company website
+    const website = await findCompanyWebsite(query);
+
+    if (website) {
+      console.log(`Found website: ${website.url}`);
+
+      // Step 2: Fetch the team/about page
+      const teamPage = await fetchTeamPageContent(website.url);
+
+      if (teamPage && teamPage.content.length > 200) {
+        console.log(`Fetched team page content (${teamPage.content.length} chars) from: ${teamPage.url}`);
+
+        // Step 3: Send the actual website content to the LLM
+        const enhancedPrompt = getEnhancedTargetPrompt(query, website.url, teamPage.content);
+
+        // Use Gemini for this enhanced prompt
+        try {
+          const { content } = await queryGemini(enhancedPrompt);
+          const parsed = parseAIResponse(content);
+
+          // The results now come from ACTUAL website content
+          return {
+            results: parsed.results,
+            summary: `${parsed.summary} (Extracted from actual website content at ${teamPage.url})`,
+            actualSource: "gemini",
+          };
+        } catch (error) {
+          console.error("Enhanced search failed, falling back to standard search:", error);
+        }
+      }
+    }
+  }
+
+  // Standard search (for individual searches or if website fetch failed)
   const prompt =
     searchType === "individual" ? getIndividualSearchPrompt(query) : getTargetSearchPrompt(query);
 
