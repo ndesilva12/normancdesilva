@@ -906,11 +906,9 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             display: "flex",
             alignItems: "flex-start",
             gap: "8px",
-            marginBottom: "12px",
+            marginBottom: "16px",
             flexWrap: "wrap",
             justifyContent: "center",
-            maxHeight: isMobile ? "none" : "52px", // Constrain to ~2 rows on desktop
-            overflow: "hidden",
           }}
         >
           <TrendingUp
@@ -922,32 +920,70 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               marginTop: "4px",
             }}
           />
-          {/* Show limited trends: 10 on mobile, 16 on desktop (fits in 2 rows) */}
+          {/* Show limited trends: 10 on mobile, 14 on desktop (fits in 2 rows) */}
           {(() => {
-            const displayTrends = isMobile ? trends.slice(0, 10) : trends.slice(0, 16);
-            return displayTrends.map((trend, index) => (
-              <button
-                key={index}
-                onClick={() => handleTrendClick(trend)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  padding: "4px 0",
-                  fontSize: "13px",
-                  color: "var(--foreground-muted)",
-                  cursor: "pointer",
-                  transition: "color 0.15s",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground-muted)")}
-              >
-                {trend.title}
-                {index < displayTrends.length - 1 && (
-                  <span style={{ marginLeft: "8px", opacity: 0.3 }}>•</span>
-                )}
-              </button>
-            ));
+            const displayTrends = isMobile ? trends.slice(0, 10) : trends.slice(0, 14);
+            // Split into two equal rows
+            const halfLength = Math.ceil(displayTrends.length / 2);
+            const row1 = displayTrends.slice(0, halfLength);
+            const row2 = displayTrends.slice(halfLength);
+
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "center", flex: 1 }}>
+                {/* Row 1 */}
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "4px" }}>
+                  {row1.map((trend, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleTrendClick(trend)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: "2px 0",
+                        fontSize: "13px",
+                        color: "var(--foreground-muted)",
+                        cursor: "pointer",
+                        transition: "color 0.15s",
+                        whiteSpace: "nowrap",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground-muted)")}
+                    >
+                      {trend.title}
+                      {index < row1.length - 1 && (
+                        <span style={{ marginLeft: "8px", opacity: 0.3 }}>•</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {/* Row 2 */}
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "4px" }}>
+                  {row2.map((trend, index) => (
+                    <button
+                      key={index + halfLength}
+                      onClick={() => handleTrendClick(trend)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: "2px 0",
+                        fontSize: "13px",
+                        color: "var(--foreground-muted)",
+                        cursor: "pointer",
+                        transition: "color 0.15s",
+                        whiteSpace: "nowrap",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground-muted)")}
+                    >
+                      {trend.title}
+                      {index < row2.length - 1 && (
+                        <span style={{ marginLeft: "8px", opacity: 0.3 }}>•</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
           })()}
         </div>
       )}
