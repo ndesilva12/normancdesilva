@@ -904,11 +904,13 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
         <div
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             gap: "8px",
             marginBottom: "12px",
             flexWrap: "wrap",
             justifyContent: "center",
+            maxHeight: isMobile ? "none" : "52px", // Constrain to ~2 rows on desktop
+            overflow: "hidden",
           }}
         >
           <TrendingUp
@@ -917,11 +919,12 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               height: "14px",
               color: "var(--foreground-muted)",
               flexShrink: 0,
+              marginTop: "4px",
             }}
           />
-          {/* Show all trends on desktop, limit to 10 on mobile */}
+          {/* Show limited trends: 10 on mobile, 16 on desktop (fits in 2 rows) */}
           {(() => {
-            const displayTrends = isMobile ? trends.slice(0, 10) : trends;
+            const displayTrends = isMobile ? trends.slice(0, 10) : trends.slice(0, 16);
             return displayTrends.map((trend, index) => (
               <button
                 key={index}
