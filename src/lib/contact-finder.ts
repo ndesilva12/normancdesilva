@@ -175,13 +175,18 @@ WHAT MUST BE VERIFIED (from actual search results):
 - PEOPLE: Only include people whose names you ACTUALLY found in search results (news articles, company pages, IMDb, LinkedIn search results, etc.)
 - LINKS: All URLs (LinkedIn, Twitter, websites) must be REAL links found in search results - DO NOT construct or guess URLs
 - DO NOT fabricate fictional employees like "Jane Smith" or "John Doe"
-- If you cannot find real people, return ONLY the verified company website and state "No verified contacts found"
 
 WHAT YOU CAN SPECULATE (with clear reasoning):
 - EMAIL ADDRESSES: Once you find a REAL person and a verified domain, you CAN speculate their email using logical format patterns
 - Example: If you find "Michael Jordan works at Nike" (verified) and nike.com is the domain (verified), you can speculate michael.jordan@nike.com
 - Always mark speculated emails with appropriate confidence and explain your reasoning
 - This is acceptable because the PERSON is real - only the email format is speculated
+
+IMPORTANT - ALWAYS RETURN SOMETHING USEFUL:
+- ALWAYS search for and return the verified company website - this is valuable even without contacts
+- ALWAYS attempt email format discovery for the domain
+- If you find the website but no people, still return the website with email format notes
+- Only say "No verified contacts found" for the PEOPLE section - the website and email format are still useful
 
 SEARCH METHODOLOGY - Think strategically:
 
@@ -274,20 +279,25 @@ OUTPUT FORMAT (JSON):
 
 CRITICAL REQUIREMENTS:
 
+ALWAYS RETURN (even if no people found):
+1. VERIFIED COMPANY WEBSITE: Always search for and return the official website - this is valuable on its own
+2. EMAIL FORMAT DISCOVERY: Always attempt to find email format evidence for the domain
+
 MUST BE REAL (verified from search):
-1. PEOPLE: Only real people found in search results - cite WHERE you found them (IMDb, company page, news article, etc.)
-2. LINKS: All URLs must be real - DO NOT construct LinkedIn URLs like "linkedin.com/in/firstname-lastname"
-3. PERSONALIZATION HOOKS: Must be real facts from search results, not invented
-4. If no real people found, return ONLY the company website and state "No verified contacts found"
+3. PEOPLE: Only real people found in search results - cite WHERE you found them (IMDb, company page, news article, etc.)
+4. LINKS: All URLs must be real - DO NOT construct LinkedIn URLs like "linkedin.com/in/firstname-lastname"
+5. PERSONALIZATION HOOKS: Must be real facts from search results, not invented
 
 OK TO SPECULATE (for real people):
-5. EMAIL ADDRESSES: You CAN speculate emails for VERIFIED people using logical format patterns
-6. Explain your email reasoning (e.g., "Company appears to use firstname.lastname@ based on [evidence or common patterns]")
-7. Mark confidence appropriately - "speculative" if no format evidence, "medium" if pattern observed
+6. EMAIL ADDRESSES: You CAN speculate emails for VERIFIED people using logical format patterns
+7. Explain your email reasoning (e.g., "Company appears to use firstname.lastname@ based on [evidence or common patterns]")
+8. Mark confidence appropriately - "speculative" if no format evidence, "medium" if pattern observed
 
 The "reasoning" field MUST state:
 - WHERE this person was found (e.g., "Found on IMDb credits for The Last Dance", "Listed on company About page")
-- WHY you chose this email format (e.g., "Speculated using common firstname.lastname pattern" or "Based on colleague email found in press release")`;
+- WHY you chose this email format (e.g., "Speculated using common firstname.lastname pattern" or "Based on colleague email found in press release")
+
+IF NO PEOPLE FOUND: Still return the verified website and email format discovery. Say "No verified contacts found in search results" in the summary, but the website and email format info are still useful output.`;
 }
 
 // API configuration for each AI source
