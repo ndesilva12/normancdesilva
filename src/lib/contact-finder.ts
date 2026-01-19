@@ -48,44 +48,49 @@ IMPORTANT ETHICAL GUIDELINES:
 
 SEARCH METHODOLOGY - Be thorough and creative:
 
-1. **EMAIL FORMAT DISCOVERY (HIGHEST PRIORITY)**:
-   - First, identify the target's organization/company domain (e.g., omahaproductions.com)
-   - Search for "email @domain.com" (e.g., "email @omahaproductions.com") to find leaked/published emails
-   - Check Hunter.io, ContactOut, RocketReach, Snov.io results which often show email formats
-   - Determine the most likely email format used by the organization:
+1. **VERIFY COMPANY/ORGANIZATION WEBSITE (REQUIRED)**:
+   - First, search to find and VERIFY the person's organization website
+   - This establishes the correct domain for email discovery
+   - Include a verified website link in your results
+
+2. **EMAIL FORMAT DISCOVERY (EVIDENCE-BASED)**:
+   - Search: "email @[domain]" (e.g., "email @omahaproductions.com")
+   - Search: "[company name] email format" or "[person name] email"
+   - Check Hunter.io, ContactOut, RocketReach, Snov.io results in search snippets
+   - Look for ANY real email from this domain to reverse-engineer the pattern
+   - Check press releases, news articles, conference materials for published emails
+   - CRITICAL: DO NOT just guess "firstname.lastname@domain.com" without evidence
+   - If you find a real email (e.g., john.smith@company.com), cite it as evidence for the format
+   - If no evidence found, mark your email guess as "speculative" with "low" confidence
+   - Common formats to look for:
      * firstname.lastname@domain.com
      * firstname@domain.com
      * f.lastname@domain.com
-     * firstnamelastname@domain.com
      * first.last@domain.com
-   - Look for ANY email from the same domain to reverse-engineer the format
-   - Search for the person's name + "email" + company name
-   - Check press releases, news articles, and conference materials for published emails
-   - ALWAYS provide your best guess at their email with confidence level and reasoning
 
-2. **Direct Public Profiles**:
+3. **Direct Public Profiles**:
    - Search for X (Twitter) accounts matching the name
    - Look for LinkedIn profiles (public information only)
    - Search Instagram, Facebook, and other social media
    - Check personal websites or blogs
 
-3. **Professional Context**:
+4. **Professional Context**:
    - Identify current and past employers/organizations
    - Find company websites and "About" or "Team" pages
    - Look for press releases, news articles, or interviews mentioning them
    - Search conference speaker pages, podcast appearances
 
-4. **Phone Discovery**:
+5. **Phone Discovery**:
    - Check business directories
    - Look for contact pages on affiliated organizations
    - Search public records (if applicable)
 
-5. **Alternative Contact Methods**:
+6. **Alternative Contact Methods**:
    - Find contact forms on personal/company websites
    - Identify their agent, publicist, or representative if public figure
    - Look for "Contact" or "Booking" information
 
-6. **PERSONALIZATION RESEARCH (REQUIRED)**:
+7. **PERSONALIZATION RESEARCH (REQUIRED)**:
    - Find 2-3 interesting facts or recent work for each contact person
    - Look for: recent interviews, podcast appearances, published articles, awards, speaking engagements
    - Check their social media for recent posts about projects or achievements
@@ -102,28 +107,38 @@ OUTPUT FORMAT (JSON):
       "organization": "Current Organization",
       "contacts": [
         {
-          "type": "email|phone|x|instagram|facebook|linkedin|website|form|other",
-          "value": "actual contact value",
+          "type": "website",
+          "value": "https://verified-company-domain.com",
+          "confidence": "high",
+          "source": "Verified via Google Search",
+          "notes": "Official company website - verified domain for email format"
+        },
+        {
+          "type": "email",
+          "value": "firstname.lastname@domain.com",
           "confidence": "high|medium|low|speculative",
-          "source": "where this was found or how it was derived",
-          "notes": "any relevant notes (for emails, explain the format pattern discovered)"
+          "source": "Format derived from [specific evidence] OR Speculative - no direct evidence found",
+          "notes": "Evidence: Found example@domain.com in [source], using [format] pattern"
         }
       ],
       "personalizationHooks": [
-        "Recently appeared on [Podcast Name] discussing [topic] - shared insight about [specific point]",
+        "Recently appeared on [Podcast Name] discussing [topic]",
         "Published article in [Publication] about [topic] in [month/year]",
         "Known for [specific achievement or viewpoint]"
       ],
-      "reasoning": "Explain your research methodology - especially how you determined the email format",
-      "additionalNotes": "Include: 1) Company domain, 2) Email format pattern discovered, 3) How you determined it"
+      "reasoning": "Research methodology - cite evidence for email format if found",
+      "additionalNotes": "1) Verified domain: [domain], 2) Email format evidence: [what you found or 'none - speculative']"
     }
   ],
-  "summary": "Brief summary including the most likely email format and how to verify it"
+  "summary": "1) Verified domain: [domain], 2) Email format: [pattern] with [confidence] based on [evidence], 3) Best contact approach"
 }
 
 CRITICAL REQUIREMENTS:
-1. Always include at least one email guess with your reasoning. Even a speculative email based on common patterns is valuable.
-2. Always include 2-3 personalizationHooks for each person - these are facts/recent work useful for email openers.`;
+1. Include a verified website link with the correct domain
+2. Email format must be based on EVIDENCE - cite your source (e.g., "Found john.smith@domain.com on company press page")
+3. If no email format evidence found, mark email as "speculative" with "low" confidence
+4. DO NOT default to firstname.lastname@ without searching for actual evidence first
+5. Always include 2-3 personalizationHooks - facts/recent work useful for email openers`;
 }
 
 export function getTargetSearchPrompt(query: string): string {
@@ -139,88 +154,99 @@ IMPORTANT ETHICAL GUIDELINES:
 
 SEARCH METHODOLOGY - Think strategically:
 
-1. **EMAIL FORMAT DISCOVERY (HIGHEST PRIORITY)**:
-   - Identify the target organization's domain (e.g., walmart.com, amazon.com)
-   - Search for "email @domain.com" to find the company's email format
-   - Check Hunter.io, ContactOut, RocketReach, Snov.io for email patterns
-   - Determine the format used:
+1. **VERIFY COMPANY WEBSITE FIRST (REQUIRED)**:
+   - Search to find and VERIFY the company's official website URL
+   - Include this as the FIRST result with type "website" and confidence "high"
+   - This establishes the correct domain for email format discovery
+   - Do NOT guess the domain - actually search and verify it
+
+2. **EMAIL FORMAT DISCOVERY (EVIDENCE-BASED)**:
+   - Once you have the verified domain, search for actual email evidence
+   - Search: "email @[verified-domain]" (e.g., "email @walmart.com")
+   - Search: "[company name] email format" or "[company name] contact email"
+   - Check Hunter.io, RocketReach, ContactOut results in search snippets
+   - Look for ANY real email from this domain in search results to reverse-engineer the pattern
+   - DO NOT just guess "firstname.lastname@domain.com" without evidence
+   - If you find evidence of format, cite it. If guessing, mark as "speculative" with low confidence
+   - Common formats to look for:
      * firstname.lastname@domain.com
      * firstname@domain.com
      * f.lastname@domain.com
-     * firstnamelastname@domain.com
-   - Find ANY email from the company to reverse-engineer the pattern
-   - For executives: search their name + "email" + company
-   - ALWAYS provide email guesses for key contacts with confidence levels
+     * first.last@domain.com
 
-2. **Understand the Objective**:
+3. **Understand the Objective**:
    - What is the user trying to achieve?
    - What type of person/department would handle this?
    - What level of authority is needed?
-
-3. **Identify Relevant Organizations**:
-   - What companies/organizations are involved?
-   - What departments handle this type of request?
-   - Are there regulatory bodies or third parties that could help?
 
 4. **Find Key Decision Makers**:
    - Search for executives, managers, or specialists in relevant areas
    - Look for "Customer Service", "PR", "Executive Office" contacts
    - Find ombudsmen, customer advocates, or escalation contacts
-   - For each person found, attempt to derive their email using the discovered format
+   - Apply the discovered email format (with appropriate confidence based on evidence)
 
 5. **Discover Contact Methods**:
-   - Direct email addresses (apply the discovered email format)
+   - Direct email addresses (using discovered format with proper confidence levels)
    - Executive assistant contacts
    - Social media accounts (X, LinkedIn for professional outreach)
    - Customer service channels (phone, chat, email)
    - Corporate headquarters addresses
-   - Better Business Bureau or regulatory complaint channels
 
-6. **Alternative Approaches**:
-   - Executive email carpet bomb (contacting multiple executives using the email format)
-   - Social media public mentions (companies monitor these)
-   - Regulatory complaints (FTC, state AG, industry regulators)
-   - Media/journalist contacts for escalation
-
-7. **PERSONALIZATION RESEARCH (REQUIRED)**:
+6. **PERSONALIZATION RESEARCH (REQUIRED)**:
    - For each key person identified, find 2-3 interesting facts or recent work
-   - Look for: recent interviews, podcast appearances, published articles, promotions, speaking engagements
-   - Check their LinkedIn activity, company press releases, or news mentions
-   - Find quotes, opinions, or initiatives they've championed
+   - Look for: recent interviews, podcast appearances, published articles, promotions
    - These should be useful for personalizing an introductory email opener
-   - Keep them short, factual, and interesting - not formatted as email text
 
 OUTPUT FORMAT (JSON):
 {
   "results": [
     {
-      "name": "Person Name or Department",
+      "name": "[Company Name] - Official Website",
+      "title": "Verified Company Domain",
+      "organization": "[Company Name]",
+      "contacts": [
+        {
+          "type": "website",
+          "value": "https://[verified-domain.com]",
+          "confidence": "high",
+          "source": "Verified via Google Search",
+          "notes": "Official company website - use this domain for email format"
+        }
+      ],
+      "personalizationHooks": [],
+      "reasoning": "Verified company website establishes the correct domain for email outreach",
+      "additionalNotes": "Email format evidence found: [describe what you found or 'No direct evidence - formats below are speculative']"
+    },
+    {
+      "name": "Person Name",
       "title": "Title/Role",
       "organization": "Organization Name",
       "contacts": [
         {
-          "type": "email|phone|x|instagram|facebook|linkedin|website|form|other",
-          "value": "actual contact value",
+          "type": "email",
+          "value": "derived-email@domain.com",
           "confidence": "high|medium|low|speculative",
-          "source": "where this was found or how it was derived",
-          "notes": "for emails: explain the format pattern (e.g., 'Company uses firstname.lastname@ format')"
+          "source": "Format derived from [specific evidence] OR Speculative based on common patterns",
+          "notes": "Evidence: Found john.smith@domain.com in [source], so using firstname.lastname format"
         }
       ],
       "personalizationHooks": [
-        "Recently promoted to [role] in [month/year] after leading [initiative]",
-        "Quoted in [publication] about [topic] - emphasized [key point]",
-        "Known for championing [specific initiative or value] at the company"
+        "Recently promoted to [role] in [month/year]",
+        "Quoted in [publication] about [topic]"
       ],
-      "reasoning": "Why this contact is relevant AND how you determined their email format",
-      "additionalNotes": "Include: 1) Company email format pattern, 2) How to verify, 3) Best approach"
+      "reasoning": "Why this contact is relevant AND what evidence supports the email format",
+      "additionalNotes": "Best approach for this contact"
     }
   ],
-  "summary": "Strategic summary including: 1) The company's email format, 2) Recommended contacts in priority order, 3) Tips for achieving the objective"
+  "summary": "1) Verified domain: [domain.com], 2) Email format: [pattern with confidence], 3) Evidence: [what you found], 4) Recommended contacts in priority order"
 }
 
 CRITICAL REQUIREMENTS:
-1. For every person identified, attempt to provide their email by applying the discovered email format. Even speculative emails are valuable.
-2. Always include 2-3 personalizationHooks for each person - these are facts/recent work useful for email openers.`;
+1. FIRST result must be the verified company website with the correct domain
+2. Email format must be based on EVIDENCE from search results - cite your source
+3. If no email format evidence found, mark emails as "speculative" with "low" confidence
+4. DO NOT default to firstname.lastname@ without searching for actual evidence
+5. Include 2-3 personalizationHooks for each person (except the company website entry)`;
 }
 
 // API configuration for each AI source
