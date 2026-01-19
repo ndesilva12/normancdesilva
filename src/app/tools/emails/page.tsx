@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, ExternalLink, Trash2, Search } from "lucide-react";
 import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
 import { Header } from "@/components/Header";
@@ -28,7 +29,23 @@ interface AccountInfo {
   picture?: string;
 }
 
+// Wrapper component to handle Suspense for useSearchParams
 export default function EmailsPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+        <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+      </div>
+    }>
+      <EmailsPageContent />
+    </Suspense>
+  );
+}
+
+function EmailsPageContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [emails, setEmails] = useState<EmailWithAccount[]>([]);
   const [accounts, setAccounts] = useState<AccountInfo[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
@@ -47,6 +64,21 @@ export default function EmailsPage() {
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Handle query params for direct email opening (from dashboard widget)
+  useEffect(() => {
+    const emailIdParam = searchParams.get("emailId");
+    const accountParam = searchParams.get("account");
+
+    if (emailIdParam) {
+      setSelectedEmailId(emailIdParam);
+      if (accountParam) {
+        setSelectedEmailAccount(accountParam);
+      }
+      // Clear the query params from URL without navigation
+      router.replace("/tools/emails", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   useEffect(() => {
     checkConnectionAndFetch();

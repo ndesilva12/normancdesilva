@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail, Loader2, ExternalLink, RefreshCw, Archive, Trash2 } from "lucide-react";
-import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
+import { formatEmailSender } from "@/lib/google-services";
 
 interface EmailWithAccount {
   id: string;
@@ -195,11 +195,9 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                 onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                {/* Email Content */}
-                <a
-                  href={getSuperhumanUrl(email.threadId)}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                {/* Email Content - Navigate to internal email tool page */}
+                <Link
+                  href={`/tools/emails?emailId=${email.id}${email.accountEmail ? `&account=${encodeURIComponent(email.accountEmail)}` : ''}`}
                   style={{
                     flex: 1,
                     display: "flex",
@@ -248,7 +246,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                       {email.accountName || email.accountEmail}
                     </div>
                   )}
-                </a>
+                </Link>
 
                 {/* Action Buttons */}
                 <div
