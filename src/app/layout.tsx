@@ -1,6 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Sacramento } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
+
+// Load Sacramento font for the logo
+const sacramento = Sacramento({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-sacramento",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "The Dashboard",
@@ -44,7 +53,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="bg-background">
+    <html lang="en" className={`bg-background ${sacramento.variable}`}>
       <body className="min-h-screen w-full bg-background font-sans antialiased">
         <Providers>
           <div className="relative min-h-screen w-full bg-grid">

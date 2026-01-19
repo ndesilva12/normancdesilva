@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { LayoutDashboard, LogIn, LogOut, LayoutGrid, Calendar, TrendingUp, Bell, ChevronDown, Settings } from "lucide-react";
+import { LogIn, LogOut, LayoutGrid, Calendar, TrendingUp, Bell, ChevronDown, Settings } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
@@ -112,7 +112,18 @@ export function Header({
               backgroundColor: "rgba(var(--accent-rgb), 0.1)",
             }}
           >
-            <LayoutDashboard style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+            <span
+              style={{
+                fontFamily: "var(--font-sacramento), cursive",
+                fontSize: "28px",
+                fontWeight: 400,
+                color: "var(--accent)",
+                lineHeight: 1,
+                marginTop: "-2px",
+              }}
+            >
+              d
+            </span>
           </div>
           <span
             className="hidden sm:inline"

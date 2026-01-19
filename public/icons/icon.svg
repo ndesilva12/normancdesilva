@@ -1,12 +1,31 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="512" height="512" rx="96" fill="#0a0a0f"/>
-  <rect x="20" y="20" width="472" height="472" rx="84" stroke="#06b6d4" stroke-width="3" stroke-opacity="0.2"/>
-  <!-- Clean cursive lowercase 'd' -->
-  <g transform="translate(128, 76)">
+  <rect x="5" y="5" width="502" height="502" rx="92" stroke="#06b6d4" stroke-width="1" stroke-opacity="0.2"/>
+  <!-- Sacramento-style lowercase 'd' - flowing script letterform -->
+  <g transform="translate(100, 80)">
+    <!-- Main stem with elegant curve at top -->
     <path
-      d="M180 40 L180 320 M180 180 C180 110 145 70 100 70 C45 70 10 120 10 190 C10 260 45 320 100 320 C155 320 180 260 180 200"
+      d="M220 50 C220 50 225 40 215 35 C205 30 195 40 195 60 L195 300 C195 310 200 320 195 325"
       stroke="#06b6d4"
-      stroke-width="28"
+      stroke-width="22"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+    />
+    <!-- Bowl of the 'd' with flowing script style -->
+    <path
+      d="M195 220 C195 150 160 120 110 120 C50 120 20 170 20 230 C20 290 60 340 120 340 C170 340 195 300 195 260"
+      stroke="#06b6d4"
+      stroke-width="22"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+    />
+    <!-- Decorative entrance stroke -->
+    <path
+      d="M30 180 C50 160 70 130 110 120"
+      stroke="#06b6d4"
+      stroke-width="18"
       stroke-linecap="round"
       stroke-linejoin="round"
       fill="none"
