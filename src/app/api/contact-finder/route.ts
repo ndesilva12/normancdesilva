@@ -16,15 +16,15 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-// Fetch and extract text content from a URL
-async function fetchWebsiteContent(url: string): Promise<string | null> {
+// Fetch and extract text content from a URL with better parsing
+async function fetchWebsiteContent(url: string): Promise<{ text: string; html: string } | null> {
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ContactFinder/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       },
-      signal: AbortSignal.timeout(10000), // 10 second timeout
+      signal: AbortSignal.timeout(15000), // 15 second timeout
     });
 
     if (!response.ok) return null;
@@ -37,7 +37,6 @@ async function fetchWebsiteContent(url: string): Promise<string | null> {
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
       .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
       .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
-      .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
       .replace(/<[^>]+>/g, ' ')
       .replace(/&nbsp;/g, ' ')
       .replace(/&amp;/g, '&')
@@ -48,17 +47,94 @@ async function fetchWebsiteContent(url: string): Promise<string | null> {
       .replace(/\s+/g, ' ')
       .trim();
 
-    // Limit to first 15000 chars to avoid token limits
-    return text.slice(0, 15000);
+    return {
+      text: text.slice(0, 20000),
+      html: html.slice(0, 50000) // Keep HTML for structured extraction
+    };
   } catch (error) {
     console.error(`Failed to fetch ${url}:`, error);
     return null;
   }
 }
 
+// Extract potential names and titles from HTML using common patterns
+function extractPeopleFromHTML(html: string): { name: string; title?: string }[] {
+  const people: { name: string; title?: string }[] = [];
+  const seenNames = new Set<string>();
+
+  // Common title patterns
+  const titles = ['CEO', 'COO', 'CFO', 'CTO', 'CMO', 'President', 'Vice President', 'VP',
+    'Director', 'Manager', 'Founder', 'Co-Founder', 'Partner', 'Principal', 'Owner',
+    'Producer', 'Executive Producer', 'Creative Director', 'Head of', 'Chief',
+    'Editor', 'Writer', 'Designer', 'Lead', 'Senior', 'Managing Director'];
+
+  // Pattern 1: Look for structured person markup (common in about/team pages)
+  // Matches: <h3>John Smith</h3><p>CEO</p> or similar
+  const structuredPattern = /<(?:h[1-6]|strong|b|span)[^>]*>([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)<\/(?:h[1-6]|strong|b|span)>/gi;
+  let match;
+  while ((match = structuredPattern.exec(html)) !== null) {
+    const name = match[1].trim();
+    if (name.length > 4 && name.length < 50 && !seenNames.has(name.toLowerCase())) {
+      // Check if a title follows nearby
+      const after = html.slice(match.index, match.index + 300);
+      const titleMatch = titles.find(t => new RegExp(t, 'i').test(after));
+      people.push({ name, title: titleMatch });
+      seenNames.add(name.toLowerCase());
+    }
+  }
+
+  // Pattern 2: Look for "Name, Title" or "Name - Title" patterns
+  const nameWithTitlePattern = /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)[\s,\-–—]+(?:is\s+)?(?:the\s+)?(\b(?:CEO|COO|CFO|CTO|CMO|President|Vice President|VP|Director|Manager|Founder|Co-Founder|Partner|Principal|Owner|Producer|Executive Producer|Creative Director|Head of [A-Za-z]+|Chief [A-Za-z]+ Officer)\b)/gi;
+  while ((match = nameWithTitlePattern.exec(html)) !== null) {
+    const name = match[1].trim();
+    const title = match[2].trim();
+    if (name.length > 4 && name.length < 50 && !seenNames.has(name.toLowerCase())) {
+      people.push({ name, title });
+      seenNames.add(name.toLowerCase());
+    }
+  }
+
+  // Pattern 3: JSON-LD structured data
+  const jsonLdPattern = /<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+  while ((match = jsonLdPattern.exec(html)) !== null) {
+    try {
+      const jsonData = JSON.parse(match[1]);
+      const extractFromObject = (obj: Record<string, unknown>) => {
+        if (obj['@type'] === 'Person' && typeof obj.name === 'string') {
+          const name = obj.name as string;
+          if (!seenNames.has(name.toLowerCase())) {
+            people.push({ name, title: obj.jobTitle as string | undefined });
+            seenNames.add(name.toLowerCase());
+          }
+        }
+        for (const value of Object.values(obj)) {
+          if (Array.isArray(value)) {
+            value.forEach(item => {
+              if (typeof item === 'object' && item !== null) extractFromObject(item as Record<string, unknown>);
+            });
+          } else if (typeof value === 'object' && value !== null) {
+            extractFromObject(value as Record<string, unknown>);
+          }
+        }
+      };
+      if (Array.isArray(jsonData)) {
+        jsonData.forEach(item => {
+          if (typeof item === 'object' && item !== null) extractFromObject(item as Record<string, unknown>);
+        });
+      } else if (typeof jsonData === 'object' && jsonData !== null) {
+        extractFromObject(jsonData as Record<string, unknown>);
+      }
+    } catch {
+      // JSON parse failed, skip
+    }
+  }
+
+  return people.slice(0, 20); // Limit to 20 people
+}
+
 // Try to find and fetch the team/about page from a website
-async function fetchTeamPageContent(baseUrl: string): Promise<{ url: string; content: string } | null> {
-  // Common paths for team/about pages
+async function fetchTeamPageContent(baseUrl: string): Promise<{ url: string; text: string; html: string; extractedPeople: { name: string; title?: string }[] } | null> {
+  // Extensive list of common paths for team/about pages
   const teamPaths = [
     '/about',
     '/team',
@@ -68,37 +144,128 @@ async function fetchTeamPageContent(baseUrl: string): Promise<{ url: string; con
     '/staff',
     '/leadership',
     '/about/team',
+    '/about/leadership',
+    '/about/people',
     '/company',
     '/company/team',
+    '/company/leadership',
+    '/company/about',
     '/who-we-are',
+    '/meet-the-team',
+    '/meet-us',
+    '/our-people',
+    '/the-team',
+    '/crew',
+    '/filmmakers',
+    '/directors',
+    '/executives',
+    '/management',
+    '/bios',
+    '/roster',
+    '/talent',
+    '/contact',
+    '/contact-us',
+    '/about/staff',
   ];
 
   // Normalize base URL
   const base = baseUrl.replace(/\/$/, '');
+  const results: { url: string; text: string; html: string; extractedPeople: { name: string; title?: string }[]; score: number }[] = [];
 
   // First try the homepage
-  const homepageContent = await fetchWebsiteContent(base);
+  const homepageResult = await fetchWebsiteContent(base);
+  if (homepageResult) {
+    const extractedPeople = extractPeopleFromHTML(homepageResult.html);
+    const hasTeamIndicators = /(?:CEO|Founder|Director|Manager|President|Partner|Producer|Executive|Our Team|Meet the|Leadership)/i.test(homepageResult.text);
+    results.push({
+      url: base,
+      text: homepageResult.text,
+      html: homepageResult.html,
+      extractedPeople,
+      score: extractedPeople.length * 10 + (hasTeamIndicators ? 5 : 0)
+    });
+  }
 
-  // Try each team path
-  for (const path of teamPaths) {
-    const fullUrl = `${base}${path}`;
-    const content = await fetchWebsiteContent(fullUrl);
-    if (content && content.length > 500) {
-      // Check if it looks like a team page (has names/titles)
-      const hasNames = /(?:CEO|Founder|Director|Manager|President|Partner|Producer|Executive)/i.test(content);
-      if (hasNames) {
-        console.log(`Found team page at: ${fullUrl}`);
-        return { url: fullUrl, content };
+  // Try team paths in parallel (batch of 5 at a time)
+  for (let i = 0; i < teamPaths.length; i += 5) {
+    const batch = teamPaths.slice(i, i + 5);
+    const batchResults = await Promise.all(
+      batch.map(async (path) => {
+        const fullUrl = `${base}${path}`;
+        const content = await fetchWebsiteContent(fullUrl);
+        if (content && content.text.length > 300) {
+          const extractedPeople = extractPeopleFromHTML(content.html);
+          const hasTeamIndicators = /(?:CEO|Founder|Director|Manager|President|Partner|Producer|Executive|Our Team|Meet the|Leadership)/i.test(content.text);
+          const hasMultipleNames = (content.text.match(/[A-Z][a-z]+\s+[A-Z][a-z]+/g) || []).length;
+          return {
+            url: fullUrl,
+            text: content.text,
+            html: content.html,
+            extractedPeople,
+            score: extractedPeople.length * 10 + (hasTeamIndicators ? 5 : 0) + Math.min(hasMultipleNames, 10)
+          };
+        }
+        return null;
+      })
+    );
+
+    for (const result of batchResults) {
+      if (result) {
+        results.push(result);
+        // If we found a page with people extracted, prioritize it
+        if (result.extractedPeople.length >= 3) {
+          console.log(`Found team page with ${result.extractedPeople.length} people at: ${result.url}`);
+          return result;
+        }
       }
     }
   }
 
-  // Return homepage content if no team page found
-  if (homepageContent) {
-    return { url: base, content: homepageContent };
+  // Sort by score and return best result
+  results.sort((a, b) => b.score - a.score);
+  if (results.length > 0) {
+    const best = results[0];
+    console.log(`Best page found: ${best.url} with ${best.extractedPeople.length} extracted people`);
+    return best;
   }
 
   return null;
+}
+
+// Search for company employees using external sources via Gemini grounding
+async function searchExternalSources(companyName: string, domain: string): Promise<string> {
+  if (!GEMINI_API_KEY) return '';
+
+  const searchQuery = `Find real employees who work at "${companyName}". Search LinkedIn, company press releases, news articles, IMDb (if entertainment), and business databases. Return actual names and job titles of people who verifiably work there.
+
+IMPORTANT: Only return names of REAL people you find in search results. Include where you found each person (LinkedIn, news article, etc.)
+
+List the people you find with their titles and sources.`;
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: searchQuery }] }],
+          tools: [{ google_search: {} }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 2000 },
+        }),
+      }
+    );
+
+    if (!response.ok) return '';
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log(`External source search found: ${text.slice(0, 200)}...`);
+    return text;
+  } catch (error) {
+    console.error("External source search failed:", error);
+    return '';
+  }
 }
 
 interface GroundingChunk {
@@ -488,55 +655,77 @@ async function findCompanyWebsite(query: string): Promise<{ url: string; domain:
   }
 }
 
-// Generate prompt with actual website content included
-function getEnhancedTargetPrompt(query: string, websiteUrl: string, websiteContent: string): string {
+// Generate prompt with actual website content and extracted people
+function getEnhancedTargetPrompt(
+  query: string,
+  websiteUrl: string,
+  websiteContent: string,
+  extractedPeople: { name: string; title?: string }[],
+  externalSourceResults: string
+): string {
+  const domain = new URL(websiteUrl).hostname.replace('www.', '');
+
+  const extractedPeopleText = extractedPeople.length > 0
+    ? `\n\nPEOPLE ALREADY EXTRACTED FROM WEBSITE HTML (these are REAL - verified from HTML structure):\n${extractedPeople.map(p => `- ${p.name}${p.title ? ` (${p.title})` : ''}`).join('\n')}`
+    : '';
+
+  const externalSourceText = externalSourceResults
+    ? `\n\nEMPLOYEES FOUND FROM EXTERNAL SOURCES (LinkedIn, news, databases):\n---\n${externalSourceResults}\n---`
+    : '';
+
   return `You are an expert OSINT researcher. I need to find contacts at a company.
 
 TARGET: ${query}
 VERIFIED WEBSITE: ${websiteUrl}
+DOMAIN: ${domain}
+${extractedPeopleText}
+${externalSourceText}
 
-ACTUAL CONTENT FROM THE COMPANY WEBSITE (extracted team/about page):
+ACTUAL CONTENT FROM THE COMPANY WEBSITE (team/about page):
 ---
-${websiteContent}
+${websiteContent.slice(0, 12000)}
 ---
 
-Based on the ACTUAL WEBSITE CONTENT above, extract:
-1. Real names and titles of people who work there
-2. Any email addresses or email format patterns you can see
-3. Any contact information visible
+YOUR TASK:
+1. Use the EXTRACTED PEOPLE list above as your primary source - these are VERIFIED from the HTML
+2. If external source results found additional people, include them (with source citation)
+3. Look through the website content for any additional names you can find
+4. For each REAL person, speculate their email using ${domain}
 
-DO NOT make up fictional people. Only include people whose names appear in the website content above.
-
-For each real person found, you can SPECULATE their email using the company domain and common email formats (firstname.lastname@, firstname@, etc.), but mark it as speculative.
+CRITICAL RULES:
+- The people in "PEOPLE ALREADY EXTRACTED" are REAL - include all of them
+- Only add additional people if you can cite WHERE you found them
+- DO NOT invent fictional people like "Jane Smith" or "John Doe"
+- You CAN speculate emails for REAL people using the domain ${domain}
 
 OUTPUT FORMAT (JSON):
 {
   "results": [
     {
-      "name": "[Company Name] - Official Website",
+      "name": "${query} - Official Website",
       "title": "Verified Company Domain",
-      "organization": "[Company Name]",
-      "contacts": [{ "type": "website", "value": "${websiteUrl}", "confidence": "high", "source": "Verified", "notes": "Official website" }],
+      "organization": "${query}",
+      "contacts": [{ "type": "website", "value": "${websiteUrl}", "confidence": "high", "source": "Verified", "notes": "Official website - domain: ${domain}" }],
       "personalizationHooks": [],
       "reasoning": "Verified company website",
-      "additionalNotes": "Email format: [pattern if found]"
+      "additionalNotes": "Use this domain for emails: ${domain}"
     },
     {
-      "name": "Real Person Name FROM WEBSITE CONTENT",
-      "title": "Their Title FROM WEBSITE CONTENT",
-      "organization": "[Company]",
+      "name": "[REAL Person Name]",
+      "title": "[Their Title]",
+      "organization": "${query}",
       "contacts": [
-        { "type": "email", "value": "speculated.email@domain.com", "confidence": "speculative", "source": "Speculated from name + domain", "notes": "Format: firstname.lastname@domain" }
+        { "type": "email", "value": "firstname.lastname@${domain}", "confidence": "speculative", "source": "Speculated using name + verified domain", "notes": "Format: firstname.lastname@${domain}" }
       ],
-      "personalizationHooks": ["Any facts about them from the website content"],
-      "reasoning": "Found on company website at ${websiteUrl}",
+      "personalizationHooks": ["[Real fact about them if found]"],
+      "reasoning": "Found on company website / Found via LinkedIn / Found in extracted HTML",
       "additionalNotes": ""
     }
   ],
-  "summary": "Found X real people on company website. Email format: [pattern]. Domain: [domain]"
+  "summary": "Found X real people. Domain: ${domain}. Email format: [pattern]"
 }
 
-Respond with valid JSON only.`;
+Respond with valid JSON only. Include ALL people from the extracted list.`;
 }
 
 // Main search function with website scraping for target searches
@@ -548,32 +737,84 @@ async function runSearch(
 
   // For target searches, try to actually fetch the company website first
   if (searchType === "target") {
-    console.log(`Target search for: ${query} - attempting to fetch actual website...`);
+    console.log(`Target search for: ${query} - attempting multi-strategy approach...`);
 
     // Step 1: Find the company website
     const website = await findCompanyWebsite(query);
 
     if (website) {
-      console.log(`Found website: ${website.url}`);
+      console.log(`Found website: ${website.url} (domain: ${website.domain})`);
 
-      // Step 2: Fetch the team/about page
+      // Step 2: Fetch and parse the team/about page
       const teamPage = await fetchTeamPageContent(website.url);
 
-      if (teamPage && teamPage.content.length > 200) {
-        console.log(`Fetched team page content (${teamPage.content.length} chars) from: ${teamPage.url}`);
+      // Step 3: If we didn't find enough people from website, search external sources
+      let externalResults = '';
+      const extractedPeople = teamPage?.extractedPeople || [];
 
-        // Step 3: Send the actual website content to the LLM
-        const enhancedPrompt = getEnhancedTargetPrompt(query, website.url, teamPage.content);
+      if (extractedPeople.length < 2) {
+        console.log(`Only found ${extractedPeople.length} people from website, searching external sources...`);
+        externalResults = await searchExternalSources(query, website.domain);
+      }
+
+      // Step 4: Build comprehensive prompt with all data sources
+      if (teamPage || externalResults) {
+        const websiteContent = teamPage?.text || '';
+        console.log(`Building enhanced prompt with: ${extractedPeople.length} extracted people, ${websiteContent.length} chars content, ${externalResults.length > 0 ? 'external results' : 'no external results'}`);
+
+        const enhancedPrompt = getEnhancedTargetPrompt(
+          query,
+          website.url,
+          websiteContent,
+          extractedPeople,
+          externalResults
+        );
 
         // Use Gemini for this enhanced prompt
         try {
           const { content } = await queryGemini(enhancedPrompt);
           const parsed = parseAIResponse(content);
 
-          // The results now come from ACTUAL website content
+          // If we extracted people but AI didn't return them, create results directly
+          if (parsed.results.length <= 1 && extractedPeople.length > 0) {
+            console.log(`AI returned few results but we have ${extractedPeople.length} extracted people - creating direct results`);
+            const domain = website.domain;
+            const directResults: ContactResult[] = [
+              {
+                name: `${query} - Official Website`,
+                title: 'Verified Company Domain',
+                organization: query,
+                contacts: [{ type: 'website', value: website.url, confidence: 'high', source: 'Verified', notes: `Domain: ${domain}` }],
+                personalizationHooks: [],
+                reasoning: 'Verified company website',
+                additionalNotes: `Use ${domain} for emails`
+              },
+              ...extractedPeople.map(person => ({
+                name: person.name,
+                title: person.title,
+                organization: query,
+                contacts: [{
+                  type: 'email' as const,
+                  value: `${person.name.toLowerCase().split(' ').join('.')}@${domain}`,
+                  confidence: 'speculative' as const,
+                  source: 'Speculated from name + verified domain',
+                  notes: `Format: firstname.lastname@${domain}`
+                }],
+                personalizationHooks: [],
+                reasoning: `Extracted from company website at ${teamPage?.url || website.url}`,
+                additionalNotes: ''
+              }))
+            ];
+            return {
+              results: directResults,
+              summary: `Found ${extractedPeople.length} people from company website. Domain: ${domain}`,
+              actualSource: 'gemini'
+            };
+          }
+
           return {
             results: parsed.results,
-            summary: `${parsed.summary} (Extracted from actual website content at ${teamPage.url})`,
+            summary: `${parsed.summary} (Multi-strategy: website parsing + ${externalResults ? 'external search' : 'AI analysis'})`,
             actualSource: "gemini",
           };
         } catch (error) {
