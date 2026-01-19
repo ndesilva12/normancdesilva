@@ -46,6 +46,14 @@ IMPORTANT ETHICAL GUIDELINES:
 - Do not access private databases or use illegal methods
 - This is for legitimate contact purposes only
 
+CRITICAL - DO NOT FABRICATE INFORMATION:
+- ONLY report information you actually found in search results
+- DO NOT make up or invent details about the person
+- DO NOT fabricate LinkedIn profiles, social media URLs, or email addresses without evidence
+- If you cannot verify information through search, clearly state what was NOT found
+- Every contact detail must be traceable to a real search result
+- If the person cannot be found in search results, say "Unable to find verified information"
+
 SEARCH METHODOLOGY - Be thorough and creative:
 
 1. **VERIFY COMPANY/ORGANIZATION WEBSITE (REQUIRED)**:
@@ -152,6 +160,14 @@ IMPORTANT ETHICAL GUIDELINES:
 - Do not access private databases or use illegal methods
 - This is for legitimate contact purposes only
 
+CRITICAL - DO NOT FABRICATE INFORMATION:
+- ONLY include people whose names you found in ACTUAL search results
+- DO NOT make up fictional names like "Jane Smith" or "John Doe"
+- DO NOT invent LinkedIn profiles or social media URLs
+- If you cannot find real people through search, SAY SO - do not fabricate contacts
+- Every person listed must have their name found in a real search result (news article, company page, LinkedIn, etc.)
+- If search returns no real contacts, return ONLY the verified company website and state "No verified contacts found"
+
 SEARCH METHODOLOGY - Think strategically:
 
 1. **VERIFY COMPANY WEBSITE FIRST (REQUIRED)**:
@@ -218,7 +234,7 @@ OUTPUT FORMAT (JSON):
       "additionalNotes": "Email format evidence found: [describe what you found or 'No direct evidence - formats below are speculative']"
     },
     {
-      "name": "Person Name",
+      "name": "REAL Person Name (found in search)",
       "title": "Title/Role",
       "organization": "Organization Name",
       "contacts": [
@@ -231,22 +247,24 @@ OUTPUT FORMAT (JSON):
         }
       ],
       "personalizationHooks": [
-        "Recently promoted to [role] in [month/year]",
-        "Quoted in [publication] about [topic]"
+        "REAL fact found in search results - cite source",
+        "Another REAL fact from actual search result"
       ],
-      "reasoning": "Why this contact is relevant AND what evidence supports the email format",
+      "reasoning": "WHERE THIS PERSON WAS FOUND: [cite the actual search result - news article, company page, LinkedIn, IMDb, etc.] AND why they are relevant",
       "additionalNotes": "Best approach for this contact"
     }
   ],
-  "summary": "1) Verified domain: [domain.com], 2) Email format: [pattern with confidence], 3) Evidence: [what you found], 4) Recommended contacts in priority order"
+  "summary": "1) Verified domain: [domain.com], 2) Email format: [pattern with confidence], 3) Evidence: [what you found], 4) REAL contacts found: [list names with sources] OR 'No verified contacts found in search results'"
 }
 
 CRITICAL REQUIREMENTS:
 1. FIRST result must be the verified company website with the correct domain
-2. Email format must be based on EVIDENCE from search results - cite your source
-3. If no email format evidence found, mark emails as "speculative" with "low" confidence
-4. DO NOT default to firstname.lastname@ without searching for actual evidence
-5. Include 2-3 personalizationHooks for each person (except the company website entry)`;
+2. ONLY include people you ACTUALLY found in search results - cite where you found them
+3. DO NOT fabricate people - "Jane Smith" and "John Doe" are red flags for fake data
+4. If no real people found, return ONLY the company website and state "No verified contacts found"
+5. Email format must be based on EVIDENCE - if no evidence, mark as "speculative" with "low" confidence
+6. Personalization hooks must be REAL facts from search results, not invented
+7. The "reasoning" field MUST state WHERE you found this person (e.g., "Found on company About page", "Listed in IMDb credits", "Mentioned in Variety article")`;
 }
 
 // API configuration for each AI source
