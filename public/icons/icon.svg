@@ -1,12 +1,15 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="512" height="512" rx="96" fill="#0a0a0f"/>
-  <rect x="24" y="24" width="464" height="464" rx="80" stroke="#06b6d4" stroke-width="4" stroke-opacity="0.3"/>
-  <g transform="translate(128, 128)">
-    <rect x="0" y="0" width="256" height="256" rx="32" fill="#06b6d4" fill-opacity="0.1"/>
-    <rect x="0" y="0" width="256" height="256" rx="32" stroke="#06b6d4" stroke-width="3"/>
-    <rect x="24" y="24" width="88" height="88" rx="16" fill="#06b6d4"/>
-    <rect x="144" y="24" width="88" height="88" rx="16" fill="#06b6d4" fill-opacity="0.6"/>
-    <rect x="24" y="144" width="88" height="88" rx="16" fill="#06b6d4" fill-opacity="0.4"/>
-    <rect x="144" y="144" width="88" height="88" rx="16" fill="#06b6d4" fill-opacity="0.2"/>
+  <rect x="20" y="20" width="472" height="472" rx="84" stroke="#06b6d4" stroke-width="3" stroke-opacity="0.2"/>
+  <!-- Clean cursive lowercase 'd' -->
+  <g transform="translate(128, 76)">
+    <path
+      d="M180 40 L180 320 M180 180 C180 110 145 70 100 70 C45 70 10 120 10 190 C10 260 45 320 100 320 C155 320 180 260 180 200"
+      stroke="#06b6d4"
+      stroke-width="28"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+    />
   </g>
 </svg>

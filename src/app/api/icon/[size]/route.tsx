@@ -3,14 +3,9 @@ import { NextRequest } from "next/server";
 
 export const runtime = "edge";
 
-function DashboardIcon({ size }: { size: number }) {
-  const innerSize = size * 0.75;
-  const borderRadius = size * 0.188; // ~18.8%
-  const innerRadius = size * 0.125;
-  const rectSize = innerSize * 0.344;
-  const rectRadius = innerSize * 0.0625;
-  const padding = innerSize * 0.094;
-  const gap = innerSize * 0.469;
+function CursiveDLogo({ size }: { size: number }) {
+  const scale = size / 512;
+  const borderRadius = size * 0.188;
 
   return (
     <div
@@ -22,55 +17,35 @@ function DashboardIcon({ size }: { size: number }) {
         justifyContent: "center",
         background: "#0a0a0f",
         borderRadius: `${borderRadius}px`,
+        position: "relative",
       }}
     >
+      {/* Subtle border */}
       <div
         style={{
-          width: `${innerSize}px`,
-          height: `${innerSize}px`,
-          display: "flex",
-          flexWrap: "wrap",
-          alignContent: "flex-start",
-          gap: `${padding}px`,
-          padding: `${padding}px`,
-          borderRadius: `${innerRadius}px`,
-          border: "2px solid rgba(6, 182, 212, 0.5)",
-          background: "rgba(6, 182, 212, 0.1)",
+          position: "absolute",
+          inset: `${4 * scale}px`,
+          borderRadius: `${84 * scale}px`,
+          border: `${3 * scale}px solid rgba(6, 182, 212, 0.2)`,
         }}
+      />
+      {/* Cursive 'd' using SVG path rendered as text-based approximation */}
+      <svg
+        width={size * 0.7}
+        height={size * 0.7}
+        viewBox="0 0 100 100"
+        style={{ overflow: "visible" }}
       >
-        <div
-          style={{
-            width: `${rectSize}px`,
-            height: `${rectSize}px`,
-            borderRadius: `${rectRadius}px`,
-            background: "#06b6d4",
-          }}
+        {/* Clean cursive lowercase 'd' */}
+        <path
+          d="M65 15 L65 85 M65 50 C65 30 50 25 40 25 C25 25 15 40 15 55 C15 70 25 85 40 85 C55 85 65 70 65 55"
+          stroke="#06b6d4"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
         />
-        <div
-          style={{
-            width: `${rectSize}px`,
-            height: `${rectSize}px`,
-            borderRadius: `${rectRadius}px`,
-            background: "rgba(6, 182, 212, 0.6)",
-          }}
-        />
-        <div
-          style={{
-            width: `${rectSize}px`,
-            height: `${rectSize}px`,
-            borderRadius: `${rectRadius}px`,
-            background: "rgba(6, 182, 212, 0.4)",
-          }}
-        />
-        <div
-          style={{
-            width: `${rectSize}px`,
-            height: `${rectSize}px`,
-            borderRadius: `${rectRadius}px`,
-            background: "rgba(6, 182, 212, 0.2)",
-          }}
-        />
-      </div>
+      </svg>
     </div>
   );
 }
@@ -86,7 +61,7 @@ export async function GET(
     return new Response("Invalid size", { status: 400 });
   }
 
-  return new ImageResponse(<DashboardIcon size={size} />, {
+  return new ImageResponse(<CursiveDLogo size={size} />, {
     width: size,
     height: size,
   });

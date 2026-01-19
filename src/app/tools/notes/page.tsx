@@ -21,6 +21,9 @@ import {
   Maximize2,
   Minimize2,
   Type,
+  Share2,
+  Copy,
+  CheckCircle,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
@@ -148,6 +151,11 @@ function NotesContent() {
   const [fullPageEditMode, setFullPageEditMode] = useState(false);
   const [fullPageContent, setFullPageContent] = useState("");
   const [savingFullPage, setSavingFullPage] = useState(false);
+
+  // Share modal state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareEmail, setShareEmail] = useState("");
+  const [shareCopied, setShareCopied] = useState(false);
 
   const titleInputRef = useRef<HTMLInputElement>(null);
   const newContentRef = useRef<HTMLTextAreaElement>(null);
@@ -449,6 +457,27 @@ function NotesContent() {
     } finally {
       setCreatingSubpage(false);
     }
+  };
+
+  // Handle sharing note via Notion link
+  const handleCopyShareLink = async () => {
+    if (!selectedPage) return;
+    try {
+      await navigator.clipboard.writeText(selectedPage.url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy link:", err);
+    }
+  };
+
+  const handleShareViaEmail = () => {
+    if (!selectedPage || !shareEmail.trim()) return;
+    const subject = encodeURIComponent(`Shared Note: ${selectedPage.title}`);
+    const body = encodeURIComponent(`I'd like to share this note with you:\n\n${selectedPage.title}\n${selectedPage.url}`);
+    window.open(`mailto:${shareEmail}?subject=${subject}&body=${body}`);
+    setShowShareModal(false);
+    setShareEmail("");
   };
 
   // Enter full-page edit mode - combine all blocks into one editable area
@@ -1070,6 +1099,24 @@ function NotesContent() {
                       </p>
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        onClick={() => setShowShareModal(true)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "36px",
+                          height: "36px",
+                          borderRadius: "8px",
+                          backgroundColor: "rgba(255,255,255,0.05)",
+                          color: "var(--foreground-muted)",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
+                        title="Share note"
+                      >
+                        <Share2 style={{ width: "16px", height: "16px" }} />
+                      </button>
                       <a
                         href={selectedPage.url}
                         target="_blank"
@@ -1422,7 +1469,7 @@ Use ⌘+Enter to save quickly."
         <div style={{
           position: "fixed",
           inset: 0,
-          backgroundColor: "rgba(0,0,0,0.9)",
+          backgroundColor: "rgba(0,0,0,0.95)",
           display: "flex",
           flexDirection: "column",
           zIndex: 1000,
@@ -1432,20 +1479,50 @@ Use ⌘+Enter to save quickly."
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "16px 24px",
+            padding: isMobile ? "12px 16px" : "16px 24px",
             borderBottom: "1px solid var(--glass-border)",
             backgroundColor: "rgba(255,255,255,0.02)",
+            gap: "12px",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <Type style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
-              <h2 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)" }}>
-                Editing: {selectedPage.title}
+            {/* Close button - prominent on left for mobile */}
+            <button
+              onClick={() => setFullPageEditMode(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: isMobile ? "44px" : "40px",
+                height: isMobile ? "44px" : "40px",
+                borderRadius: "8px",
+                backgroundColor: "rgba(255,255,255,0.1)",
+                color: "var(--foreground)",
+                border: "none",
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+              title="Close editor"
+            >
+              <X style={{ width: "20px", height: "20px" }} />
+            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
+              <Type style={{ width: "20px", height: "20px", color: "var(--accent)", flexShrink: 0, display: isMobile ? "none" : "block" }} />
+              <h2 style={{
+                fontSize: isMobile ? "15px" : "18px",
+                fontWeight: 600,
+                color: "var(--foreground)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}>
+                {isMobile ? selectedPage.title : `Editing: ${selectedPage.title}`}
               </h2>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
-                Edit your entire note as one document
-              </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+              {!isMobile && (
+                <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
+                  Edit your entire note as one document
+                </span>
+              )}
               <button
                 onClick={saveFullPageEdit}
                 disabled={savingFullPage}
@@ -1453,7 +1530,7 @@ Use ⌘+Enter to save quickly."
                   display: "flex",
                   alignItems: "center",
                   gap: "6px",
-                  padding: "10px 20px",
+                  padding: isMobile ? "10px 16px" : "10px 20px",
                   borderRadius: "8px",
                   backgroundColor: "var(--accent)",
                   color: "var(--background)",
@@ -1468,24 +1545,7 @@ Use ⌘+Enter to save quickly."
                 ) : (
                   <Save style={{ width: "16px", height: "16px" }} />
                 )}
-                Save Changes
-              </button>
-              <button
-                onClick={() => setFullPageEditMode(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "8px",
-                  backgroundColor: "rgba(255,255,255,0.1)",
-                  color: "var(--foreground-muted)",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                <Minimize2 style={{ width: "18px", height: "18px" }} />
+                {isMobile ? "Save" : "Save Changes"}
               </button>
             </div>
           </div>
@@ -1683,6 +1743,187 @@ The editor will expand as you type."
               >
                 Cancel
               </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Share Note Modal */}
+      {showShareModal && selectedPage && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(0,0,0,0.7)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px",
+        }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass"
+            style={{
+              width: "100%",
+              maxWidth: "450px",
+              borderRadius: "16px",
+              padding: "24px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Share2 style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+                <h2 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)" }}>
+                  Share Note
+                </h2>
+              </div>
+              <button
+                onClick={() => {
+                  setShowShareModal(false);
+                  setShareEmail("");
+                }}
+                style={{
+                  padding: "8px",
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  color: "var(--foreground-muted)",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                }}
+              >
+                <X style={{ width: "16px", height: "16px" }} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginBottom: "20px" }}>
+              Share &quot;{selectedPage.title}&quot; with others
+            </p>
+
+            {/* Copy Link Section */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", fontSize: "13px", color: "var(--foreground-muted)", marginBottom: "8px" }}>
+                Notion Link
+              </label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  value={selectedPage.url}
+                  readOnly
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: "8px",
+                    color: "var(--foreground-muted)",
+                    fontSize: "13px",
+                  }}
+                />
+                <button
+                  onClick={handleCopyShareLink}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    backgroundColor: shareCopied ? "rgba(34, 197, 94, 0.2)" : "var(--accent)",
+                    color: shareCopied ? "#22c55e" : "var(--background)",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    transition: "all 0.2s",
+                  }}
+                >
+                  {shareCopied ? (
+                    <>
+                      <CheckCircle style={{ width: "16px", height: "16px" }} />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy style={{ width: "16px", height: "16px" }} />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+              <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "8px" }}>
+                Note: Make sure to enable sharing in Notion for this page
+              </p>
+            </div>
+
+            {/* Email Share Section */}
+            <div style={{ borderTop: "1px solid var(--glass-border)", paddingTop: "20px" }}>
+              <label style={{ display: "block", fontSize: "13px", color: "var(--foreground-muted)", marginBottom: "8px" }}>
+                Share via Email
+              </label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="email"
+                  value={shareEmail}
+                  onChange={(e) => setShareEmail(e.target.value)}
+                  placeholder="Enter email address..."
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: "8px",
+                    color: "var(--foreground)",
+                    fontSize: "14px",
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && handleShareViaEmail()}
+                />
+                <button
+                  onClick={handleShareViaEmail}
+                  disabled={!shareEmail.trim()}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                    color: shareEmail.trim() ? "var(--foreground)" : "var(--foreground-muted)",
+                    border: "none",
+                    cursor: shareEmail.trim() ? "pointer" : "not-allowed",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    opacity: shareEmail.trim() ? 1 : 0.5,
+                  }}
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+
+            {/* Open in Notion */}
+            <div style={{ marginTop: "20px", borderTop: "1px solid var(--glass-border)", paddingTop: "20px" }}>
+              <a
+                href={selectedPage.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  width: "100%",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                  color: "var(--foreground-muted)",
+                  textDecoration: "none",
+                  fontSize: "14px",
+                  transition: "all 0.15s",
+                }}
+              >
+                <ExternalLink style={{ width: "16px", height: "16px" }} />
+                Open in Notion to manage sharing permissions
+              </a>
             </div>
           </motion.div>
         </div>

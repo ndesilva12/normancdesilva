@@ -3,7 +3,17 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, ExternalLink, Trash2, Search } from "lucide-react";
+import { ArrowLeft, Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, ExternalLink, Trash2, Search, Inbox, Send, Archive, FileEdit } from "lucide-react";
+
+type EmailFolder = "inbox" | "sent" | "archived" | "trash" | "drafts";
+
+const FOLDER_CONFIG: Record<EmailFolder, { label: string; icon: typeof Inbox; query: string }> = {
+  inbox: { label: "Inbox", icon: Inbox, query: "in:inbox" },
+  sent: { label: "Sent", icon: Send, query: "in:sent" },
+  archived: { label: "Archived", icon: Archive, query: "-in:inbox -in:spam -in:trash" },
+  trash: { label: "Trash", icon: Trash2, query: "in:trash" },
+  drafts: { label: "Drafts", icon: FileEdit, query: "in:drafts" },
+};
 import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
@@ -49,6 +59,8 @@ function EmailsPageContent() {
   const [emails, setEmails] = useState<EmailWithAccount[]>([]);
   const [accounts, setAccounts] = useState<AccountInfo[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
+  const [selectedFolder, setSelectedFolder] = useState<EmailFolder>("inbox");
+  const [showFolderMenu, setShowFolderMenu] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -96,7 +108,7 @@ function EmailsPageContent() {
     if (isConnected) {
       fetchEmails();
     }
-  }, [selectedAccount, isConnected, debouncedSearch]);
+  }, [selectedAccount, selectedFolder, isConnected, debouncedSearch]);
 
   const checkConnectionAndFetch = async () => {
     try {
@@ -133,9 +145,12 @@ function EmailsPageContent() {
       } else {
         params.set("account", selectedAccount);
       }
-      // Add search query - if searching, prepend in:inbox to keep archived hidden
+      // Build query with folder and optional search
+      const folderQuery = FOLDER_CONFIG[selectedFolder].query;
       if (debouncedSearch.trim()) {
-        params.set("q", `in:inbox ${debouncedSearch.trim()}`);
+        params.set("q", `${folderQuery} ${debouncedSearch.trim()}`);
+      } else {
+        params.set("q", folderQuery);
       }
 
       const response = await fetch(`/api/gmail?${params.toString()}`);
@@ -548,6 +563,47 @@ function EmailsPageContent() {
               style={{ position: "fixed", inset: 0, zIndex: 40 }}
               onClick={() => setShowAccountMenu(false)}
             />
+          )}
+
+          {/* Folder Tabs */}
+          {isConnected && (
+            <div style={{
+              display: "flex",
+              gap: "4px",
+              marginBottom: "16px",
+              overflowX: "auto",
+              paddingBottom: "4px",
+            }}>
+              {(Object.keys(FOLDER_CONFIG) as EmailFolder[]).map((folder) => {
+                const config = FOLDER_CONFIG[folder];
+                const FolderIcon = config.icon;
+                const isActive = selectedFolder === folder;
+                return (
+                  <button
+                    key={folder}
+                    onClick={() => setSelectedFolder(folder)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 14px",
+                      borderRadius: "8px",
+                      backgroundColor: isActive ? "rgba(6, 182, 212, 0.15)" : "rgba(255, 255, 255, 0.03)",
+                      color: isActive ? "var(--accent)" : "var(--foreground-muted)",
+                      border: isActive ? "1px solid rgba(6, 182, 212, 0.3)" : "1px solid transparent",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      fontWeight: isActive ? 500 : 400,
+                      whiteSpace: "nowrap",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <FolderIcon style={{ width: "14px", height: "14px" }} />
+                    {config.label}
+                  </button>
+                );
+              })}
+            </div>
           )}
 
           {/* Search Bar */}
