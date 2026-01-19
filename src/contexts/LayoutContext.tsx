@@ -24,27 +24,27 @@ export interface LayoutConfig {
 
 // Default widget configurations - Data Widgets (connected services)
 const DEFAULT_PREVIEW_WIDGETS: WidgetConfig[] = [
-  { id: "files", size: "default", visible: true, order: 0 },
-  { id: "emails", size: "default", visible: true, order: 1 },
-  { id: "notes", size: "default", visible: true, order: 2 },
-  { id: "stocks", size: "default", visible: true, order: 3 },
-  { id: "news", size: "default", visible: true, order: 4 },
-  { id: "raindrop", size: "default", visible: true, order: 5 },
-  { id: "trending", size: "default", visible: true, order: 6 },
+  { id: "news", size: "default", visible: true, order: 0 },
+  { id: "trending", size: "default", visible: true, order: 1 },
+  { id: "emails", size: "default", visible: true, order: 2 },
+  { id: "files", size: "default", visible: true, order: 3 },
+  { id: "notes", size: "default", visible: true, order: 4 },
+  { id: "stocks", size: "default", visible: true, order: 5 },
+  { id: "raindrop", size: "default", visible: true, order: 6 },
 ];
 
 // Tool Widgets (interactive tools and features)
 const DEFAULT_TOOL_CARDS: WidgetConfig[] = [
-  { id: "contact-finder", size: "default", visible: true, order: 0 },
-  { id: "company-politics", size: "default", visible: true, order: 1 },
-  { id: "business-info", size: "default", visible: true, order: 2 },
-  { id: "visual-rosters", size: "default", visible: true, order: 3 },
-  { id: "spotify", size: "default", visible: true, order: 4 },
+  { id: "deep-search", size: "default", visible: true, order: 0 },
+  { id: "dark-search", size: "default", visible: true, order: 1 },
+  { id: "contact-finder", size: "default", visible: true, order: 2 },
+  { id: "company-politics", size: "default", visible: true, order: 3 },
+  { id: "business-info", size: "default", visible: true, order: 4 },
   { id: "contacts", size: "default", visible: true, order: 5 },
-  { id: "image-lookup", size: "default", visible: true, order: 6 },
-  { id: "visuals", size: "default", visible: true, order: 7 },
-  { id: "deep-search", size: "default", visible: true, order: 8 },
-  { id: "dark-search", size: "default", visible: true, order: 9 },
+  { id: "visual-rosters", size: "default", visible: true, order: 6 },
+  { id: "image-lookup", size: "default", visible: true, order: 7 },
+  { id: "visuals", size: "default", visible: true, order: 8 },
+  { id: "spotify", size: "default", visible: true, order: 9 },
 ];
 
 const DEFAULT_LAYOUT: LayoutConfig = {
