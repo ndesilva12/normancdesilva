@@ -12,7 +12,6 @@ import {
 } from "@/lib/search-service";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useRecentSearches } from "@/contexts/RecentSearchesContext";
-import { RecentSearchesInline } from "@/components/RecentSearches";
 
 interface TrendingSearch {
   title: string;
@@ -961,14 +960,6 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
           Loading trends...
         </div>
       )}
-
-      {/* Recent Searches */}
-      <div style={{ marginBottom: "12px", display: "flex", justifyContent: "center" }}>
-        <RecentSearchesInline
-          toolId="search"
-          onSelect={(recentQuery) => setQuery(recentQuery)}
-        />
-      </div>
 
       <form onSubmit={handleSearch}>
         {/* Search Bar */}
