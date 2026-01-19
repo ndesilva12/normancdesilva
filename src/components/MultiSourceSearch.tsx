@@ -118,13 +118,14 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
       const googleData = await googleResponse.json();
       const xData = await xResponse.json();
 
-      const googleTrends: TrendingSearch[] = (googleData.trends || []).slice(0, 6).map((t: { title: string; searchUrl: string }) => ({
+      // Fetch more topics to fill two lines on desktop (around 20-24)
+      const googleTrends: TrendingSearch[] = (googleData.trends || []).slice(0, 12).map((t: { title: string; searchUrl: string }) => ({
         title: t.title,
         searchUrl: t.searchUrl,
         source: "google" as const,
       }));
 
-      const xTrends: TrendingSearch[] = (xData.topics || []).slice(0, 6).map((t: { topic: string; searchUrl: string }) => ({
+      const xTrends: TrendingSearch[] = (xData.topics || []).slice(0, 12).map((t: { topic: string; searchUrl: string }) => ({
         title: t.topic,
         searchUrl: t.searchUrl,
         source: "x" as const,
@@ -138,8 +139,8 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
         if (i < xTrends.length) mixed.push(xTrends[i]);
       }
 
-      // Take top 10 mixed trends
-      setTrends(mixed.slice(0, 10));
+      // Take top 24 mixed trends (will be limited to 10 on mobile in render)
+      setTrends(mixed.slice(0, 24));
     } catch (error) {
       console.error("Error fetching trends:", error);
     } finally {
@@ -898,7 +899,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
 
   return (
     <div style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}>
-      {/* Google Trends Row - Above Search Bar */}
+      {/* Trending Topics Row - Above Search Bar */}
       {trends.length > 0 && (
         <div
           style={{
@@ -918,29 +919,33 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               flexShrink: 0,
             }}
           />
-          {trends.map((trend, index) => (
-            <button
-              key={index}
-              onClick={() => handleTrendClick(trend)}
-              style={{
-                background: "none",
-                border: "none",
-                padding: "4px 0",
-                fontSize: "13px",
-                color: "var(--foreground-muted)",
-                cursor: "pointer",
-                transition: "color 0.15s",
-                whiteSpace: "nowrap",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground-muted)")}
-            >
-              {trend.title}
-              {index < trends.length - 1 && (
-                <span style={{ marginLeft: "8px", opacity: 0.3 }}>•</span>
-              )}
-            </button>
-          ))}
+          {/* Show all trends on desktop, limit to 10 on mobile */}
+          {(() => {
+            const displayTrends = isMobile ? trends.slice(0, 10) : trends;
+            return displayTrends.map((trend, index) => (
+              <button
+                key={index}
+                onClick={() => handleTrendClick(trend)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: "4px 0",
+                  fontSize: "13px",
+                  color: "var(--foreground-muted)",
+                  cursor: "pointer",
+                  transition: "color 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground-muted)")}
+              >
+                {trend.title}
+                {index < displayTrends.length - 1 && (
+                  <span style={{ marginLeft: "8px", opacity: 0.3 }}>•</span>
+                )}
+              </button>
+            ));
+          })()}
         </div>
       )}
 
