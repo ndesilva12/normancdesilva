@@ -46,13 +46,17 @@ IMPORTANT ETHICAL GUIDELINES:
 - Do not access private databases or use illegal methods
 - This is for legitimate contact purposes only
 
-CRITICAL - DO NOT FABRICATE INFORMATION:
-- ONLY report information you actually found in search results
-- DO NOT make up or invent details about the person
-- DO NOT fabricate LinkedIn profiles, social media URLs, or email addresses without evidence
-- If you cannot verify information through search, clearly state what was NOT found
-- Every contact detail must be traceable to a real search result
-- If the person cannot be found in search results, say "Unable to find verified information"
+WHAT MUST BE VERIFIED (from actual search results):
+- LINKS: All URLs (LinkedIn, Twitter, Instagram, websites) must be REAL links found in search results
+- DO NOT construct or guess social media URLs like "linkedin.com/in/firstname-lastname"
+- If you find a real LinkedIn profile in search results, include that exact URL
+- If you cannot find their social profiles, do NOT include fake/guessed URLs
+
+WHAT YOU CAN SPECULATE (with clear reasoning):
+- EMAIL ADDRESSES: If you verify the person exists and find their company domain, you CAN speculate their email
+- Use evidence when available (e.g., "Found colleague john.doe@company.com, so likely uses firstname.lastname format")
+- Mark speculated emails with appropriate confidence level
+- This is acceptable because we're applying a logical format to a VERIFIED person
 
 SEARCH METHODOLOGY - Be thorough and creative:
 
@@ -142,11 +146,18 @@ OUTPUT FORMAT (JSON):
 }
 
 CRITICAL REQUIREMENTS:
-1. Include a verified website link with the correct domain
-2. Email format must be based on EVIDENCE - cite your source (e.g., "Found john.smith@domain.com on company press page")
-3. If no email format evidence found, mark email as "speculative" with "low" confidence
-4. DO NOT default to firstname.lastname@ without searching for actual evidence first
-5. Always include 2-3 personalizationHooks - facts/recent work useful for email openers`;
+
+MUST BE REAL (verified from search):
+1. LINKS: All URLs (LinkedIn, Twitter, website) must be REAL links found in search - DO NOT construct URLs
+2. Include a verified website/organization link with the correct domain
+3. Personalization hooks must be real facts from search results
+
+OK TO SPECULATE (with reasoning):
+4. EMAIL ADDRESSES: You CAN speculate the email if you verify the person and domain exist
+5. Cite any evidence for email format, or explain your reasoning if speculating
+6. Mark confidence: "high" if email found directly, "medium" if format evidence exists, "speculative" if guessing pattern
+
+The goal is: REAL person + REAL domain + LOGICAL email format speculation = useful contact`;
 }
 
 export function getTargetSearchPrompt(query: string): string {
@@ -160,13 +171,17 @@ IMPORTANT ETHICAL GUIDELINES:
 - Do not access private databases or use illegal methods
 - This is for legitimate contact purposes only
 
-CRITICAL - DO NOT FABRICATE INFORMATION:
-- ONLY include people whose names you found in ACTUAL search results
-- DO NOT make up fictional names like "Jane Smith" or "John Doe"
-- DO NOT invent LinkedIn profiles or social media URLs
-- If you cannot find real people through search, SAY SO - do not fabricate contacts
-- Every person listed must have their name found in a real search result (news article, company page, LinkedIn, etc.)
-- If search returns no real contacts, return ONLY the verified company website and state "No verified contacts found"
+WHAT MUST BE VERIFIED (from actual search results):
+- PEOPLE: Only include people whose names you ACTUALLY found in search results (news articles, company pages, IMDb, LinkedIn search results, etc.)
+- LINKS: All URLs (LinkedIn, Twitter, websites) must be REAL links found in search results - DO NOT construct or guess URLs
+- DO NOT fabricate fictional employees like "Jane Smith" or "John Doe"
+- If you cannot find real people, return ONLY the verified company website and state "No verified contacts found"
+
+WHAT YOU CAN SPECULATE (with clear reasoning):
+- EMAIL ADDRESSES: Once you find a REAL person and a verified domain, you CAN speculate their email using logical format patterns
+- Example: If you find "Michael Jordan works at Nike" (verified) and nike.com is the domain (verified), you can speculate michael.jordan@nike.com
+- Always mark speculated emails with appropriate confidence and explain your reasoning
+- This is acceptable because the PERSON is real - only the email format is speculated
 
 SEARCH METHODOLOGY - Think strategically:
 
@@ -258,13 +273,21 @@ OUTPUT FORMAT (JSON):
 }
 
 CRITICAL REQUIREMENTS:
-1. FIRST result must be the verified company website with the correct domain
-2. ONLY include people you ACTUALLY found in search results - cite where you found them
-3. DO NOT fabricate people - "Jane Smith" and "John Doe" are red flags for fake data
+
+MUST BE REAL (verified from search):
+1. PEOPLE: Only real people found in search results - cite WHERE you found them (IMDb, company page, news article, etc.)
+2. LINKS: All URLs must be real - DO NOT construct LinkedIn URLs like "linkedin.com/in/firstname-lastname"
+3. PERSONALIZATION HOOKS: Must be real facts from search results, not invented
 4. If no real people found, return ONLY the company website and state "No verified contacts found"
-5. Email format must be based on EVIDENCE - if no evidence, mark as "speculative" with "low" confidence
-6. Personalization hooks must be REAL facts from search results, not invented
-7. The "reasoning" field MUST state WHERE you found this person (e.g., "Found on company About page", "Listed in IMDb credits", "Mentioned in Variety article")`;
+
+OK TO SPECULATE (for real people):
+5. EMAIL ADDRESSES: You CAN speculate emails for VERIFIED people using logical format patterns
+6. Explain your email reasoning (e.g., "Company appears to use firstname.lastname@ based on [evidence or common patterns]")
+7. Mark confidence appropriately - "speculative" if no format evidence, "medium" if pattern observed
+
+The "reasoning" field MUST state:
+- WHERE this person was found (e.g., "Found on IMDb credits for The Last Dance", "Listed on company About page")
+- WHY you chose this email format (e.g., "Speculated using common firstname.lastname pattern" or "Based on colleague email found in press release")`;
 }
 
 // API configuration for each AI source
