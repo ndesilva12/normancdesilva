@@ -115,11 +115,11 @@ export function Header({
             <span
               style={{
                 fontFamily: "var(--font-sacramento), cursive",
-                fontSize: "28px",
+                fontSize: "32px",
                 fontWeight: 400,
                 color: "var(--accent)",
                 lineHeight: 1,
-                marginTop: "-2px",
+                marginTop: "4px",
               }}
             >
               d
