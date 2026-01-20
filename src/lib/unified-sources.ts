@@ -116,7 +116,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     name: "News",
     description: "Google News search",
     type: "web",
-    searchUrlTemplate: "https://news.google.com/search?q={query}",
+    searchUrlTemplate: "https://www.google.com/search?q={query}&tbm=nws",
   },
   {
     id: "trends",
