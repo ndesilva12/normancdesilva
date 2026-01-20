@@ -396,7 +396,7 @@ export default function Home() {
               transition={{ duration: 0.6 }}
               style={{ marginBottom: "32px" }}
             >
-              <MultiSourceSearch onResultsChange={(results) => setHasSearchResults(results.length > 0)} />
+              <MultiSourceSearch onResultsChange={(hasResults) => setHasSearchResults(hasResults)} />
             </motion.section>
           )}
 

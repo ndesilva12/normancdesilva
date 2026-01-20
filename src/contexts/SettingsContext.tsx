@@ -96,8 +96,10 @@ export interface UserSettings {
 
 // All available search sources for default settings
 const ALL_SEARCH_SOURCES = [
-  "duck", "google", "news", "wikipedia", "grokipedia", "x",
-  "youtube", "rumble", "trends", "amazon", "grok", "gemini", "claude", "chatgpt"
+  "google", "news", "trends", "duck", "deep-search", "dark-search",
+  "wikipedia", "grokipedia", "corporate-info", "business-info", "contacts",
+  "x", "youtube", "rumble", "amazon", "image-lookup", "visuals", "rosters",
+  "spotify", "grok", "gemini", "claude", "chatgpt"
 ];
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -108,7 +110,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   connectedEmails: [],
   searchSources: {
     enabledSources: ALL_SEARCH_SOURCES,
-    defaultSourceShort: "duck", // Default for short queries
+    defaultSourceShort: "google", // Default source is Google
     defaultSourceLong: "grok", // Default for long queries (AI better for detailed questions)
   },
   recentSearches: {

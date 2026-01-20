@@ -3,13 +3,16 @@
 import { useState, useEffect, FormEvent, useCallback, useRef, useMemo } from "react";
 import { Search, ExternalLink, X, Loader2, TrendingUp, ChevronDown } from "lucide-react";
 import {
-  SearchSource,
-  SEARCH_SOURCES,
-  AI_SOURCES,
+  UnifiedSourceId,
+  UNIFIED_SOURCES,
+  AI_SOURCE_IDS,
+  WEB_SOURCE_IDS,
+  DEFAULT_SOURCE,
   getSearchUrl,
-  SearchResult,
-  WebSearchResultItem,
-} from "@/lib/search-service";
+  getSourceConfig,
+  getAIModelUrl,
+  sourceNeedsInputs,
+} from "@/lib/unified-sources";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useRecentSearches } from "@/contexts/RecentSearchesContext";
 
@@ -19,24 +22,18 @@ interface TrendingSearch {
   source: "google" | "x";
 }
 
-// Get the URL to open an AI model's web interface
-function getAIModelUrl(source: SearchSource): string {
-  switch (source) {
-    case "grok":
-      return "https://grok.com";
-    case "gemini":
-      return "https://gemini.google.com/app";
-    case "claude":
-      return "https://claude.ai/new";
-    case "chatgpt":
-      return "https://chatgpt.com";
-    default:
-      return "";
-  }
+interface ToolResult {
+  source: UnifiedSourceId;
+  sourceName: string;
+  status: "loading" | "success" | "error";
+  content?: string;
+  error?: string;
+  data?: Record<string, unknown>;
 }
 
 interface MultiSourceSearchProps {
-  onResultsChange?: (results: SearchResult[]) => void;
+  onResultsChange?: (hasResults: boolean) => void;
+  onToolResult?: (result: ToolResult | null) => void;
 }
 
 interface ConversationMessage {
@@ -44,58 +41,40 @@ interface ConversationMessage {
   content: string;
 }
 
-interface ConversationState {
-  [source: string]: ConversationMessage[];
-}
-
-export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
-  const { settings } = useSettings();
+export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSourceSearchProps) {
+  const { settings, updateSettings } = useSettings();
   const { addRecentSearch } = useRecentSearches();
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [toolResult, setToolResult] = useState<ToolResult | null>(null);
   const [trends, setTrends] = useState<TrendingSearch[]>([]);
   const [trendsLoading, setTrendsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [userManuallySelected, setUserManuallySelected] = useState(false);
 
-  // Get enabled sources from settings (with fallback)
-  const enabledSourceIds = useMemo(() => {
-    return settings.searchSources?.enabledSources || SEARCH_SOURCES.map(s => s.id);
-  }, [settings.searchSources?.enabledSources]);
+  // Tool-specific input values
+  const [toolInputs, setToolInputs] = useState<Record<string, string>>({});
 
-  // Filter SEARCH_SOURCES to only show enabled ones
-  const enabledSources = useMemo(() => {
-    return SEARCH_SOURCES.filter(s => enabledSourceIds.includes(s.id));
-  }, [enabledSourceIds]);
+  // Get default source from settings (with fallback)
+  const defaultSource = (settings.searchSources?.defaultSourceShort as UnifiedSourceId) || DEFAULT_SOURCE;
 
-  // Get default sources from settings
-  const defaultSourceShort = settings.searchSources?.defaultSourceShort || "duck";
-  const defaultSourceLong = settings.searchSources?.defaultSourceLong || "grok";
+  // Selected source (single select only now)
+  const [selectedSource, setSelectedSource] = useState<UnifiedSourceId>(defaultSource);
 
-  // Initialize selectedSources with default
-  const [selectedSources, setSelectedSources] = useState<SearchSource[]>([defaultSourceShort as SearchSource]);
+  // AI follow-up conversation
+  const [conversation, setConversation] = useState<ConversationMessage[]>([]);
+  const [followUpInput, setFollowUpInput] = useState("");
+  const [sendingFollowUp, setSendingFollowUp] = useState(false);
 
-  // Conversation state for follow-up messages
-  const [conversations, setConversations] = useState<ConversationState>({});
-  const [followUpInputs, setFollowUpInputs] = useState<{ [source: string]: string }>({});
-  const [sendingFollowUp, setSendingFollowUp] = useState<{ [source: string]: boolean }>({});
-
-  // Auto-switch source based on query length using settings defaults
+  // Update parent when tool result changes
   useEffect(() => {
-    if (userManuallySelected) return; // Don't auto-switch if user manually selected
-
-    const wordCount = query.trim().split(/\s+/).filter(w => w.length > 0).length;
-    const shortDefault = defaultSourceShort as SearchSource;
-    const longDefault = defaultSourceLong as SearchSource;
-
-    if (wordCount >= 6 && selectedSources[0] === shortDefault) {
-      setSelectedSources([longDefault]);
-    } else if (wordCount < 6 && selectedSources[0] === longDefault && !userManuallySelected) {
-      setSelectedSources([shortDefault]);
+    if (onToolResult) {
+      onToolResult(toolResult);
     }
-  }, [query, selectedSources, userManuallySelected, defaultSourceShort, defaultSourceLong]);
+    if (onResultsChange) {
+      onResultsChange(toolResult !== null);
+    }
+  }, [toolResult, onToolResult, onResultsChange]);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -105,11 +84,10 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Fetch both Google Trends and X trending, then mix them
+  // Fetch trending topics
   const fetchTrends = useCallback(async () => {
     setTrendsLoading(true);
     try {
-      // Fetch both sources in parallel
       const [googleResponse, xResponse] = await Promise.all([
         fetch("/api/google-trends"),
         fetch("/api/x-trending"),
@@ -118,7 +96,6 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
       const googleData = await googleResponse.json();
       const xData = await xResponse.json();
 
-      // Fetch more topics to fill two lines on desktop (around 20-24)
       const googleTrends: TrendingSearch[] = (googleData.trends || []).slice(0, 12).map((t: { title: string; searchUrl: string }) => ({
         title: t.title,
         searchUrl: t.searchUrl,
@@ -131,7 +108,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
         source: "x" as const,
       }));
 
-      // Interleave the trends from both sources
+      // Interleave trends
       const mixed: TrendingSearch[] = [];
       const maxLength = Math.max(googleTrends.length, xTrends.length);
       for (let i = 0; i < maxLength; i++) {
@@ -139,7 +116,6 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
         if (i < xTrends.length) mixed.push(xTrends[i]);
       }
 
-      // Take top 24 mixed trends (will be limited to 10 on mobile in render)
       setTrends(mixed.slice(0, 24));
     } catch (error) {
       console.error("Error fetching trends:", error);
@@ -154,52 +130,37 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Single-select: clicking a source selects only that source (deselects all others)
-  const selectSource = (source: SearchSource) => {
-    setSelectedSources([source]);
-    setUserManuallySelected(true); // User manually selected, disable auto-switch
+  // Get current source config
+  const currentSourceConfig = useMemo(() => getSourceConfig(selectedSource), [selectedSource]);
+
+  // Check if current source needs additional inputs
+  const needsAdditionalInputs = useMemo(() => sourceNeedsInputs(selectedSource), [selectedSource]);
+
+  // Check if all required inputs are filled
+  const hasRequiredInputs = useMemo(() => {
+    if (!currentSourceConfig?.additionalInputs) return true;
+    return currentSourceConfig.additionalInputs
+      .filter(input => input.required)
+      .every(input => toolInputs[input.id]?.trim());
+  }, [currentSourceConfig, toolInputs]);
+
+  // Select a source
+  const selectSource = (source: UnifiedSourceId) => {
+    setSelectedSource(source);
+    setToolInputs({}); // Clear tool inputs when changing source
+    setDropdownOpen(false);
   };
 
-  // Check if all enabled AI sources are selected
-  const allAISelected = useMemo(() => {
-    const enabledAIIds = enabledSources.filter(s => s.type === "ai").map(s => s.id);
-    return enabledAIIds.length > 0 && enabledAIIds.every((s) => selectedSources.includes(s as SearchSource)) && selectedSources.length === enabledAIIds.length;
-  }, [enabledSources, selectedSources]);
-
-  // Check if multiple non-AI sources selected (multi-mode)
-  const isMultiMode = selectedSources.length > 1 && !allAISelected;
-
-  // Toggle all AI sources (replaces current selection with all enabled AI)
-  const toggleAllAI = () => {
-    setUserManuallySelected(true);
-    const enabledAIIds = enabledSources.filter(s => s.type === "ai").map(s => s.id) as SearchSource[];
-    if (allAISelected) {
-      // If AI is already selected, switch to default source
-      setSelectedSources([defaultSourceShort as SearchSource]);
-    } else {
-      // Select all enabled AI sources only
-      setSelectedSources([...enabledAIIds]);
-    }
+  // Toggle all AI sources
+  const allAISelected = AI_SOURCE_IDS.includes(selectedSource);
+  const toggleAI = () => {
+    selectSource("grok"); // Select first AI source
   };
 
-  // Enable multi-select mode with web sources (only enabled ones)
-  const enabledWebSources = useMemo(() => {
-    return enabledSources.filter(s => s.type === "web").map(s => s.id) as SearchSource[];
-  }, [enabledSources]);
-
-  const enabledAISources = useMemo(() => {
-    return enabledSources.filter(s => s.type === "ai").map(s => s.id) as SearchSource[];
-  }, [enabledSources]);
-
-  const allWebSelected = enabledWebSources.length > 0 && enabledWebSources.every((s) => selectedSources.includes(s)) && selectedSources.length === enabledWebSources.length;
-
-  const toggleAllWeb = () => {
-    setUserManuallySelected(true);
-    if (allWebSelected) {
-      setSelectedSources([defaultSourceShort as SearchSource]);
-    } else {
-      setSelectedSources([...enabledWebSources]);
-    }
+  // Toggle all Web sources
+  const allWebSelected = WEB_SOURCE_IDS.includes(selectedSource);
+  const toggleWeb = () => {
+    selectSource("google"); // Select first web source
   };
 
   // Auto-expand textarea
@@ -219,166 +180,143 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
     setQuery(trend.title);
   };
 
+  // Handle tool input change
+  const handleToolInputChange = (inputId: string, value: string) => {
+    setToolInputs(prev => ({ ...prev, [inputId]: value }));
+  };
+
+  // Handle search/execute
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
-    if (!query.trim() || selectedSources.length === 0) return;
+
+    const sourceConfig = currentSourceConfig;
+    if (!sourceConfig) return;
+
+    // For tools with additional inputs, check those are filled
+    if (needsAdditionalInputs && !hasRequiredInputs) return;
+
+    // For tools that use search input or web/AI sources, check query
+    if ((sourceConfig.type !== "tool" || sourceConfig.usesSearchInput) && !query.trim()) return;
 
     // Add to recent searches
-    addRecentSearch("search", query.trim());
-
-    // Single source handling - open directly for web sources
-    if (selectedSources.length === 1) {
-      const sourceId = selectedSources[0];
-      const sourceConfig = SEARCH_SOURCES.find((s) => s.id === sourceId);
-
-      // For web sources (non-AI), open the URL directly
-      if (sourceConfig?.type === "web") {
-        const searchUrl = getSearchUrl(sourceId, query.trim());
-        window.open(searchUrl, "_blank");
-        return;
-      }
+    if (query.trim()) {
+      addRecentSearch("search", query.trim());
     }
 
+    // Handle web sources - open in new tab
+    if (sourceConfig.type === "web") {
+      const searchUrl = getSearchUrl(selectedSource, query.trim());
+      window.open(searchUrl, "_blank");
+      return;
+    }
+
+    // Handle AI and tool sources - fetch and display results
     setIsSearching(true);
-
-    // Initialize all results as loading
-    const initialResults: SearchResult[] = selectedSources.map((sourceId) => {
-      const sourceConfig = SEARCH_SOURCES.find((s) => s.id === sourceId);
-      return {
-        source: sourceId,
-        sourceName: sourceConfig?.name || sourceId,
-        type: sourceConfig?.type || "web",
-        status: "loading" as const,
-        url: getSearchUrl(sourceId, query.trim()),
-      };
+    setToolResult({
+      source: selectedSource,
+      sourceName: sourceConfig.name,
+      status: "loading",
     });
 
-    setResults([...initialResults]);
-    if (onResultsChange) onResultsChange([...initialResults]);
+    try {
+      let response: Response;
+      let data: Record<string, unknown>;
 
-    // Fetch all results in parallel
-    const fetchPromises = selectedSources.map(async (sourceId) => {
-      const sourceConfig = SEARCH_SOURCES.find((s) => s.id === sourceId);
+      if (sourceConfig.type === "ai") {
+        // AI source
+        response = await fetch(
+          `/api/search?q=${encodeURIComponent(query.trim())}&source=${selectedSource}`
+        );
+        data = await response.json();
 
-      if (sourceConfig?.type === "ai") {
-        // AI sources
-        try {
-          const response = await fetch(
-            `/api/search?q=${encodeURIComponent(query.trim())}&source=${sourceId}`
-          );
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.error || "Search failed");
-          }
-
-          return {
-            source: sourceId,
-            content: data.content,
-            status: "success" as const,
-            type: "ai" as const,
-          };
-        } catch (error) {
-          return {
-            source: sourceId,
-            error: error instanceof Error ? error.message : "Search failed",
-            status: "error" as const,
-            type: "ai" as const,
-          };
+        if (!response.ok) {
+          throw new Error((data as { error?: string }).error || "Search failed");
         }
+
+        setToolResult({
+          source: selectedSource,
+          sourceName: sourceConfig.name,
+          status: "success",
+          content: (data as { content?: string }).content,
+        });
+
+        // Initialize conversation for follow-ups
+        setConversation([
+          { role: "user", content: query },
+          { role: "assistant", content: (data as { content?: string }).content || "" },
+        ]);
       } else {
-        // Web sources - fetch from our API
-        try {
-          const response = await fetch(
-            `/api/web-search?q=${encodeURIComponent(query.trim())}&source=${sourceId}`
-          );
-          const data = await response.json();
+        // Tool source
+        const endpoint = sourceConfig.apiEndpoint || "";
+        const body: Record<string, string> = {};
 
-          if (!response.ok) {
-            throw new Error(data.error || "Search failed");
-          }
-
-          return {
-            source: sourceId,
-            webResults: data.results as WebSearchResultItem[],
-            instantAnswer: data.instant_answer,
-            status: "success" as const,
-            type: "web" as const,
-          };
-        } catch (error) {
-          return {
-            source: sourceId,
-            error: error instanceof Error ? error.message : "Search failed",
-            status: "error" as const,
-            type: "web" as const,
-          };
+        // Add search query if tool uses it
+        if (sourceConfig.usesSearchInput && query.trim()) {
+          body.query = query.trim();
         }
+
+        // Add additional inputs
+        if (sourceConfig.additionalInputs) {
+          sourceConfig.additionalInputs.forEach(input => {
+            if (toolInputs[input.id]) {
+              body[input.id] = toolInputs[input.id];
+            }
+          });
+        }
+
+        response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        data = await response.json();
+
+        if (!response.ok) {
+          throw new Error((data as { error?: string }).error || "Request failed");
+        }
+
+        setToolResult({
+          source: selectedSource,
+          sourceName: sourceConfig.name,
+          status: "success",
+          content: (data as { content?: string; report?: string }).content || (data as { report?: string }).report,
+          data,
+        });
       }
-    });
-
-    const fetchedResults = await Promise.all(fetchPromises);
-
-    // Merge fetched results with initial results
-    const finalResults = initialResults.map((result) => {
-      const fetched = fetchedResults.find((r) => r.source === result.source);
-      if (fetched) {
-        return {
-          ...result,
-          status: fetched.status,
-          content: fetched.type === "ai" && fetched.status === "success" ? fetched.content : undefined,
-          webResults: fetched.type === "web" && fetched.status === "success" ? fetched.webResults : undefined,
-          instantAnswer: fetched.type === "web" && fetched.status === "success" ? fetched.instantAnswer : undefined,
-          error: fetched.status === "error" ? fetched.error : undefined,
-        };
-      }
-      return result;
-    });
-
-    setResults(finalResults);
-    if (onResultsChange) onResultsChange(finalResults);
-    setIsSearching(false);
-  };
-
-  const clearResults = () => {
-    setResults([]);
-    setConversations({});
-    setFollowUpInputs({});
-    setUserManuallySelected(false); // Reset manual selection to enable auto-switch again
-    setSelectedSources([defaultSourceShort as SearchSource]); // Reset to default source
-    if (onResultsChange) onResultsChange([]);
-  };
-
-  // Handle follow-up message for a specific AI source
-  const handleFollowUp = async (source: SearchSource) => {
-    const followUpQuery = followUpInputs[source]?.trim();
-    if (!followUpQuery) return;
-
-    setSendingFollowUp(prev => ({ ...prev, [source]: true }));
-
-    // Get the current result for this source
-    const currentResult = results.find(r => r.source === source);
-    if (!currentResult || currentResult.type !== "ai") return;
-
-    // Build conversation history from previous messages
-    const existingConversation = conversations[source] || [];
-
-    // If this is the first follow-up, add the original query and response to history
-    let conversationHistory = [...existingConversation];
-    if (conversationHistory.length === 0 && currentResult.content) {
-      conversationHistory = [
-        { role: "user" as const, content: query },
-        { role: "assistant" as const, content: currentResult.content },
-      ];
+    } catch (error) {
+      setToolResult({
+        source: selectedSource,
+        sourceName: currentSourceConfig?.name || selectedSource,
+        status: "error",
+        error: error instanceof Error ? error.message : "Request failed",
+      });
+    } finally {
+      setIsSearching(false);
     }
+  };
+
+  // Clear results
+  const clearResults = () => {
+    setToolResult(null);
+    setConversation([]);
+    setFollowUpInput("");
+    setToolInputs({});
+  };
+
+  // Handle AI follow-up
+  const handleFollowUp = async () => {
+    if (!followUpInput.trim() || !toolResult || toolResult.status !== "success") return;
+
+    setSendingFollowUp(true);
 
     try {
       const response = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: followUpQuery,
-          source,
-          conversationHistory,
+          query: followUpInput,
+          source: selectedSource,
+          conversationHistory: conversation,
         }),
       });
 
@@ -388,98 +326,46 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
         throw new Error(data.error || "Follow-up failed");
       }
 
-      // Update conversation history
-      const newHistory: ConversationMessage[] = [
-        ...conversationHistory,
-        { role: "user", content: followUpQuery },
+      // Update conversation
+      const newConversation: ConversationMessage[] = [
+        ...conversation,
+        { role: "user", content: followUpInput },
         { role: "assistant", content: data.content },
       ];
-      setConversations(prev => ({ ...prev, [source]: newHistory }));
+      setConversation(newConversation);
 
-      // Update the result with the new content (append to existing)
-      setResults(prev =>
-        prev.map(r => {
-          if (r.source === source) {
-            const existingContent = r.content || "";
-            const separator = "\n\n---\n\n**You:** " + followUpQuery + "\n\n**" + r.sourceName + ":** ";
-            return {
-              ...r,
-              content: existingContent + separator + data.content,
-            };
-          }
-          return r;
-        })
-      );
+      // Update result with appended content
+      const existingContent = toolResult.content || "";
+      const separator = "\n\n---\n\n**You:** " + followUpInput + "\n\n**" + toolResult.sourceName + ":** ";
+      setToolResult({
+        ...toolResult,
+        content: existingContent + separator + data.content,
+      });
 
-      // Clear the follow-up input
-      setFollowUpInputs(prev => ({ ...prev, [source]: "" }));
+      setFollowUpInput("");
     } catch (error) {
       console.error("Follow-up error:", error);
     } finally {
-      setSendingFollowUp(prev => ({ ...prev, [source]: false }));
+      setSendingFollowUp(false);
     }
   };
 
-  const isSingleSource = selectedSources.length === 1;
+  // Set default source preference
+  const setAsDefaultSource = () => {
+    updateSettings({
+      searchSources: {
+        ...settings.searchSources,
+        defaultSourceShort: selectedSource,
+      },
+    });
+  };
 
-  // Render a single web result item
-  const renderWebResultItem = (item: WebSearchResultItem, index: number, isFullView: boolean) => (
-    <a
-      key={index}
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: "block",
-        padding: isFullView ? "16px 0" : "12px 0",
-        borderBottom: "1px solid var(--glass-border)",
-        textDecoration: "none",
-        transition: "opacity 0.15s",
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
-      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-    >
-      <div
-        style={{
-          fontSize: isFullView ? "16px" : "14px",
-          fontWeight: 500,
-          color: "var(--accent)",
-          marginBottom: "4px",
-        }}
-      >
-        {item.title}
-      </div>
-      <div
-        style={{
-          fontSize: isFullView ? "13px" : "11px",
-          color: "var(--foreground-muted)",
-          marginBottom: "6px",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {item.url}
-      </div>
-      <div
-        style={{
-          fontSize: isFullView ? "14px" : "13px",
-          color: "var(--foreground)",
-          lineHeight: 1.5,
-          display: "-webkit-box",
-          WebkitLineClamp: isFullView ? 4 : 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}
-      >
-        {item.snippet}
-      </div>
-    </a>
-  );
+  // Render result display
+  const renderResult = () => {
+    if (!toolResult) return null;
 
-  // Render full-page single source results
-  const renderSingleSourceResults = (result: SearchResult) => {
-    const sourceConfig = SEARCH_SOURCES.find((s) => s.id === result.source);
+    const sourceConfig = getSourceConfig(toolResult.source);
+    const isAI = sourceConfig?.type === "ai";
 
     return (
       <div
@@ -487,6 +373,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
         style={{
           borderRadius: "12px",
           overflow: "hidden",
+          marginTop: "24px",
         }}
       >
         {/* Header */}
@@ -501,18 +388,18 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
         >
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, fontSize: "18px", color: "var(--foreground)" }}>
-              {result.sourceName}
+              {toolResult.sourceName}
             </div>
             <div style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
-              {result.type === "web" ? "Search Results" : "AI Response"}
+              {isAI ? "AI Response" : "Tool Results"}
             </div>
           </div>
-          {result.status === "loading" && (
+          {toolResult.status === "loading" && (
             <Loader2 style={{ width: "24px", height: "24px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
           )}
-          {result.type === "web" && result.url && (
+          {isAI && toolResult.status === "success" && getAIModelUrl(toolResult.source) && (
             <a
-              href={result.url}
+              href={getAIModelUrl(toolResult.source)}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -527,62 +414,59 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
                 textDecoration: "none",
               }}
             >
-              Open in {result.sourceName}
+              Open {toolResult.sourceName}
               <ExternalLink style={{ width: "14px", height: "14px" }} />
             </a>
           )}
-          {result.type === "ai" && getAIModelUrl(result.source) && (
-            <a
-              href={getAIModelUrl(result.source)}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 14px",
-                borderRadius: "6px",
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
-                color: "var(--foreground-muted)",
-                fontSize: "13px",
-                textDecoration: "none",
-              }}
-            >
-              Open {result.sourceName}
-              <ExternalLink style={{ width: "14px", height: "14px" }} />
-            </a>
-          )}
+          <button
+            onClick={clearResults}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "8px 14px",
+              borderRadius: "6px",
+              border: "1px solid var(--glass-border)",
+              background: "transparent",
+              color: "var(--foreground-muted)",
+              fontSize: "13px",
+              cursor: "pointer",
+            }}
+          >
+            <X style={{ width: "14px", height: "14px" }} />
+            Clear
+          </button>
         </div>
 
         {/* Content */}
         <div style={{ padding: "20px" }}>
-          {result.status === "loading" && (
+          {toolResult.status === "loading" && (
             <div style={{ color: "var(--foreground-muted)", fontSize: "14px", textAlign: "center", padding: "40px" }}>
-              Fetching results...
+              Processing request...
             </div>
           )}
 
-          {result.status === "error" && (
+          {toolResult.status === "error" && (
             <div style={{ textAlign: "center", padding: "40px" }}>
-              {result.error?.includes("not configured") ? (
+              {toolResult.error?.includes("not configured") ? (
                 <>
                   <div style={{ fontSize: "32px", marginBottom: "12px" }}>🔑</div>
                   <div style={{ color: "var(--foreground-muted)", fontSize: "14px", marginBottom: "8px" }}>
-                    {result.error}
+                    {toolResult.error}
                   </div>
                   <div style={{ color: "var(--foreground-muted)", fontSize: "13px", opacity: 0.7 }}>
-                    This AI source requires an API key to be configured.
+                    This source requires an API key to be configured.
                   </div>
                 </>
               ) : (
                 <div style={{ color: "#f87171", fontSize: "14px" }}>
-                  Error: {result.error}
+                  Error: {toolResult.error}
                 </div>
               )}
             </div>
           )}
 
-          {result.status === "success" && result.type === "ai" && result.content && (
+          {toolResult.status === "success" && toolResult.content && (
             <>
               <div
                 style={{
@@ -592,302 +476,68 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
                   whiteSpace: "pre-wrap",
                 }}
               >
-                {result.content}
+                {toolResult.content}
               </div>
 
-              {/* Follow-up input for AI responses */}
-              <div
-                style={{
-                  marginTop: "20px",
-                  paddingTop: "16px",
-                  borderTop: "1px solid var(--glass-border)",
-                }}
-              >
-                <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
-                  <textarea
-                    placeholder="Ask a follow-up question..."
-                    value={followUpInputs[result.source] || ""}
-                    onChange={(e) =>
-                      setFollowUpInputs(prev => ({ ...prev, [result.source]: e.target.value }))
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleFollowUp(result.source);
-                      }
-                    }}
-                    rows={1}
-                    style={{
-                      flex: 1,
-                      background: "rgba(255, 255, 255, 0.05)",
-                      border: "1px solid var(--glass-border)",
-                      borderRadius: "8px",
-                      padding: "10px 14px",
-                      fontSize: "14px",
-                      color: "var(--foreground)",
-                      resize: "none",
-                      outline: "none",
-                      fontFamily: "inherit",
-                    }}
-                  />
-                  <button
-                    onClick={() => handleFollowUp(result.source)}
-                    disabled={sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim()}
-                    style={{
-                      padding: "10px 16px",
-                      borderRadius: "8px",
-                      border: "none",
-                      backgroundColor: "var(--accent)",
-                      color: "var(--background)",
-                      fontSize: "13px",
-                      fontWeight: 500,
-                      cursor: sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim() ? "not-allowed" : "pointer",
-                      opacity: sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim() ? 0.5 : 1,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    {sendingFollowUp[result.source] ? (
-                      <Loader2 style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite" }} />
-                    ) : (
-                      "Send"
-                    )}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-
-          {result.status === "success" && result.type === "web" && (
-            <>
-              {result.instantAnswer && (
+              {/* Follow-up input for AI */}
+              {isAI && (
                 <div
                   style={{
-                    padding: "16px",
-                    marginBottom: "20px",
-                    borderRadius: "8px",
-                    backgroundColor: "rgba(6, 182, 212, 0.1)",
-                    borderLeft: "4px solid var(--accent)",
+                    marginTop: "20px",
+                    paddingTop: "16px",
+                    borderTop: "1px solid var(--glass-border)",
                   }}
                 >
-                  <div style={{ fontSize: "15px", lineHeight: 1.6, color: "var(--foreground)" }}>
-                    {result.instantAnswer}
+                  <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                    <textarea
+                      placeholder="Ask a follow-up question..."
+                      value={followUpInput}
+                      onChange={(e) => setFollowUpInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleFollowUp();
+                        }
+                      }}
+                      rows={1}
+                      style={{
+                        flex: 1,
+                        background: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid var(--glass-border)",
+                        borderRadius: "8px",
+                        padding: "10px 14px",
+                        fontSize: "14px",
+                        color: "var(--foreground)",
+                        resize: "none",
+                        outline: "none",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                    <button
+                      onClick={handleFollowUp}
+                      disabled={sendingFollowUp || !followUpInput.trim()}
+                      style={{
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        backgroundColor: "var(--accent)",
+                        color: "var(--background)",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        cursor: sendingFollowUp || !followUpInput.trim() ? "not-allowed" : "pointer",
+                        opacity: sendingFollowUp || !followUpInput.trim() ? 0.5 : 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      {sendingFollowUp ? (
+                        <Loader2 style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite" }} />
+                      ) : (
+                        "Send"
+                      )}
+                    </button>
                   </div>
-                </div>
-              )}
-              {result.webResults && result.webResults.length > 0 ? (
-                <div>
-                  {result.webResults.map((item, index) => renderWebResultItem(item, index, true))}
-                </div>
-              ) : (
-                <div style={{ textAlign: "center", padding: "40px", color: "var(--foreground-muted)" }}>
-                  No results found. Try searching directly on {result.sourceName}.
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // Render multi-source result card with preview
-  const renderResultCard = (result: SearchResult) => {
-    const sourceConfig = SEARCH_SOURCES.find((s) => s.id === result.source);
-
-    return (
-      <div
-        key={result.source}
-        className="glass"
-        style={{
-          borderRadius: "12px",
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            padding: "14px 16px",
-            borderBottom: "1px solid var(--glass-border)",
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 500, fontSize: "14px", color: "var(--foreground)" }}>
-              {result.sourceName}
-            </div>
-          </div>
-          {result.status === "loading" && (
-            <Loader2 style={{ width: "16px", height: "16px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
-          )}
-          {result.type === "web" && result.url && result.status === "success" && (
-            <a
-              href={result.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "6px 10px",
-                borderRadius: "6px",
-                backgroundColor: "var(--accent)",
-                color: "var(--background)",
-                fontSize: "12px",
-                fontWeight: 500,
-                textDecoration: "none",
-              }}
-            >
-              Open
-              <ExternalLink style={{ width: "12px", height: "12px" }} />
-            </a>
-          )}
-          {result.type === "ai" && result.status === "success" && getAIModelUrl(result.source) && (
-            <a
-              href={getAIModelUrl(result.source)}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "6px 10px",
-                borderRadius: "6px",
-                backgroundColor: "var(--accent)",
-                color: "var(--background)",
-                fontSize: "12px",
-                fontWeight: 500,
-                textDecoration: "none",
-              }}
-            >
-              Open
-              <ExternalLink style={{ width: "12px", height: "12px" }} />
-            </a>
-          )}
-        </div>
-
-        {/* Content Preview */}
-        <div style={{ padding: "14px 16px", flex: 1, maxHeight: "280px", overflowY: "auto" }}>
-          {result.status === "loading" && (
-            <div style={{ color: "var(--foreground-muted)", fontSize: "13px" }}>
-              Fetching results...
-            </div>
-          )}
-
-          {result.status === "error" && (
-            <div>
-              {result.error?.includes("not configured") ? (
-                <div style={{ textAlign: "center", padding: "20px 0" }}>
-                  <div style={{ fontSize: "24px", marginBottom: "8px" }}>🔑</div>
-                  <div style={{ color: "var(--foreground-muted)", fontSize: "13px" }}>
-                    API key not configured
-                  </div>
-                </div>
-              ) : (
-                <div style={{ color: "#f87171", fontSize: "13px" }}>
-                  Error: {result.error}
-                </div>
-              )}
-            </div>
-          )}
-
-          {result.status === "success" && result.type === "ai" && result.content && (
-            <>
-              <div
-                style={{
-                  fontSize: "13px",
-                  lineHeight: 1.6,
-                  color: "var(--foreground)",
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {result.content}
-              </div>
-
-              {/* Follow-up input for AI responses in cards */}
-              <div
-                style={{
-                  marginTop: "12px",
-                  paddingTop: "12px",
-                  borderTop: "1px solid var(--glass-border)",
-                }}
-              >
-                <div style={{ display: "flex", gap: "6px", alignItems: "flex-start" }}>
-                  <input
-                    type="text"
-                    placeholder="Follow-up..."
-                    value={followUpInputs[result.source] || ""}
-                    onChange={(e) =>
-                      setFollowUpInputs(prev => ({ ...prev, [result.source]: e.target.value }))
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleFollowUp(result.source);
-                      }
-                    }}
-                    style={{
-                      flex: 1,
-                      background: "rgba(255, 255, 255, 0.05)",
-                      border: "1px solid var(--glass-border)",
-                      borderRadius: "6px",
-                      padding: "8px 10px",
-                      fontSize: "12px",
-                      color: "var(--foreground)",
-                      outline: "none",
-                    }}
-                  />
-                  <button
-                    onClick={() => handleFollowUp(result.source)}
-                    disabled={sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim()}
-                    style={{
-                      padding: "8px 12px",
-                      borderRadius: "6px",
-                      border: "none",
-                      backgroundColor: "var(--accent)",
-                      color: "var(--background)",
-                      fontSize: "12px",
-                      fontWeight: 500,
-                      cursor: sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim() ? "not-allowed" : "pointer",
-                      opacity: sendingFollowUp[result.source] || !followUpInputs[result.source]?.trim() ? 0.5 : 1,
-                    }}
-                  >
-                    {sendingFollowUp[result.source] ? "..." : "Send"}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-
-          {result.status === "success" && result.type === "web" && (
-            <>
-              {result.instantAnswer && (
-                <div
-                  style={{
-                    padding: "10px",
-                    marginBottom: "12px",
-                    borderRadius: "6px",
-                    backgroundColor: "rgba(6, 182, 212, 0.1)",
-                    fontSize: "13px",
-                    lineHeight: 1.5,
-                    color: "var(--foreground)",
-                  }}
-                >
-                  {result.instantAnswer}
-                </div>
-              )}
-              {result.webResults && result.webResults.length > 0 ? (
-                <div>
-                  {result.webResults.slice(0, 4).map((item, index) => renderWebResultItem(item, index, false))}
-                </div>
-              ) : (
-                <div style={{ color: "var(--foreground-muted)", fontSize: "13px" }}>
-                  Click "Open" to view results on {result.sourceName}
                 </div>
               )}
             </>
@@ -899,8 +549,8 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
 
   return (
     <div style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}>
-      {/* Trending Topics Row - Above Search Bar */}
-      {trends.length > 0 && (
+      {/* Trending Topics */}
+      {trends.length > 0 && !toolResult && (
         <div
           style={{
             display: "flex",
@@ -920,75 +570,48 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               marginTop: "4px",
             }}
           />
-          {/* Show limited trends: 10 on mobile, 14 on desktop (fits in 2 rows) */}
           {(() => {
             const displayTrends = isMobile ? trends.slice(0, 10) : trends.slice(0, 14);
-            // Split into two equal rows
             const halfLength = Math.ceil(displayTrends.length / 2);
             const row1 = displayTrends.slice(0, halfLength);
             const row2 = displayTrends.slice(halfLength);
 
             return (
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "center", flex: 1 }}>
-                {/* Row 1 */}
-                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "4px" }}>
-                  {row1.map((trend, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleTrendClick(trend)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        padding: "2px 0",
-                        fontSize: "13px",
-                        color: "var(--foreground-muted)",
-                        cursor: "pointer",
-                        transition: "color 0.15s",
-                        whiteSpace: "nowrap",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground-muted)")}
-                    >
-                      {trend.title}
-                      {index < row1.length - 1 && (
-                        <span style={{ marginLeft: "8px", opacity: 0.3 }}>•</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                {/* Row 2 */}
-                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "4px" }}>
-                  {row2.map((trend, index) => (
-                    <button
-                      key={index + halfLength}
-                      onClick={() => handleTrendClick(trend)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        padding: "2px 0",
-                        fontSize: "13px",
-                        color: "var(--foreground-muted)",
-                        cursor: "pointer",
-                        transition: "color 0.15s",
-                        whiteSpace: "nowrap",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground-muted)")}
-                    >
-                      {trend.title}
-                      {index < row2.length - 1 && (
-                        <span style={{ marginLeft: "8px", opacity: 0.3 }}>•</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
+                {[row1, row2].map((row, rowIndex) => (
+                  <div key={rowIndex} style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "4px" }}>
+                    {row.map((trend, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleTrendClick(trend)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: "2px 0",
+                          fontSize: "13px",
+                          color: "var(--foreground-muted)",
+                          cursor: "pointer",
+                          transition: "color 0.15s",
+                          whiteSpace: "nowrap",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground-muted)")}
+                      >
+                        {trend.title}
+                        {index < row.length - 1 && (
+                          <span style={{ marginLeft: "8px", opacity: 0.3 }}>•</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ))}
               </div>
             );
           })()}
         </div>
       )}
 
-      {trendsLoading && (
+      {trendsLoading && !toolResult && (
         <div
           style={{
             display: "flex",
@@ -1029,13 +652,13 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
           />
           <textarea
             ref={textareaRef}
-            placeholder="Search across multiple sources..."
+            placeholder={needsAdditionalInputs ? "Additional context (optional)..." : "Search..."}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                if (query.trim()) {
+                if (query.trim() || (needsAdditionalInputs && hasRequiredInputs)) {
                   handleSearch(e as unknown as FormEvent);
                 }
               }
@@ -1057,7 +680,6 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             }}
           />
 
-          {/* Clear button */}
           {query && (
             <button
               type="button"
@@ -1092,7 +714,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
 
           <button
             type="submit"
-            disabled={isSearching || !query.trim()}
+            disabled={isSearching || (!query.trim() && !hasRequiredInputs)}
             style={{
               display: "flex",
               alignItems: "center",
@@ -1105,8 +727,8 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
               fontWeight: 500,
               color: "var(--background)",
               border: "none",
-              cursor: isSearching || !query.trim() ? "not-allowed" : "pointer",
-              opacity: isSearching || !query.trim() ? 0.5 : 1,
+              cursor: isSearching || (!query.trim() && !hasRequiredInputs) ? "not-allowed" : "pointer",
+              opacity: isSearching || (!query.trim() && !hasRequiredInputs) ? 0.5 : 1,
               marginTop: "2px",
             }}
           >
@@ -1118,7 +740,46 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
           </button>
         </div>
 
-        {/* Source Selector - Below Search Bar */}
+        {/* Tool-specific inputs */}
+        {needsAdditionalInputs && currentSourceConfig?.additionalInputs && (
+          <div
+            style={{
+              marginTop: "12px",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "8px",
+            }}
+          >
+            {currentSourceConfig.additionalInputs.map((input) => (
+              <div
+                key={input.id}
+                style={{
+                  flex: input.required ? "1 1 200px" : "0 1 150px",
+                  minWidth: "120px",
+                }}
+              >
+                <input
+                  type={input.type || "text"}
+                  placeholder={input.placeholder}
+                  value={toolInputs[input.id] || ""}
+                  onChange={(e) => handleToolInputChange(input.id, e.target.value)}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: "8px",
+                    padding: "10px 14px",
+                    fontSize: "14px",
+                    color: "var(--foreground)",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Source Selector */}
         {isMobile ? (
           /* Mobile Dropdown */
           <div style={{ marginTop: "12px", position: "relative" }}>
@@ -1139,11 +800,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
                 cursor: "pointer",
               }}
             >
-              <span>
-                {selectedSources.length === 1
-                  ? SEARCH_SOURCES.find((s) => s.id === selectedSources[0])?.name
-                  : `${selectedSources.length} sources selected`}
-              </span>
+              <span>{currentSourceConfig?.name || selectedSource}</span>
               <ChevronDown
                 style={{
                   width: "16px",
@@ -1170,30 +827,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
                   overflowY: "auto",
                 }}
               >
-                {/* All AI Button */}
-                <button
-                  type="button"
-                  onClick={toggleAllAI}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 14px",
-                    border: "none",
-                    borderBottom: "2px solid rgba(255, 255, 255, 0.1)",
-                    background: allAISelected ? "rgba(6, 182, 212, 0.15)" : "transparent",
-                    color: allAISelected ? "var(--accent)" : "var(--foreground)",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }}
-                >
-                  All AI Models
-                  {allAISelected && <span style={{ fontSize: "12px" }}>✓</span>}
-                </button>
-                {enabledSources.map((source) => (
+                {UNIFIED_SOURCES.map((source) => (
                   <button
                     key={source.id}
                     type="button"
@@ -1207,7 +841,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
                       border: "none",
                       borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
                       background: "transparent",
-                      color: selectedSources.includes(source.id)
+                      color: selectedSource === source.id
                         ? "var(--accent)"
                         : "var(--foreground-muted)",
                       fontSize: "13px",
@@ -1216,7 +850,7 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
                     }}
                   >
                     {source.name}
-                    {selectedSources.includes(source.id) && (
+                    {selectedSource === source.id && (
                       <span style={{ fontSize: "12px" }}>✓</span>
                     )}
                   </button>
@@ -1225,90 +859,85 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             )}
           </div>
         ) : (
-          /* Desktop Pill Buttons */
+          /* Desktop - Compact text buttons */
           <div
             style={{
               marginTop: "12px",
               display: "flex",
-              flexWrap: "nowrap",
+              flexWrap: "wrap",
               alignItems: "center",
               justifyContent: "center",
-              gap: "6px",
+              gap: "4px",
             }}
           >
-            {/* All AI Button - First (only show if there are enabled AI sources) */}
-            {enabledAISources.length > 0 && (
-              <button
-                type="button"
-                onClick={toggleAllAI}
-                className={!allAISelected ? "glass" : ""}
-                style={{
-                  whiteSpace: "nowrap",
-                  borderRadius: "9999px",
-                  padding: "5px 12px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  backgroundColor: allAISelected
-                    ? "var(--accent)"
-                    : "transparent",
-                  color: allAISelected
-                    ? "var(--background)"
-                    : "var(--foreground-muted)",
-                }}
-              >
-                AI
-              </button>
-            )}
-            {/* All Web Button (only show if there are enabled web sources) */}
-            {enabledWebSources.length > 0 && (
-              <button
-                type="button"
-                onClick={toggleAllWeb}
-                className={!allWebSelected ? "glass" : ""}
-                style={{
-                  whiteSpace: "nowrap",
-                  borderRadius: "9999px",
-                  padding: "5px 12px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  backgroundColor: allWebSelected
-                    ? "var(--accent)"
-                    : "transparent",
-                  color: allWebSelected
-                    ? "var(--background)"
-                    : "var(--foreground-muted)",
-                }}
-              >
-                Web
-              </button>
-            )}
-            {enabledSources.map((source) => (
+            {/* AI group button */}
+            <button
+              type="button"
+              onClick={toggleAI}
+              style={{
+                padding: "4px 10px",
+                fontSize: "12px",
+                fontWeight: 600,
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                transition: "all 0.15s",
+                backgroundColor: allAISelected ? "var(--accent)" : "transparent",
+                color: allAISelected ? "var(--background)" : "var(--foreground-muted)",
+              }}
+            >
+              Ai
+            </button>
+
+            {/* Web group button */}
+            <button
+              type="button"
+              onClick={toggleWeb}
+              style={{
+                padding: "4px 10px",
+                fontSize: "12px",
+                fontWeight: 600,
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                transition: "all 0.15s",
+                backgroundColor: allWebSelected ? "var(--accent)" : "transparent",
+                color: allWebSelected ? "var(--background)" : "var(--foreground-muted)",
+              }}
+            >
+              Web
+            </button>
+
+            {/* Separator */}
+            <span style={{ color: "var(--foreground-muted)", opacity: 0.3, margin: "0 4px" }}>|</span>
+
+            {/* Individual sources */}
+            {UNIFIED_SOURCES.map((source) => (
               <button
                 key={source.id}
                 type="button"
                 onClick={() => selectSource(source.id)}
-                className={!selectedSources.includes(source.id) ? "glass" : ""}
                 style={{
-                  whiteSpace: "nowrap",
-                  borderRadius: "9999px",
-                  padding: "5px 12px",
-                  fontSize: "12px",
+                  padding: "4px 8px",
+                  fontSize: "11px",
                   fontWeight: 500,
                   border: "none",
+                  borderRadius: "4px",
                   cursor: "pointer",
-                  transition: "all 0.2s",
-                  backgroundColor: selectedSources.includes(source.id) && selectedSources.length === 1
-                    ? "var(--accent)"
-                    : "transparent",
-                  color: selectedSources.includes(source.id) && selectedSources.length === 1
-                    ? "var(--background)"
-                    : "var(--foreground-muted)",
+                  transition: "all 0.15s",
+                  backgroundColor: selectedSource === source.id ? "var(--accent)" : "transparent",
+                  color: selectedSource === source.id ? "var(--background)" : "var(--foreground-muted)",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedSource !== source.id) {
+                    e.currentTarget.style.color = "var(--foreground)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedSource !== source.id) {
+                    e.currentTarget.style.color = "var(--foreground-muted)";
+                  }
                 }}
               >
                 {source.name}
@@ -1316,52 +945,33 @@ export function MultiSourceSearch({ onResultsChange }: MultiSourceSearchProps) {
             ))}
           </div>
         )}
+
+        {/* Set as default link */}
+        {selectedSource !== defaultSource && (
+          <div style={{ marginTop: "8px", textAlign: "center" }}>
+            <button
+              type="button"
+              onClick={setAsDefaultSource}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--foreground-muted)",
+                fontSize: "11px",
+                cursor: "pointer",
+                textDecoration: "underline",
+                opacity: 0.7,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+            >
+              Set as default source
+            </button>
+          </div>
+        )}
       </form>
 
       {/* Results display */}
-      {results.length > 0 && (
-        <div style={{ marginTop: "24px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)" }}>
-              Results {isSingleSource ? "" : `(${results.length} sources)`}
-            </h3>
-            <button
-              onClick={clearResults}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "6px 12px",
-                borderRadius: "6px",
-                border: "1px solid var(--glass-border)",
-                background: "transparent",
-                color: "var(--foreground-muted)",
-                fontSize: "13px",
-                cursor: "pointer",
-              }}
-            >
-              <X style={{ width: "14px", height: "14px" }} />
-              Clear
-            </button>
-          </div>
-
-          {/* Single source - full page display */}
-          {isSingleSource && results.length === 1 ? (
-            renderSingleSourceResults(results[0])
-          ) : (
-            /* Multiple sources - grid of preview cards */
-            <div
-              style={{
-                display: "grid",
-                gap: "16px",
-                gridTemplateColumns: results.length === 2 ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(320px, 1fr))",
-              }}
-            >
-              {results.map((result) => renderResultCard(result))}
-            </div>
-          )}
-        </div>
-      )}
+      {renderResult()}
 
       <style jsx global>{`
         @keyframes spin {
