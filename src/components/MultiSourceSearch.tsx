@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, FormEvent, useCallback, useRef, useMemo } from "react";
-import { Search, ExternalLink, X, Loader2, TrendingUp, ChevronDown } from "lucide-react";
+import {
+  Search, ExternalLink, X, Loader2, TrendingUp, ChevronDown, Upload,
+  BookOpen, FileSearch, Link2, User, Target, Sparkles
+} from "lucide-react";
 import {
   UnifiedSourceId,
   UNIFIED_SOURCES,
@@ -12,6 +15,9 @@ import {
   getSourceConfig,
   getAIModelUrl,
   sourceNeedsInputs,
+  sourceIsTool,
+  sourceIsMeta,
+  getIncludedSources,
 } from "@/lib/unified-sources";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useRecentSearches } from "@/contexts/RecentSearchesContext";
@@ -34,6 +40,7 @@ interface ToolResult {
 interface MultiSourceSearchProps {
   onResultsChange?: (hasResults: boolean) => void;
   onToolResult?: (result: ToolResult | null) => void;
+  onToolActive?: (isActive: boolean) => void;
 }
 
 interface ConversationMessage {
@@ -41,9 +48,9 @@ interface ConversationMessage {
   content: string;
 }
 
-export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSourceSearchProps) {
+export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive }: MultiSourceSearchProps) {
   const { settings, updateSettings } = useSettings();
-  const { addRecentSearch } = useRecentSearches();
+  const { getRecentSearches, addRecentSearch } = useRecentSearches();
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [toolResult, setToolResult] = useState<ToolResult | null>(null);
@@ -54,6 +61,14 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
 
   // Tool-specific input values
   const [toolInputs, setToolInputs] = useState<Record<string, string>>({});
+
+  // Tool option values
+  const [toolOptions, setToolOptions] = useState<Record<string, string>>({});
+
+  // Image upload for image-lookup
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get default source from settings (with fallback)
   const defaultSource = (settings.searchSources?.defaultSourceShort as UnifiedSourceId) || DEFAULT_SOURCE;
@@ -66,6 +81,9 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
   const [followUpInput, setFollowUpInput] = useState("");
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
 
+  // Check if current source is a tool
+  const isToolSource = useMemo(() => sourceIsTool(selectedSource), [selectedSource]);
+
   // Update parent when tool result changes
   useEffect(() => {
     if (onToolResult) {
@@ -75,6 +93,13 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
       onResultsChange(toolResult !== null);
     }
   }, [toolResult, onToolResult, onResultsChange]);
+
+  // Notify parent when tool is active
+  useEffect(() => {
+    if (onToolActive) {
+      onToolActive(isToolSource);
+    }
+  }, [isToolSource, onToolActive]);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -144,24 +169,34 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
       .every(input => toolInputs[input.id]?.trim());
   }, [currentSourceConfig, toolInputs]);
 
+  // Initialize tool options when source changes
+  useEffect(() => {
+    if (currentSourceConfig?.toolOptions) {
+      const defaults: Record<string, string> = {};
+      currentSourceConfig.toolOptions.forEach(opt => {
+        defaults[opt.id] = opt.defaultValue;
+      });
+      setToolOptions(defaults);
+    }
+  }, [currentSourceConfig]);
+
   // Select a source
   const selectSource = (source: UnifiedSourceId) => {
     setSelectedSource(source);
     setToolInputs({}); // Clear tool inputs when changing source
+    setUploadedImage(null); // Clear uploaded image
+    setToolResult(null); // Clear results
     setDropdownOpen(false);
   };
 
-  // Toggle all AI sources
-  const allAISelected = AI_SOURCE_IDS.includes(selectedSource);
-  const toggleAI = () => {
-    selectSource("grok"); // Select first AI source
-  };
-
-  // Toggle all Web sources
-  const allWebSelected = WEB_SOURCE_IDS.includes(selectedSource);
-  const toggleWeb = () => {
-    selectSource("google"); // Select first web source
-  };
+  // Get sources that should be highlighted (for meta sources)
+  const highlightedSources = useMemo(() => {
+    if (sourceIsMeta(selectedSource)) {
+      const included = getIncludedSources(selectedSource);
+      return included.map(s => s.id);
+    }
+    return [];
+  }, [selectedSource]);
 
   // Auto-expand textarea
   const adjustTextareaHeight = () => {
@@ -185,6 +220,36 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
     setToolInputs(prev => ({ ...prev, [inputId]: value }));
   };
 
+  // Handle tool option change
+  const handleToolOptionChange = (optionId: string, value: string) => {
+    setToolOptions(prev => ({ ...prev, [optionId]: value }));
+  };
+
+  // Handle image upload
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setUploadedImage(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setUploadedImage(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Handle search/execute
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
@@ -192,11 +257,17 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
     const sourceConfig = currentSourceConfig;
     if (!sourceConfig) return;
 
+    // For image-lookup, require an image
+    if (selectedSource === "image-lookup" && !uploadedImage && !toolInputs.imageUrl) return;
+
     // For tools with additional inputs, check those are filled
     if (needsAdditionalInputs && !hasRequiredInputs) return;
 
     // For tools that use search input or web/AI sources, check query
-    if ((sourceConfig.type !== "tool" || sourceConfig.usesSearchInput) && !query.trim()) return;
+    if ((sourceConfig.type !== "tool" || sourceConfig.usesSearchInput) && !query.trim()) {
+      // Allow empty query for tools with required inputs that are filled
+      if (!hasRequiredInputs) return;
+    }
 
     // Add to recent searches
     if (query.trim()) {
@@ -208,6 +279,71 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
       const searchUrl = getSearchUrl(selectedSource, query.trim());
       window.open(searchUrl, "_blank");
       return;
+    }
+
+    // Handle meta sources (AI and Web multi-source)
+    if (sourceConfig.type === "meta") {
+      // For now, treat meta sources similar to their first included source
+      // In a full implementation, this would fetch from all included sources
+      if (selectedSource === "ai") {
+        // Query all AI sources
+        setIsSearching(true);
+        setToolResult({
+          source: selectedSource,
+          sourceName: "AI (All Models)",
+          status: "loading",
+        });
+
+        try {
+          const responses = await Promise.all(
+            AI_SOURCE_IDS.map(async (aiSource) => {
+              try {
+                const resp = await fetch(
+                  `/api/search?q=${encodeURIComponent(query.trim())}&source=${aiSource}`
+                );
+                const data = await resp.json();
+                return { source: aiSource, content: data.content, error: data.error };
+              } catch (err) {
+                return { source: aiSource, error: String(err) };
+              }
+            })
+          );
+
+          const successfulResponses = responses.filter(r => r.content);
+          const formattedContent = successfulResponses
+            .map(r => `**${r.source.charAt(0).toUpperCase() + r.source.slice(1)}:**\n${r.content}`)
+            .join("\n\n---\n\n");
+
+          setToolResult({
+            source: selectedSource,
+            sourceName: "AI (All Models)",
+            status: "success",
+            content: formattedContent || "No responses received from AI models.",
+          });
+        } catch (error) {
+          setToolResult({
+            source: selectedSource,
+            sourceName: "AI (All Models)",
+            status: "error",
+            error: error instanceof Error ? error.message : "Request failed",
+          });
+        } finally {
+          setIsSearching(false);
+        }
+        return;
+      }
+
+      if (selectedSource === "web") {
+        // Open all web sources in tabs
+        const webSources = getIncludedSources(selectedSource);
+        webSources.forEach(source => {
+          if (source.searchUrlTemplate) {
+            const searchUrl = getSearchUrl(source.id, query.trim());
+            window.open(searchUrl, "_blank");
+          }
+        });
+        return;
+      }
     }
 
     // Handle AI and tool sources - fetch and display results
@@ -248,7 +384,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
       } else {
         // Tool source
         const endpoint = sourceConfig.apiEndpoint || "";
-        const body: Record<string, string> = {};
+        const body: Record<string, unknown> = {};
 
         // Add search query if tool uses it
         if (sourceConfig.usesSearchInput && query.trim()) {
@@ -262,6 +398,16 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
               body[input.id] = toolInputs[input.id];
             }
           });
+        }
+
+        // Add tool options
+        Object.entries(toolOptions).forEach(([key, value]) => {
+          body[key] = value;
+        });
+
+        // Special handling for image-lookup
+        if (selectedSource === "image-lookup" && uploadedImage) {
+          body.imageData = uploadedImage;
         }
 
         response = await fetch(endpoint, {
@@ -301,6 +447,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
     setConversation([]);
     setFollowUpInput("");
     setToolInputs({});
+    setUploadedImage(null);
   };
 
   // Handle AI follow-up
@@ -360,12 +507,406 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
     });
   };
 
+  // Get recent searches for current tool
+  const toolRecentSearches = useMemo((): string[] => {
+    if (!isToolSource) return [];
+    // Map tool source ID to the ToolId used by the context
+    const toolIdMap: Record<string, string> = {
+      "deep-search": "deep-search",
+      "dark-search": "dark-search",
+      "corporate-info": "company-politics",
+      "business-info": "business-info",
+      "contacts": "contacts",
+      "contact-finder": "contact-finder",
+      "image-lookup": "image-lookup",
+      "visuals": "visuals",
+      "rosters": "visual-rosters",
+      "spotify": "spotify",
+    };
+    const toolId = toolIdMap[selectedSource] || "search";
+    const recentItems = getRecentSearches(toolId as import("@/contexts/SettingsContext").ToolId);
+    return recentItems.map(item => item.query);
+  }, [isToolSource, selectedSource, getRecentSearches]);
+
+  // Render tool options
+  const renderToolOptions = () => {
+    if (!currentSourceConfig?.toolOptions) return null;
+
+    return (
+      <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+        {currentSourceConfig.toolOptions.map((option) => {
+          // Skip generateMode if action is "search"
+          if (option.id === "generateMode" && toolOptions.action === "search") {
+            return null;
+          }
+
+          if (option.type === "toggle" || option.type === "radio") {
+            return (
+              <div key={option.id}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--foreground-muted)",
+                    marginBottom: "8px",
+                  }}
+                >
+                  {option.label}
+                </label>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  {option.options?.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleToolOptionChange(option.id, opt.value)}
+                      style={{
+                        flex: option.type === "toggle" ? 1 : "0 0 auto",
+                        display: "flex",
+                        flexDirection: option.type === "radio" && opt.description ? "column" : "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                        padding: option.type === "radio" && opt.description ? "12px 16px" : "10px 16px",
+                        borderRadius: "8px",
+                        border: toolOptions[option.id] === opt.value
+                          ? "2px solid var(--accent)"
+                          : "1px solid var(--glass-border)",
+                        backgroundColor: toolOptions[option.id] === opt.value
+                          ? "rgba(var(--accent-rgb), 0.1)"
+                          : "rgba(255, 255, 255, 0.03)",
+                        color: toolOptions[option.id] === opt.value
+                          ? "var(--accent)"
+                          : "var(--foreground-muted)",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {option.id === "searchType" && opt.value === "individual" && (
+                        <User style={{ width: "16px", height: "16px" }} />
+                      )}
+                      {option.id === "searchType" && opt.value === "target" && (
+                        <Target style={{ width: "16px", height: "16px" }} />
+                      )}
+                      {option.id === "mode" && opt.value === "long" && (
+                        <BookOpen style={{ width: "16px", height: "16px" }} />
+                      )}
+                      {option.id === "mode" && opt.value === "short" && (
+                        <FileSearch style={{ width: "16px", height: "16px" }} />
+                      )}
+                      {option.id === "mode" && opt.value === "links" && (
+                        <Link2 style={{ width: "16px", height: "16px" }} />
+                      )}
+                      {option.id === "aiSource" && (
+                        <Sparkles style={{ width: "14px", height: "14px" }} />
+                      )}
+                      <span>{opt.label}</span>
+                      {opt.description && (
+                        <span style={{ fontSize: "11px", opacity: 0.7 }}>{opt.description}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
+          if (option.type === "select") {
+            return (
+              <div key={option.id} style={{ position: "relative" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--foreground-muted)",
+                    marginBottom: "8px",
+                  }}
+                >
+                  {option.label}
+                </label>
+                <select
+                  value={toolOptions[option.id] || option.defaultValue}
+                  onChange={(e) => handleToolOptionChange(option.id, e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "12px 36px 12px 14px",
+                    fontSize: "14px",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: "8px",
+                    color: "var(--foreground)",
+                    appearance: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {option.options?.map((opt) => (
+                    <option
+                      key={opt.value}
+                      value={opt.value}
+                      style={{ backgroundColor: "var(--dropdown-bg)" }}
+                    >
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    bottom: "14px",
+                    width: "16px",
+                    height: "16px",
+                    color: "var(--foreground-muted)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
+            );
+          }
+
+          return null;
+        })}
+      </div>
+    );
+  };
+
+  // Render image upload area for image-lookup
+  const renderImageUpload = () => {
+    if (selectedSource !== "image-lookup") return null;
+
+    return (
+      <div style={{ marginTop: "16px" }}>
+        {uploadedImage ? (
+          <div
+            style={{
+              position: "relative",
+              borderRadius: "12px",
+              overflow: "hidden",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            <img
+              src={uploadedImage}
+              alt="Uploaded"
+              style={{ width: "100%", maxHeight: "200px", objectFit: "contain" }}
+            />
+            <button
+              type="button"
+              onClick={() => setUploadedImage(null)}
+              style={{
+                position: "absolute",
+                top: "8px",
+                right: "8px",
+                padding: "6px",
+                borderRadius: "50%",
+                backgroundColor: "rgba(0, 0, 0, 0.6)",
+                border: "none",
+                cursor: "pointer",
+                color: "white",
+              }}
+            >
+              <X style={{ width: "16px", height: "16px" }} />
+            </button>
+          </div>
+        ) : (
+          <div
+            onDrop={handleDrop}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              border: `2px dashed ${isDragging ? "var(--accent)" : "var(--glass-border)"}`,
+              borderRadius: "12px",
+              padding: "32px 24px",
+              textAlign: "center",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              backgroundColor: isDragging ? "rgba(var(--accent-rgb), 0.1)" : "transparent",
+            }}
+          >
+            <Upload
+              style={{
+                width: "36px",
+                height: "36px",
+                color: isDragging ? "var(--accent)" : "var(--foreground-muted)",
+                margin: "0 auto 12px",
+              }}
+            />
+            <p style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)", marginBottom: "4px" }}>
+              Drop an image here or click to upload
+            </p>
+            <p style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+              PNG, JPG, GIF up to 10MB
+            </p>
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          style={{ display: "none" }}
+        />
+      </div>
+    );
+  };
+
+  // Render tool panel (description, options, recent searches)
+  const renderToolPanel = () => {
+    if (!isToolSource || !currentSourceConfig) return null;
+
+    return (
+      <div
+        className="glass"
+        style={{
+          marginTop: "20px",
+          padding: "20px",
+          borderRadius: "12px",
+        }}
+      >
+        {/* Tool Description */}
+        <div style={{ marginBottom: "16px" }}>
+          <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "6px" }}>
+            {currentSourceConfig.name}
+          </h3>
+          <p style={{ fontSize: "14px", color: "var(--foreground-muted)", lineHeight: 1.5 }}>
+            {currentSourceConfig.longDescription || currentSourceConfig.description}
+          </p>
+        </div>
+
+        {/* Tool-specific inputs */}
+        {currentSourceConfig.additionalInputs && currentSourceConfig.additionalInputs.length > 0 && (
+          <div style={{ marginBottom: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+            {currentSourceConfig.additionalInputs.map((input) => (
+              <div key={input.id}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--foreground-muted)",
+                    marginBottom: "6px",
+                  }}
+                >
+                  {input.label} {input.required && <span style={{ color: "var(--accent)" }}>*</span>}
+                </label>
+                <input
+                  type={input.type || "text"}
+                  placeholder={input.placeholder}
+                  value={toolInputs[input.id] || ""}
+                  onChange={(e) => handleToolInputChange(input.id, e.target.value)}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: "8px",
+                    padding: "12px 14px",
+                    fontSize: "14px",
+                    color: "var(--foreground)",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Image upload for image-lookup */}
+        {renderImageUpload()}
+
+        {/* Tool options */}
+        {renderToolOptions()}
+
+        {/* Recent Searches */}
+        {toolRecentSearches.length > 0 && (
+          <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: "1px solid var(--glass-border)" }}>
+            <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "10px" }}>
+              Recent Searches
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {toolRecentSearches.slice(0, 5).map((search, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    if (currentSourceConfig.usesSearchInput) {
+                      setQuery(search);
+                    } else if (currentSourceConfig.additionalInputs?.[0]) {
+                      setToolInputs(prev => ({
+                        ...prev,
+                        [currentSourceConfig.additionalInputs![0].id]: search,
+                      }));
+                    }
+                  }}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--glass-border)",
+                    background: "transparent",
+                    color: "var(--foreground-muted)",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {search}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Example Searches */}
+        {currentSourceConfig.exampleSearches && currentSourceConfig.exampleSearches.length > 0 && (
+          <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: "1px solid var(--glass-border)" }}>
+            <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "10px" }}>
+              Try These Examples
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {currentSourceConfig.exampleSearches.map((example, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    if (currentSourceConfig.usesSearchInput) {
+                      setQuery(example);
+                    } else if (currentSourceConfig.additionalInputs?.[0]) {
+                      setToolInputs(prev => ({
+                        ...prev,
+                        [currentSourceConfig.additionalInputs![0].id]: example,
+                      }));
+                    }
+                  }}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid rgba(var(--accent-rgb), 0.3)",
+                    background: "rgba(var(--accent-rgb), 0.05)",
+                    color: "var(--accent)",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render result display
   const renderResult = () => {
     if (!toolResult) return null;
 
     const sourceConfig = getSourceConfig(toolResult.source);
-    const isAI = sourceConfig?.type === "ai";
+    const isAI = sourceConfig?.type === "ai" || toolResult.source === "ai";
 
     return (
       <div
@@ -391,7 +932,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
               {toolResult.sourceName}
             </div>
             <div style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
-              {isAI ? "AI Response" : "Tool Results"}
+              {isAI ? "AI Response" : "Results"}
             </div>
           </div>
           {toolResult.status === "loading" && (
@@ -547,10 +1088,24 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
     );
   };
 
+  // Build ordered source list for display
+  const orderedSources = useMemo(() => {
+    // Order: AI, Web | Google, Images, News, Trends, Duck, Wikipedia, Grokipedia | tools | X, Youtube, Rumble, Amazon | individual AI
+    const order: UnifiedSourceId[] = [
+      "ai", "web",
+      "google", "images", "news", "trends", "duck", "wikipedia", "grokipedia",
+      "deep-search", "dark-search", "corporate-info", "business-info", "contacts", "contact-finder",
+      "image-lookup", "visuals", "rosters", "spotify",
+      "x", "youtube", "rumble", "amazon",
+      "grok", "gemini", "claude", "chatgpt",
+    ];
+    return order.map(id => UNIFIED_SOURCES.find(s => s.id === id)).filter(Boolean) as typeof UNIFIED_SOURCES;
+  }, []);
+
   return (
-    <div style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}>
-      {/* Trending Topics */}
-      {trends.length > 0 && !toolResult && (
+    <div style={{ width: "100%", maxWidth: "900px", margin: "0 auto" }}>
+      {/* Trending Topics - only show when not viewing a tool */}
+      {trends.length > 0 && !toolResult && !isToolSource && (
         <div
           style={{
             display: "flex",
@@ -611,7 +1166,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
         </div>
       )}
 
-      {trendsLoading && !toolResult && (
+      {trendsLoading && !toolResult && !isToolSource && (
         <div
           style={{
             display: "flex",
@@ -652,15 +1207,19 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
           />
           <textarea
             ref={textareaRef}
-            placeholder={needsAdditionalInputs ? "Additional context (optional)..." : "Search..."}
+            placeholder={
+              selectedSource === "image-lookup"
+                ? "Describe what you're looking for (optional)..."
+                : needsAdditionalInputs
+                ? "Additional context (optional)..."
+                : "Search..."
+            }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                if (query.trim() || (needsAdditionalInputs && hasRequiredInputs)) {
-                  handleSearch(e as unknown as FormEvent);
-                }
+                handleSearch(e as unknown as FormEvent);
               }
             }}
             rows={1}
@@ -714,7 +1273,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
 
           <button
             type="submit"
-            disabled={isSearching || (!query.trim() && !hasRequiredInputs)}
+            disabled={isSearching}
             style={{
               display: "flex",
               alignItems: "center",
@@ -727,8 +1286,8 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
               fontWeight: 500,
               color: "var(--background)",
               border: "none",
-              cursor: isSearching || (!query.trim() && !hasRequiredInputs) ? "not-allowed" : "pointer",
-              opacity: isSearching || (!query.trim() && !hasRequiredInputs) ? 0.5 : 1,
+              cursor: isSearching ? "not-allowed" : "pointer",
+              opacity: isSearching ? 0.5 : 1,
               marginTop: "2px",
             }}
           >
@@ -739,45 +1298,6 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
             )}
           </button>
         </div>
-
-        {/* Tool-specific inputs */}
-        {needsAdditionalInputs && currentSourceConfig?.additionalInputs && (
-          <div
-            style={{
-              marginTop: "12px",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "8px",
-            }}
-          >
-            {currentSourceConfig.additionalInputs.map((input) => (
-              <div
-                key={input.id}
-                style={{
-                  flex: input.required ? "1 1 200px" : "0 1 150px",
-                  minWidth: "120px",
-                }}
-              >
-                <input
-                  type={input.type || "text"}
-                  placeholder={input.placeholder}
-                  value={toolInputs[input.id] || ""}
-                  onChange={(e) => handleToolInputChange(input.id, e.target.value)}
-                  style={{
-                    width: "100%",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    border: "1px solid var(--glass-border)",
-                    borderRadius: "8px",
-                    padding: "10px 14px",
-                    fontSize: "14px",
-                    color: "var(--foreground)",
-                    outline: "none",
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* Source Selector */}
         {isMobile ? (
@@ -791,12 +1311,12 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "10px 14px",
-                borderRadius: "8px",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                background: "transparent",
+                padding: "12px 14px",
+                borderRadius: "10px",
+                border: "1px solid var(--glass-border)",
+                background: "rgba(255, 255, 255, 0.03)",
                 color: "var(--foreground)",
-                fontSize: "13px",
+                fontSize: "14px",
                 cursor: "pointer",
               }}
             >
@@ -818,16 +1338,16 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
                   left: 0,
                   right: 0,
                   marginTop: "4px",
-                  borderRadius: "8px",
+                  borderRadius: "10px",
                   border: "1px solid var(--glass-border)",
                   backgroundColor: "var(--dropdown-bg)",
                   zIndex: 50,
                   overflow: "hidden",
-                  maxHeight: "300px",
+                  maxHeight: "350px",
                   overflowY: "auto",
                 }}
               >
-                {UNIFIED_SOURCES.map((source) => (
+                {orderedSources.map((source) => (
                   <button
                     key={source.id}
                     type="button"
@@ -837,14 +1357,14 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      padding: "10px 14px",
+                      padding: "12px 14px",
                       border: "none",
                       borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
                       background: "transparent",
-                      color: selectedSource === source.id
+                      color: selectedSource === source.id || highlightedSources.includes(source.id)
                         ? "var(--accent)"
                         : "var(--foreground-muted)",
-                      fontSize: "13px",
+                      fontSize: "14px",
                       cursor: "pointer",
                       textAlign: "left",
                     }}
@@ -859,96 +1379,80 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
             )}
           </div>
         ) : (
-          /* Desktop - Compact text buttons */
+          /* Desktop - Source buttons with outlines */
           <div
             style={{
-              marginTop: "12px",
+              marginTop: "16px",
               display: "flex",
               flexWrap: "wrap",
               alignItems: "center",
               justifyContent: "center",
-              gap: "4px",
+              gap: "8px",
             }}
           >
-            {/* AI group button */}
-            <button
-              type="button"
-              onClick={toggleAI}
-              style={{
-                padding: "4px 10px",
-                fontSize: "12px",
-                fontWeight: 600,
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-                transition: "all 0.15s",
-                backgroundColor: allAISelected ? "var(--accent)" : "transparent",
-                color: allAISelected ? "var(--background)" : "var(--foreground-muted)",
-              }}
-            >
-              Ai
-            </button>
+            {orderedSources.map((source, index) => {
+              const isSelected = selectedSource === source.id;
+              const isHighlighted = highlightedSources.includes(source.id);
+              const isMeta = source.type === "meta";
+              const isTool = source.type === "tool";
 
-            {/* Web group button */}
-            <button
-              type="button"
-              onClick={toggleWeb}
-              style={{
-                padding: "4px 10px",
-                fontSize: "12px",
-                fontWeight: 600,
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-                transition: "all 0.15s",
-                backgroundColor: allWebSelected ? "var(--accent)" : "transparent",
-                color: allWebSelected ? "var(--background)" : "var(--foreground-muted)",
-              }}
-            >
-              Web
-            </button>
+              // Add separator after Web and before individual AI sources
+              const showSeparatorAfter = source.id === "web" || source.id === "amazon";
 
-            {/* Separator */}
-            <span style={{ color: "var(--foreground-muted)", opacity: 0.3, margin: "0 4px" }}>|</span>
-
-            {/* Individual sources */}
-            {UNIFIED_SOURCES.map((source) => (
-              <button
-                key={source.id}
-                type="button"
-                onClick={() => selectSource(source.id)}
-                style={{
-                  padding: "4px 8px",
-                  fontSize: "11px",
-                  fontWeight: 500,
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  backgroundColor: selectedSource === source.id ? "var(--accent)" : "transparent",
-                  color: selectedSource === source.id ? "var(--background)" : "var(--foreground-muted)",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => {
-                  if (selectedSource !== source.id) {
-                    e.currentTarget.style.color = "var(--foreground)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (selectedSource !== source.id) {
-                    e.currentTarget.style.color = "var(--foreground-muted)";
-                  }
-                }}
-              >
-                {source.name}
-              </button>
-            ))}
+              return (
+                <div key={source.id} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => selectSource(source.id)}
+                    style={{
+                      padding: isMeta ? "8px 16px" : "8px 14px",
+                      fontSize: "13px",
+                      fontWeight: isSelected || isMeta ? 600 : 500,
+                      border: isSelected
+                        ? "2px solid var(--accent)"
+                        : isHighlighted
+                        ? "2px solid rgba(var(--accent-rgb), 0.5)"
+                        : "1px solid var(--glass-border)",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                      backgroundColor: isSelected
+                        ? "rgba(var(--accent-rgb), 0.15)"
+                        : isHighlighted
+                        ? "rgba(var(--accent-rgb), 0.08)"
+                        : "rgba(255, 255, 255, 0.03)",
+                      color: isSelected || isHighlighted
+                        ? "var(--accent)"
+                        : "var(--foreground-muted)",
+                      whiteSpace: "nowrap",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected && !isHighlighted) {
+                        e.currentTarget.style.borderColor = "rgba(var(--accent-rgb), 0.3)";
+                        e.currentTarget.style.color = "var(--foreground)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected && !isHighlighted) {
+                        e.currentTarget.style.borderColor = "var(--glass-border)";
+                        e.currentTarget.style.color = "var(--foreground-muted)";
+                      }
+                    }}
+                  >
+                    {source.name}
+                  </button>
+                  {showSeparatorAfter && (
+                    <span style={{ color: "var(--foreground-muted)", opacity: 0.2, fontSize: "18px" }}>|</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
         {/* Set as default link */}
-        {selectedSource !== defaultSource && (
-          <div style={{ marginTop: "8px", textAlign: "center" }}>
+        {selectedSource !== defaultSource && !isToolSource && (
+          <div style={{ marginTop: "10px", textAlign: "center" }}>
             <button
               type="button"
               onClick={setAsDefaultSource}
@@ -969,6 +1473,9 @@ export function MultiSourceSearch({ onResultsChange, onToolResult }: MultiSource
           </div>
         )}
       </form>
+
+      {/* Tool panel */}
+      {renderToolPanel()}
 
       {/* Results display */}
       {renderResult()}

@@ -96,8 +96,8 @@ export interface UserSettings {
 
 // All available search sources for default settings
 const ALL_SEARCH_SOURCES = [
-  "google", "news", "trends", "duck", "deep-search", "dark-search",
-  "wikipedia", "grokipedia", "corporate-info", "business-info", "contacts",
+  "ai", "web", "google", "images", "news", "trends", "duck", "wikipedia", "grokipedia",
+  "deep-search", "dark-search", "corporate-info", "business-info", "contacts", "contact-finder",
   "x", "youtube", "rumble", "amazon", "image-lookup", "visuals", "rosters",
   "spotify", "grok", "gemini", "claude", "chatgpt"
 ];

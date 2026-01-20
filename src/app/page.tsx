@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Header } from "@/components/Header";
-import { ToolCard } from "@/components/ToolCard";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { FilesPreview } from "@/components/FilesPreview";
 import { EmailsPreview } from "@/components/EmailsPreview";
@@ -17,7 +16,6 @@ import { DraggableWidget, useDragState } from "@/components/DraggableWidget";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { useLayout, WidgetConfig } from "@/contexts/LayoutContext";
 import { useSettings } from "@/contexts/SettingsContext";
-import { tools } from "@/lib/tools";
 
 // Mobile Date/Time Banner Component
 function MobileDateTimeBanner() {
@@ -82,22 +80,13 @@ const WIDGET_TITLES: Record<string, string> = {
   emails: "Emails",
   notes: "Notes",
   stocks: "Market",
-  "contact-finder": "Contact Finder",
-  "company-politics": "Company Info",
-  "visual-rosters": "Visual Rosters",
   news: "News",
-  spotify: "Spotify",
   trending: "Trending",
-  contacts: "Contacts",
   raindrop: "Reading List",
-  "image-lookup": "Image Lookup",
-  visuals: "Visuals",
-  "deep-search": "Deep Search",
-  "dark-search": "Dark Search",
 };
 
-// Unified widgets grid - combines preview widgets and tool cards into a single grid
-function UnifiedWidgetsGrid({
+// Data widgets grid - only preview widgets (tools are now in sources)
+function DataWidgetsGrid({
   isGoogleConnected,
   onConnectGoogle,
   isMobile,
@@ -106,24 +95,16 @@ function UnifiedWidgetsGrid({
   onConnectGoogle: () => void;
   isMobile: boolean;
 }) {
-  const { layout, isEditMode, reorderWidgets, getWidgetConfig } = useLayout();
+  const { layout, isEditMode, reorderWidgets } = useLayout();
 
-  // Separate drag states for each section to avoid dual highlighting
   const previewDragState = useDragState();
-  const toolDragState = useDragState();
 
-  // Data widgets (Files, Emails, Notes, Market) - removed Contacts
-  // In edit mode, show all widgets; in normal mode, only show visible ones
+  // Data widgets only
   const previewWidgets = [...layout.previewWidgets]
-    .filter((w) => w.id !== "contacts") // Contacts is now a tool widget
-    .filter((w) => isEditMode || w.visible) // Hide invisible widgets in normal mode
+    .filter((w) => w.id !== "contacts") // Contacts is now a source
+    .filter((w) => isEditMode || w.visible)
     .sort((a, b) => a.order - b.order)
     .map((w) => ({ ...w, widgetType: "previewWidgets" as const }));
-
-  const toolCards = [...layout.toolCards]
-    .filter((w) => isEditMode || w.visible) // Hide invisible widgets in normal mode
-    .sort((a, b) => a.order - b.order)
-    .map((w) => ({ ...w, widgetType: "toolCards" as const }));
 
   const handlePreviewDrop = useCallback(() => {
     if (previewDragState.dragIndex !== null && previewDragState.dragOverIndex !== null && previewDragState.dragIndex !== previewDragState.dragOverIndex) {
@@ -131,13 +112,6 @@ function UnifiedWidgetsGrid({
     }
     previewDragState.handleDragEnd();
   }, [previewDragState, reorderWidgets]);
-
-  const handleToolDrop = useCallback(() => {
-    if (toolDragState.dragIndex !== null && toolDragState.dragOverIndex !== null && toolDragState.dragIndex !== toolDragState.dragOverIndex) {
-      reorderWidgets("toolCards", toolDragState.dragIndex, toolDragState.dragOverIndex);
-    }
-    toolDragState.handleDragEnd();
-  }, [toolDragState, reorderWidgets]);
 
   const renderPreviewWidget = (widgetConfig: WidgetConfig & { widgetType: "previewWidgets" }, index: number) => {
     const { id } = widgetConfig;
@@ -181,139 +155,53 @@ function UnifiedWidgetsGrid({
     );
   };
 
-  const renderToolCard = (widgetConfig: WidgetConfig & { widgetType: "toolCards" }, index: number) => {
-    const { id, customName } = widgetConfig;
-    const tool = tools.find((t) => t.id === id);
-    if (!tool) return null;
-
-    const displayName = customName || WIDGET_TITLES[id] || tool.name;
-
-    return (
-      <DraggableWidget
-        key={`tool-${id}`}
-        id={id}
-        type="toolCards"
-        title={WIDGET_TITLES[id] || tool.name}
-        index={index}
-        onDragStart={toolDragState.handleDragStart}
-        onDragOver={toolDragState.handleDragOver}
-        onDragEnd={handleToolDrop}
-        isDragging={toolDragState.isDragging}
-        dragOverIndex={toolDragState.dragOverIndex}
-      >
-        <ToolCard tool={tool} index={index} compact customName={displayName} />
-      </DraggableWidget>
-    );
-  };
-
-  // Separate section rendering for edit mode
+  // Edit mode layout
   if (isEditMode) {
     return (
-      <>
-        {/* Tool Widgets Section - First */}
-        <div style={{ marginBottom: "24px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
-            Tool Widgets
-          </h3>
-          <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginBottom: "12px" }}>
-            Interactive tools and features
-          </p>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))",
-              gap: isMobile ? "8px" : "10px",
-              position: "relative",
-              zIndex: 50,
-            }}
-          >
-            {toolCards.map((widget, index) => renderToolCard(widget, index))}
-          </div>
+      <div>
+        <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+          Data Widgets
+        </h3>
+        <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginBottom: "12px" }}>
+          Your connected services and data feeds
+        </p>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+            gap: "12px",
+            position: "relative",
+            zIndex: 50,
+          }}
+        >
+          {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}
         </div>
-
-        {/* Data Widgets Section - Second */}
-        <div>
-          <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
-            Data Widgets
-          </h3>
-          <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginBottom: "12px" }}>
-            Your connected services (Files, Emails, Notes, Market)
-          </p>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-              gap: "12px",
-              position: "relative",
-              zIndex: 50,
-            }}
-          >
-            {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}
-          </div>
-        </div>
-      </>
+      </div>
     );
   }
 
-  // Calculate optimal columns for balanced rows
-  const visibleToolCount = toolCards.length;
-  const getBalancedColumns = (count: number, maxCols: number): number => {
-    // For small counts, use the count itself
-    if (count <= maxCols) return count;
-
-    // Find the best column count that creates balanced rows
-    for (let cols = maxCols; cols >= 2; cols--) {
-      const remainder = count % cols;
-      // If it divides evenly, or the last row has at least half the columns, use this
-      if (remainder === 0 || remainder >= cols / 2) {
-        return cols;
-      }
-    }
-    return maxCols;
-  };
-
-  const maxColumns = isMobile ? 2 : 6;
-  const optimalColumns = getBalancedColumns(visibleToolCount, maxColumns);
-
-  // Normal mode: Tool widgets first, then data widgets
+  // Normal mode
   return (
-    <>
-      {/* Tool Widgets - First (balanced grid) */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: isMobile
-            ? "repeat(2, 1fr)"
-            : `repeat(${optimalColumns}, minmax(120px, 160px))`,
-          justifyContent: "center",
-          gap: isMobile ? "8px" : "10px",
-          marginBottom: "24px",
-        }}
-      >
-        {toolCards.map((widget, index) => renderToolCard(widget, index))}
-      </div>
-
-      {/* Data Widgets - Second (uniform grid) */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-          gap: "16px",
-          gridAutoRows: "364px",
-          width: "100%",
-          maxWidth: "100%",
-          overflow: "hidden",
-        }}
-      >
-        {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}
-      </div>
-    </>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+        gap: "16px",
+        gridAutoRows: "364px",
+        width: "100%",
+        maxWidth: "100%",
+        overflow: "hidden",
+      }}
+    >
+      {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}
+    </div>
   );
 }
 
 export default function Home() {
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [hasSearchResults, setHasSearchResults] = useState(false);
+  const [isToolActive, setIsToolActive] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { isEditMode } = useLayout();
 
@@ -396,19 +284,22 @@ export default function Home() {
               transition={{ duration: 0.6 }}
               style={{ marginBottom: "32px" }}
             >
-              <MultiSourceSearch onResultsChange={(hasResults) => setHasSearchResults(hasResults)} />
+              <MultiSourceSearch
+                onResultsChange={(hasResults) => setHasSearchResults(hasResults)}
+                onToolActive={(active) => setIsToolActive(active)}
+              />
             </motion.section>
           )}
 
-          {/* Unified Widgets Grid - Hidden when search results are shown (unless in edit mode) */}
-          {(isEditMode || !hasSearchResults) && (
+          {/* Data Widgets Grid - Hidden when tool is active or has search results (unless in edit mode) */}
+          {(isEditMode || (!hasSearchResults && !isToolActive)) && (
             <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
               style={{ width: "100%" }}
             >
-              <UnifiedWidgetsGrid
+              <DataWidgetsGrid
                 isGoogleConnected={isGoogleConnected}
                 onConnectGoogle={handleConnectGoogle}
                 isMobile={isMobile}
