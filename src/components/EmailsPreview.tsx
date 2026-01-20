@@ -33,6 +33,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
   const [accounts, setAccounts] = useState<AccountInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ emailId: string; accountEmail?: string; subject: string } | null>(null);
 
   useEffect(() => {
     if (isGoogleConnected) {
@@ -68,11 +69,26 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
     e: React.MouseEvent,
     emailId: string,
     action: "archive" | "trash",
-    accountEmail?: string
+    accountEmail?: string,
+    subject?: string
   ) => {
     e.preventDefault();
     e.stopPropagation();
 
+    // Show confirmation for delete action
+    if (action === "trash") {
+      setDeleteConfirm({ emailId, accountEmail, subject: subject || "this email" });
+      return;
+    }
+
+    await performEmailAction(emailId, action, accountEmail);
+  };
+
+  const performEmailAction = async (
+    emailId: string,
+    action: "archive" | "trash",
+    accountEmail?: string
+  ) => {
     try {
       const response = await fetch(`/api/gmail/${emailId}/actions`, {
         method: "POST",
@@ -91,6 +107,13 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
     }
   };
 
+  const confirmDelete = async () => {
+    if (deleteConfirm) {
+      await performEmailAction(deleteConfirm.emailId, "trash", deleteConfirm.accountEmail);
+      setDeleteConfirm(null);
+    }
+  };
+
   const formatDate = (timestamp: string) => {
     const date = new Date(parseInt(timestamp));
     const now = new Date();
@@ -103,6 +126,85 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
   };
 
   return (
+    <>
+    {/* Delete Confirmation Modal */}
+    {deleteConfirm && (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          backdropFilter: "blur(4px)",
+        }}
+        onClick={() => setDeleteConfirm(null)}
+      >
+        <div
+          className="glass"
+          style={{
+            padding: "24px",
+            borderRadius: "12px",
+            maxWidth: "400px",
+            width: "90%",
+            textAlign: "center",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Trash2 style={{ width: "32px", height: "32px", color: "#ef4444", marginBottom: "16px" }} />
+          <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+            Delete Email?
+          </h3>
+          <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginBottom: "20px", lineHeight: 1.5 }}>
+            Are you sure you want to delete &quot;{deleteConfirm.subject.length > 50 ? deleteConfirm.subject.substring(0, 50) + "..." : deleteConfirm.subject}&quot;?
+          </p>
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+            <button
+              onClick={() => setDeleteConfirm(null)}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "8px",
+                border: "1px solid var(--glass-border)",
+                backgroundColor: "transparent",
+                color: "var(--foreground)",
+                fontSize: "14px",
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "8px",
+                border: "none",
+                backgroundColor: "#ef4444",
+                color: "white",
+                fontSize: "14px",
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#dc2626")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#ef4444")}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header - clickable to navigate to full page */}
       <Link
@@ -281,7 +383,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                     <Archive style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
                   </button>
                   <button
-                    onClick={(e) => handleEmailAction(e, email.id, "trash", email.accountEmail)}
+                    onClick={(e) => handleEmailAction(e, email.id, "trash", email.accountEmail, email.subject)}
                     title="Delete"
                     style={{
                       padding: "6px",
@@ -306,5 +408,6 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
         )}
       </div>
     </div>
+    </>
   );
 }

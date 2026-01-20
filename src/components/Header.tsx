@@ -106,20 +106,20 @@ export function Header({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "36px",
-              height: "36px",
-              borderRadius: "10px",
+              width: isMobile ? "44px" : "38px",
+              height: isMobile ? "44px" : "38px",
+              borderRadius: isMobile ? "12px" : "10px",
               backgroundColor: "rgba(var(--accent-rgb), 0.1)",
             }}
           >
             <span
               style={{
                 fontFamily: "var(--font-sacramento), cursive",
-                fontSize: "36px",
+                fontSize: isMobile ? "44px" : "38px",
                 fontWeight: 400,
                 color: "var(--accent)",
                 lineHeight: 1,
-                marginTop: "8px",
+                marginTop: isMobile ? "10px" : "8px",
               }}
             >
               d
