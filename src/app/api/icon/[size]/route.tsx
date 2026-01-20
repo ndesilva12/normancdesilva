@@ -25,8 +25,8 @@ async function loadSacramentoFont() {
 
 function CursiveDLogo({ size }: { size: number }) {
   const borderRadius = size * 0.188;
-  // Calculate font size to fill most of the square (approximately 75% of the size)
-  const fontSize = size * 0.75;
+  // Calculate font size to fill most of the square (approximately 85% of the size)
+  const fontSize = size * 0.85;
 
   return (
     <div
@@ -58,7 +58,7 @@ function CursiveDLogo({ size }: { size: number }) {
           fontWeight: 400,
           color: "#06b6d4",
           lineHeight: 1,
-          marginTop: `-${size * 0.05}px`,
+          marginTop: `${size * 0.12}px`,
         }}
       >
         d

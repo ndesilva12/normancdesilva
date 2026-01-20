@@ -1,8 +1,8 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="512" height="512" rx="96" fill="#0a0a0f"/>
   <rect x="5" y="5" width="502" height="502" rx="92" stroke="#06b6d4" stroke-width="1" stroke-opacity="0.2"/>
-  <!-- Sacramento-style lowercase 'd' - flowing script letterform -->
-  <g transform="translate(100, 80)">
+  <!-- Sacramento-style lowercase 'd' - flowing script letterform, centered and enlarged -->
+  <g transform="translate(85, 110) scale(1.1)">
     <!-- Main stem with elegant curve at top -->
     <path
       d="M220 50 C220 50 225 40 215 35 C205 30 195 40 195 60 L195 300 C195 310 200 320 195 325"
