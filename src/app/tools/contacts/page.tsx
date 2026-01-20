@@ -2,17 +2,25 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Users, Loader2, RefreshCw, Search, Mail, Phone } from "lucide-react";
 import { GoogleContact } from "@/lib/google-services";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
 export default function ContactsPage() {
+  const router = useRouter();
   const [contacts, setContacts] = useState<GoogleContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const handleEmailClick = (e: React.MouseEvent, email: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/tools/emails?compose=${encodeURIComponent(email)}`);
+  };
 
   useEffect(() => {
     checkConnectionAndFetch();
@@ -312,20 +320,24 @@ export default function ContactsPage() {
                       )}
                       <div style={{ display: "flex", gap: "16px", marginTop: "6px" }}>
                         {email && (
-                          <a
-                            href={`mailto:${email}`}
+                          <button
+                            onClick={(e) => handleEmailClick(e, email)}
                             style={{
                               display: "flex",
                               alignItems: "center",
                               gap: "4px",
                               fontSize: "12px",
-                              color: "var(--foreground-muted)",
-                              textDecoration: "none",
+                              color: "var(--accent)",
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: 0,
                             }}
+                            title={`Compose email to ${email}`}
                           >
                             <Mail style={{ width: "12px", height: "12px" }} />
                             {email}
-                          </a>
+                          </button>
                         )}
                         {phone && (
                           <a

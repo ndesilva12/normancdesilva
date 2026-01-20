@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { FilesPreview } from "@/components/FilesPreview";
 import { EmailsPreview } from "@/components/EmailsPreview";
+import { ContactsPreview } from "@/components/ContactsPreview";
 import { NotesPreview } from "@/components/NotesPreview";
 import { StocksPreview } from "@/components/StocksPreview";
 import { NewsPreview } from "@/components/NewsPreview";
@@ -78,6 +79,7 @@ function MobileDateTimeBanner() {
 const WIDGET_TITLES: Record<string, string> = {
   files: "Files",
   emails: "Emails",
+  contacts: "Contacts",
   notes: "Notes",
   stocks: "Market",
   news: "News",
@@ -122,6 +124,8 @@ function DataWidgetsGrid({
           return <FilesPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={onConnectGoogle} />;
         case "emails":
           return <EmailsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={onConnectGoogle} />;
+        case "contacts":
+          return <ContactsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={onConnectGoogle} />;
         case "notes":
           return <NotesPreview />;
         case "stocks":

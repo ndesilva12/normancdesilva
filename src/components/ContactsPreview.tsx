@@ -2,8 +2,17 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Users, Loader2, ExternalLink, RefreshCw } from "lucide-react";
-import { GoogleContact } from "@/lib/google-services";
+import { useRouter } from "next/navigation";
+import { Users, Loader2, ExternalLink, RefreshCw, Search, Mail, Phone, Building } from "lucide-react";
+
+interface Contact {
+  resourceName: string;
+  names?: { displayName: string; givenName?: string; familyName?: string }[];
+  emailAddresses?: { value: string; type?: string }[];
+  phoneNumbers?: { value: string; type?: string }[];
+  photos?: { url: string }[];
+  organizations?: { name: string; title?: string }[];
+}
 
 interface ContactsPreviewProps {
   isGoogleConnected: boolean;
@@ -11,9 +20,12 @@ interface ContactsPreviewProps {
 }
 
 export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: ContactsPreviewProps) {
-  const [contacts, setContacts] = useState<GoogleContact[]>([]);
+  const router = useRouter();
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   useEffect(() => {
     if (isGoogleConnected) {
@@ -21,11 +33,30 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
     }
   }, [isGoogleConnected]);
 
-  const fetchContacts = async () => {
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Re-fetch when search changes
+  useEffect(() => {
+    if (isGoogleConnected) {
+      fetchContacts(debouncedSearch);
+    }
+  }, [debouncedSearch, isGoogleConnected]);
+
+  const fetchContacts = async (query?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/contacts?limit=6");
+      const params = new URLSearchParams({ limit: "10" });
+      if (query) {
+        params.set("q", query);
+      }
+      const response = await fetch(`/api/contacts?${params.toString()}`);
       if (!response.ok) {
         throw new Error("Failed to fetch contacts");
       }
@@ -43,32 +74,34 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
     onConnectGoogle();
   };
 
-  const getContactName = (contact: GoogleContact): string => {
-    return contact.names?.[0]?.displayName || contact.emailAddresses?.[0]?.value || "Unknown";
+  const handleEmailClick = (e: React.MouseEvent, email: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/tools/emails?compose=${encodeURIComponent(email)}`);
   };
 
-  const getContactEmail = (contact: GoogleContact): string | undefined => {
+  const getContactName = (contact: Contact) => {
+    return contact.names?.[0]?.displayName || "Unknown";
+  };
+
+  const getContactEmail = (contact: Contact) => {
     return contact.emailAddresses?.[0]?.value;
   };
 
-  const getContactPhone = (contact: GoogleContact): string | undefined => {
+  const getContactPhone = (contact: Contact) => {
     return contact.phoneNumbers?.[0]?.value;
   };
 
-  const getContactPhoto = (contact: GoogleContact): string | undefined => {
+  const getContactOrg = (contact: Contact) => {
+    return contact.organizations?.[0]?.name;
+  };
+
+  const getContactPhoto = (contact: Contact) => {
     return contact.photos?.[0]?.url;
   };
 
-  const getInitials = (name: string): string => {
-    const parts = name.split(" ");
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
-
   return (
-    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden" }}>
+    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header - clickable to navigate to full page */}
       <Link
         href="/tools/contacts"
@@ -91,7 +124,7 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
       </Link>
 
       {/* Content */}
-      <div style={{ padding: "12px 16px", minHeight: "120px" }}>
+      <div style={{ padding: "12px 16px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
         {!isGoogleConnected ? (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <p style={{ color: "var(--foreground-muted)", fontSize: "13px", marginBottom: "12px" }}>
@@ -113,112 +146,184 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
               Connect Google
             </button>
           </div>
-        ) : loading ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "30px 0" }}>
-            <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
-          </div>
-        ) : error ? (
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <p style={{ color: "#f87171", fontSize: "13px", marginBottom: "12px" }}>{error}</p>
-            <button
-              onClick={handleReconnect}
+        ) : (
+          <>
+            {/* Search Bar */}
+            <div
               style={{
-                display: "inline-flex",
+                display: "flex",
                 alignItems: "center",
-                gap: "6px",
-                padding: "8px 16px",
-                borderRadius: "6px",
-                backgroundColor: "var(--accent)",
-                color: "var(--background)",
-                border: "none",
-                fontSize: "13px",
-                fontWeight: 500,
-                cursor: "pointer",
+                gap: "8px",
+                padding: "8px 12px",
+                borderRadius: "8px",
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                marginBottom: "12px",
               }}
             >
-              <RefreshCw style={{ width: "14px", height: "14px" }} />
-              Reconnect Google
-            </button>
-          </div>
-        ) : contacts.length === 0 ? (
-          <div style={{ color: "var(--foreground-muted)", fontSize: "13px", textAlign: "center", padding: "20px 0" }}>
-            No contacts found
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {contacts.slice(0, 5).map((contact) => {
-              const name = getContactName(contact);
-              const email = getContactEmail(contact);
-              const phone = getContactPhone(contact);
-              const photo = getContactPhoto(contact);
+              <Search style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search contacts..."
+                style={{
+                  flex: 1,
+                  background: "none",
+                  border: "none",
+                  outline: "none",
+                  color: "var(--foreground)",
+                  fontSize: "13px",
+                }}
+              />
+            </div>
 
-              return (
-                <div
-                  key={contact.resourceName}
+            {loading ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "30px 0" }}>
+                <Loader2 style={{ width: "20px", height: "20px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+              </div>
+            ) : error ? (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <p style={{ color: "#f87171", fontSize: "13px", marginBottom: "12px" }}>{error}</p>
+                <button
+                  onClick={handleReconnect}
                   style={{
-                    display: "flex",
+                    display: "inline-flex",
                     alignItems: "center",
-                    gap: "10px",
-                    padding: "8px",
+                    gap: "6px",
+                    padding: "8px 16px",
                     borderRadius: "6px",
-                    transition: "background 0.15s",
+                    backgroundColor: "var(--accent)",
+                    color: "var(--background)",
+                    border: "none",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    cursor: "pointer",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  {photo ? (
-                    <img
-                      src={photo}
-                      alt={name}
-                      style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                      }}
-                    />
-                  ) : (
+                  <RefreshCw style={{ width: "14px", height: "14px" }} />
+                  Reconnect Google
+                </button>
+              </div>
+            ) : contacts.length === 0 ? (
+              <div style={{ color: "var(--foreground-muted)", fontSize: "13px", textAlign: "center", padding: "20px 0" }}>
+                {searchQuery ? "No contacts found" : "No contacts yet"}
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {contacts.map((contact) => {
+                  const email = getContactEmail(contact);
+                  const phone = getContactPhone(contact);
+                  const org = getContactOrg(contact);
+                  const photo = getContactPhoto(contact);
+
+                  return (
                     <div
+                      key={contact.resourceName}
                       style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "50%",
-                        backgroundColor: "var(--accent)",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "var(--background)",
+                        gap: "10px",
+                        padding: "8px",
+                        borderRadius: "6px",
+                        transition: "background 0.15s",
                       }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
-                      {getInitials(name)}
+                      {/* Avatar */}
+                      {photo ? (
+                        <img
+                          src={photo}
+                          alt=""
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "50%",
+                            flexShrink: 0,
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "50%",
+                            backgroundColor: "rgba(var(--accent-rgb), 0.2)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Users style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
+                        </div>
+                      )}
+
+                      {/* Contact Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {getContactName(contact)}
+                        </div>
+                        {org && (
+                          <div style={{ fontSize: "11px", color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
+                            <Building style={{ width: "10px", height: "10px" }} />
+                            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{org}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+                        {email && (
+                          <button
+                            onClick={(e) => handleEmailClick(e, email)}
+                            title={`Email ${email}`}
+                            style={{
+                              padding: "6px",
+                              borderRadius: "4px",
+                              border: "none",
+                              backgroundColor: "transparent",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              transition: "background 0.15s",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(var(--accent-rgb), 0.2)")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                          >
+                            <Mail style={{ width: "14px", height: "14px", color: "var(--accent)" }} />
+                          </button>
+                        )}
+                        {phone && (
+                          <a
+                            href={`tel:${phone}`}
+                            title={`Call ${phone}`}
+                            style={{
+                              padding: "6px",
+                              borderRadius: "4px",
+                              border: "none",
+                              backgroundColor: "transparent",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              transition: "background 0.15s",
+                              textDecoration: "none",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(34, 197, 94, 0.2)")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                          >
+                            <Phone style={{ width: "14px", height: "14px", color: "#22c55e" }} />
+                          </a>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: "13px",
-                      color: "var(--foreground)",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}>
-                      {name}
-                    </div>
-                    <div style={{
-                      fontSize: "11px",
-                      color: "var(--foreground-muted)",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}>
-                      {email || phone || "No contact info"}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

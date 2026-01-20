@@ -27,6 +27,7 @@ interface ComposeEmailModalProps {
   };
   account?: string;
   accounts?: { email: string; name?: string }[];
+  initialTo?: string; // Pre-fill recipient for compose mode
 }
 
 export function ComposeEmailModal({
@@ -37,6 +38,7 @@ export function ComposeEmailModal({
   replyTo,
   account,
   accounts = [],
+  initialTo,
 }: ComposeEmailModalProps) {
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
@@ -63,13 +65,13 @@ export function ComposeEmailModal({
         setBody(`\n\n---\nForwarded message:\nFrom: ${replyTo.from}\nDate: ${formatDate(replyTo.date)}\nSubject: ${replyTo.subject}\nTo: ${replyTo.to}\n\n${replyTo.body}`);
       }
     } else if (isOpen && mode === "compose") {
-      setTo("");
+      setTo(initialTo || "");
       setCc("");
       setBcc("");
       setSubject("");
       setBody("");
     }
-  }, [isOpen, mode, replyTo]);
+  }, [isOpen, mode, replyTo, initialTo]);
 
   useEffect(() => {
     if (account) {

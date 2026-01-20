@@ -72,21 +72,30 @@ function EmailsPageContent() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeMode, setComposeMode] = useState<"compose" | "reply" | "forward">("compose");
   const [replyToEmail, setReplyToEmail] = useState<any>(null);
+  const [composeRecipient, setComposeRecipient] = useState<string | undefined>(undefined);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // Handle query params for direct email opening (from dashboard widget)
+  // Handle query params for direct email opening or compose (from dashboard widget or contacts)
   useEffect(() => {
     const emailIdParam = searchParams.get("emailId");
     const accountParam = searchParams.get("account");
+    const composeParam = searchParams.get("compose");
 
     if (emailIdParam) {
       setSelectedEmailId(emailIdParam);
       if (accountParam) {
         setSelectedEmailAccount(accountParam);
       }
+      // Clear the query params from URL without navigation
+      router.replace("/tools/emails", { scroll: false });
+    } else if (composeParam) {
+      // Open compose modal with pre-filled recipient
+      setComposeRecipient(composeParam);
+      setComposeMode("compose");
+      setComposeOpen(true);
       // Clear the query params from URL without navigation
       router.replace("/tools/emails", { scroll: false });
     }
@@ -866,12 +875,16 @@ function EmailsPageContent() {
       {/* Compose Email Modal */}
       <ComposeEmailModal
         isOpen={composeOpen}
-        onClose={() => setComposeOpen(false)}
+        onClose={() => {
+          setComposeOpen(false);
+          setComposeRecipient(undefined);
+        }}
         onSent={handleEmailSent}
         mode={composeMode}
         replyTo={replyToEmail}
         account={selectedAccount !== "all" ? selectedAccount : undefined}
         accounts={accounts}
+        initialTo={composeRecipient}
       />
 
       <style jsx global>{`
