@@ -374,6 +374,7 @@ export function DraggableWidget({
 
   return (
     <div
+      className="widget-no-scroll"
       style={{
         height: "100%",
         minWidth: 0,

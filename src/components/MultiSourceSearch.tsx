@@ -497,16 +497,6 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
     }
   };
 
-  // Set default source preference
-  const setAsDefaultSource = () => {
-    updateSettings({
-      searchSources: {
-        ...settings.searchSources,
-        defaultSourceShort: selectedSource,
-      },
-    });
-  };
-
   // Get recent searches for current tool
   const toolRecentSearches = useMemo((): string[] => {
     if (!isToolSource) return [];
@@ -1104,8 +1094,8 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
 
   return (
     <div style={{ width: "100%", maxWidth: "900px", margin: "0 auto" }}>
-      {/* Trending Topics - only show when not viewing a tool */}
-      {trends.length > 0 && !toolResult && !isToolSource && (
+      {/* Trending Topics - always visible */}
+      {trends.length > 0 && (
         <div
           style={{
             display: "flex",
@@ -1166,7 +1156,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
         </div>
       )}
 
-      {trendsLoading && !toolResult && !isToolSource && (
+      {trendsLoading && trends.length === 0 && (
         <div
           style={{
             display: "flex",
@@ -1450,28 +1440,6 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
           </div>
         )}
 
-        {/* Set as default link */}
-        {selectedSource !== defaultSource && !isToolSource && (
-          <div style={{ marginTop: "10px", textAlign: "center" }}>
-            <button
-              type="button"
-              onClick={setAsDefaultSource}
-              style={{
-                background: "none",
-                border: "none",
-                color: "var(--foreground-muted)",
-                fontSize: "11px",
-                cursor: "pointer",
-                textDecoration: "underline",
-                opacity: 0.7,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
-            >
-              Set as default source
-            </button>
-          </div>
-        )}
       </form>
 
       {/* Tool panel */}

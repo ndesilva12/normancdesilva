@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useSettings, THEME_COLORS, TIMEZONES, ThemeMode, TimeFormat, TOOL_IDS, ToolId } from "@/contexts/SettingsContext";
 import { SEARCH_SOURCES, SearchSource } from "@/lib/search-service";
+import { UNIFIED_SOURCES, UnifiedSourceId, DEFAULT_SOURCE } from "@/lib/unified-sources";
 
 // Tool display names for settings
 const TOOL_NAMES: Record<ToolId, string> = {
@@ -606,85 +607,44 @@ export function SettingsPopup() {
                     </div>
                   </div>
 
-                  {/* Default Sources */}
+                  {/* Default Source */}
                   <div>
                     <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
                       Default Search Source
                     </label>
                     <p style={{ fontSize: "13px", color: "var(--foreground-muted)", marginBottom: "16px" }}>
-                      Set default search source based on query length.
+                      Choose which source is selected by default when you start a new search.
                     </p>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {/* Short queries */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={{ fontSize: "13px", color: "var(--foreground)", minWidth: "130px" }}>
-                          Short queries (&lt;6 words):
-                        </span>
-                        <select
-                          value={settings.searchSources?.defaultSourceShort || "duck"}
-                          onChange={(e) => updateSettings({
-                            searchSources: {
-                              ...settings.searchSources,
-                              defaultSourceShort: e.target.value,
-                            }
-                          })}
-                          style={{
-                            flex: 1,
-                            padding: "10px 14px",
-                            borderRadius: "8px",
-                            backgroundColor: "rgba(255, 255, 255, 0.05)",
-                            border: "1px solid var(--glass-border)",
-                            color: "var(--foreground)",
-                            fontSize: "13px",
-                            cursor: "pointer",
-                            outline: "none",
-                          }}
-                        >
-                          {SEARCH_SOURCES.filter(s => isSourceEnabled(s.id)).map((source) => (
-                            <option key={source.id} value={source.id} style={{ backgroundColor: "#1a1a1a" }}>
-                              {source.icon} {source.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Long queries */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={{ fontSize: "13px", color: "var(--foreground)", minWidth: "130px" }}>
-                          Long queries (6+ words):
-                        </span>
-                        <select
-                          value={settings.searchSources?.defaultSourceLong || "grok"}
-                          onChange={(e) => updateSettings({
-                            searchSources: {
-                              ...settings.searchSources,
-                              defaultSourceLong: e.target.value,
-                            }
-                          })}
-                          style={{
-                            flex: 1,
-                            padding: "10px 14px",
-                            borderRadius: "8px",
-                            backgroundColor: "rgba(255, 255, 255, 0.05)",
-                            border: "1px solid var(--glass-border)",
-                            color: "var(--foreground)",
-                            fontSize: "13px",
-                            cursor: "pointer",
-                            outline: "none",
-                          }}
-                        >
-                          {SEARCH_SOURCES.filter(s => isSourceEnabled(s.id)).map((source) => (
-                            <option key={source.id} value={source.id} style={{ backgroundColor: "#1a1a1a" }}>
-                              {source.icon} {source.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
+                    <select
+                      value={(settings.searchSources?.defaultSourceShort as UnifiedSourceId) || DEFAULT_SOURCE}
+                      onChange={(e) => updateSettings({
+                        searchSources: {
+                          ...settings.searchSources,
+                          defaultSourceShort: e.target.value,
+                        }
+                      })}
+                      style={{
+                        width: "100%",
+                        padding: "12px 16px",
+                        borderRadius: "10px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid var(--glass-border)",
+                        color: "var(--foreground)",
+                        fontSize: "14px",
+                        cursor: "pointer",
+                        outline: "none",
+                      }}
+                    >
+                      {UNIFIED_SOURCES.filter(s => s.type !== "tool").map((source) => (
+                        <option key={source.id} value={source.id} style={{ backgroundColor: "#1a1a1a" }}>
+                          {source.name} - {source.description}
+                        </option>
+                      ))}
+                    </select>
 
                     <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "12px", fontStyle: "italic" }}>
-                      Tip: AI sources like Grok or Claude are better for detailed questions, while web sources are better for quick lookups.
+                      Tip: AI sources like Grok or Claude are better for detailed questions, while web sources like Google are better for quick lookups.
                     </p>
                   </div>
 

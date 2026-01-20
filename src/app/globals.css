@@ -174,3 +174,18 @@ body {
 .transition-default {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Mobile: Disable scrolling within widgets - treat as full page scroll */
+@media (max-width: 640px) {
+  .widget-no-scroll,
+  .widget-no-scroll * {
+    overflow: hidden !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent touch scroll capture on widgets */
+  .widget-no-scroll {
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+}
