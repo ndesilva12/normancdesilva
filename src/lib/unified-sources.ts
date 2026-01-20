@@ -238,7 +238,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     description: "Search Google Contacts",
     longDescription: "Search and manage your Google Contacts directly from the dashboard.",
     type: "tool",
-    apiEndpoint: "/api/contacts/search",
+    apiEndpoint: "/api/contacts",
     usesSearchInput: true,
     toolHref: "/tools/contacts",
     exampleSearches: ["John Smith", "email contains @gmail", "phone 555"],
