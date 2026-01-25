@@ -66,6 +66,7 @@ interface LayoutContextType {
   reorderWidgets: (type: "previewWidgets" | "toolCards", fromIndex: number, toIndex: number) => void;
   resetLayout: () => void;
   getWidgetConfig: (type: "previewWidgets" | "toolCards", id: string) => WidgetConfig | undefined;
+  toggleWidgetCollapse: (type: "previewWidgets" | "toolCards", id: string) => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | null>(null);
@@ -201,6 +202,28 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     [isEditMode, pendingLayout, layout]
   );
 
+  const toggleWidgetCollapse = useCallback(
+    (type: "previewWidgets" | "toolCards", id: string) => {
+      // Toggle widget collapse state outside of edit mode
+      const currentLayout = isEditMode && pendingLayout ? pendingLayout : layout;
+      const widget = currentLayout[type].find((w) => w.id === id);
+      if (!widget) return;
+
+      const newSize: WidgetSize = widget.size === "collapsed" ? "default" : "collapsed";
+      const updatedWidgets = currentLayout[type].map((w) =>
+        w.id === id ? { ...w, size: newSize } : w
+      );
+      const newLayout = { ...currentLayout, [type]: updatedWidgets };
+
+      if (isEditMode) {
+        setPendingLayout(newLayout);
+      } else {
+        saveLayout(newLayout);
+      }
+    },
+    [isEditMode, pendingLayout, layout, saveLayout]
+  );
+
   // Get the active layout (pending if in edit mode, otherwise saved)
   const activeLayout = isEditMode && pendingLayout ? pendingLayout : layout;
 
@@ -218,6 +241,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
         reorderWidgets,
         resetLayout,
         getWidgetConfig,
+        toggleWidgetCollapse,
       }}
     >
       {children}

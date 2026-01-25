@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { TrendingUp, Loader2, RefreshCw, ExternalLink } from "lucide-react";
+import { TrendingUp, Loader2, RefreshCw, ExternalLink, ChevronUp } from "lucide-react";
 import Link from "next/link";
+import { useLayout } from "@/contexts/LayoutContext";
 
 interface TrendingTopic {
   topic: string;
@@ -16,6 +17,10 @@ export function TrendingPreview() {
   const [topics, setTopics] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+
+  const config = getWidgetConfig("previewWidgets", "trending");
+  const isCollapsed = config?.size === "collapsed";
 
   const fetchTrends = useCallback(async () => {
     setLoading(true);
@@ -79,11 +84,16 @@ export function TrendingPreview() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "18px 16px",
-          borderBottom: "1px solid var(--glass-border)",
+          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
         }}
       >
         <Link
           href="/tools/trending"
+          onClick={(e) => {
+            if (isCollapsed) {
+              e.preventDefault();
+            }
+          }}
           style={{
             display: "flex",
             alignItems: "center",
@@ -91,6 +101,7 @@ export function TrendingPreview() {
             textDecoration: "none",
             padding: "4px 8px 4px 0",
             margin: "-4px 0",
+            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <TrendingUp style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
@@ -98,44 +109,73 @@ export function TrendingPreview() {
             Trending
           </span>
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <button
-            onClick={fetchTrends}
-            disabled={loading}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "28px",
-              height: "28px",
-              borderRadius: "6px",
-              backgroundColor: "transparent",
-              border: "none",
-              cursor: loading ? "not-allowed" : "pointer",
-              color: "var(--foreground-muted)",
-            }}
-            title="Refresh"
-          >
-            <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
-          </button>
-          <Link
-            href="/tools/trending"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              padding: "6px 10px",
-              borderRadius: "6px",
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-              color: "var(--foreground-muted)",
-              fontSize: "12px",
-              textDecoration: "none",
-            }}
-          >
-            View All
-            <ExternalLink style={{ width: "12px", height: "12px" }} />
-          </Link>
-        </div>
+        {!isCollapsed && (
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <button
+              onClick={fetchTrends}
+              disabled={loading}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "28px",
+                height: "28px",
+                borderRadius: "6px",
+                backgroundColor: "transparent",
+                border: "none",
+                cursor: loading ? "not-allowed" : "pointer",
+                color: "var(--foreground-muted)",
+              }}
+              title="Refresh"
+            >
+              <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
+            </button>
+            {/* Collapse button (only shown when not collapsed and not in edit mode) */}
+            {!isEditMode && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleWidgetCollapse("previewWidgets", "trending");
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "6px",
+                  border: "none",
+                  backgroundColor: "transparent",
+                  color: "var(--foreground-muted)",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  flexShrink: 0,
+                }}
+                title="Collapse"
+              >
+                <ChevronUp style={{ width: "16px", height: "16px" }} />
+              </button>
+            )}
+            <Link
+              href="/tools/trending"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "6px 10px",
+                borderRadius: "6px",
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                color: "var(--foreground-muted)",
+                fontSize: "12px",
+                textDecoration: "none",
+              }}
+            >
+              View All
+              <ExternalLink style={{ width: "12px", height: "12px" }} />
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Content */}

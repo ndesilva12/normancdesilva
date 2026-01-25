@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Bookmark, ExternalLink, Tag, Clock, Loader2, Link as LinkIcon } from "lucide-react";
+import { Bookmark, ExternalLink, Tag, Clock, Loader2, Link as LinkIcon, ChevronUp } from "lucide-react";
+import { useLayout } from "@/contexts/LayoutContext";
 
 interface RaindropItem {
   id: number;
@@ -30,6 +31,10 @@ export function RaindropPreview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
+  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+
+  const config = getWidgetConfig("previewWidgets", "raindrop");
+  const isCollapsed = config?.size === "collapsed";
 
   // Connect to Raindrop via OAuth
   const handleConnect = async () => {
@@ -122,12 +127,17 @@ export function RaindropPreview() {
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: "1px solid var(--glass-border)",
+          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           flexShrink: 0,
         }}
       >
         <Link
           href="/tools/raindrop"
+          onClick={(e) => {
+            if (isCollapsed) {
+              e.preventDefault();
+            }
+          }}
           style={{
             display: "flex",
             alignItems: "center",
@@ -136,6 +146,7 @@ export function RaindropPreview() {
             textDecoration: "none",
             padding: "4px 8px 4px 0",
             margin: "-4px 0",
+            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <Bookmark style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
@@ -144,51 +155,86 @@ export function RaindropPreview() {
           </span>
         </Link>
 
-        {/* Collection Pills */}
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "4px",
-            flex: 1,
-            justifyContent: "flex-end",
-          }}
-        >
-          {visibleCollections.map((collection) => (
-            <button
-              key={collection.id}
-              onClick={() => setSelectedCollection(collection.id)}
-              style={{
-                padding: "3px 8px",
-                borderRadius: "10px",
-                border: "none",
-                backgroundColor: selectedCollection === collection.id ? "var(--accent)" : "rgba(255, 255, 255, 0.08)",
-                color: selectedCollection === collection.id ? "var(--background)" : "var(--foreground-muted)",
-                fontSize: "10px",
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "all 0.15s",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {collection.title}
-            </button>
-          ))}
-        </div>
+        {/* Collection Pills - hidden when collapsed */}
+        {!isCollapsed && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "4px",
+              flex: 1,
+              justifyContent: "flex-end",
+            }}
+          >
+            {visibleCollections.map((collection) => (
+              <button
+                key={collection.id}
+                onClick={() => setSelectedCollection(collection.id)}
+                style={{
+                  padding: "3px 8px",
+                  borderRadius: "10px",
+                  border: "none",
+                  backgroundColor: selectedCollection === collection.id ? "var(--accent)" : "rgba(255, 255, 255, 0.08)",
+                  color: selectedCollection === collection.id ? "var(--background)" : "var(--foreground-muted)",
+                  fontSize: "10px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {collection.title}
+              </button>
+            ))}
+          </div>
+        )}
 
-        <a
-          href="https://app.raindrop.io"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-        </a>
+        {/* Spacer when collapsed */}
+        {isCollapsed && <div style={{ flex: 1 }} />}
+
+        {/* Collapse button (only shown when not collapsed and not in edit mode) */}
+        {!isCollapsed && !isEditMode && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWidgetCollapse("previewWidgets", "raindrop");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "24px",
+              height: "24px",
+              borderRadius: "6px",
+              border: "none",
+              backgroundColor: "transparent",
+              color: "var(--foreground-muted)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              flexShrink: 0,
+            }}
+            title="Collapse"
+          >
+            <ChevronUp style={{ width: "16px", height: "16px" }} />
+          </button>
+        )}
+
+        {!isCollapsed && (
+          <a
+            href="https://app.raindrop.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+          </a>
+        )}
       </div>
 
       {/* Content */}

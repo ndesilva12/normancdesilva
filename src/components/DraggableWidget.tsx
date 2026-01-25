@@ -29,7 +29,7 @@ export function DraggableWidget({
   isDragging,
   dragOverIndex,
 }: DraggableWidgetProps) {
-  const { isEditMode, getWidgetConfig, updateWidgetSize, updateWidgetVisibility, updateWidgetName } = useLayout();
+  const { isEditMode, getWidgetConfig, updateWidgetSize, updateWidgetVisibility, updateWidgetName, toggleWidgetCollapse } = useLayout();
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingNameValue, setEditingNameValue] = useState("");
@@ -372,9 +372,18 @@ export function DraggableWidget({
   // Normal mode: render children with size adjustments
   if (!visible) return null;
 
+  const isCollapsed = size === "collapsed";
+
+  const handleCollapsedClick = () => {
+    if (isCollapsed) {
+      toggleWidgetCollapse(type, id);
+    }
+  };
+
   return (
     <div
       className="widget-no-scroll"
+      onClick={isCollapsed ? handleCollapsedClick : undefined}
       style={{
         height: "100%",
         minWidth: 0,
@@ -382,6 +391,7 @@ export function DraggableWidget({
         ...getSizeStyles(),
         ...getGridStyles(),
         transition: "max-height 0.3s ease",
+        cursor: isCollapsed ? "pointer" : "default",
       }}
     >
       {children}

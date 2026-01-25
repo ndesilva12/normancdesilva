@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { TrendingUp, TrendingDown, Loader2, ExternalLink, Settings, X } from "lucide-react";
+import { TrendingUp, TrendingDown, Loader2, ExternalLink, Settings, X, ChevronUp } from "lucide-react";
+import { useLayout } from "@/contexts/LayoutContext";
 
 interface StockQuote {
   symbol: string;
@@ -39,6 +40,10 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
   const [symbols, setSymbols] = useState<string[]>(defaultSymbols);
   const [newSymbol, setNewSymbol] = useState("");
   const settingsRef = useRef<HTMLDivElement>(null);
+  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+
+  const config = getWidgetConfig("previewWidgets", "stocks");
+  const isCollapsed = config?.size === "collapsed";
 
   // Load saved symbols from localStorage
   useEffect(() => {
@@ -131,48 +136,104 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
   return (
     <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header - clickable to navigate to market page */}
-      <Link
-        href="/tools/market"
+      <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: "1px solid var(--glass-border)",
-          textDecoration: "none",
-          cursor: "pointer",
+          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           transition: "background 0.15s",
           flexShrink: 0,
         }}
       >
-        <TrendingUp style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
-        <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)", flex: 1 }}>
-          Market
-        </span>
-        <button
+        <Link
+          href="/tools/market"
           onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setShowSettings(!showSettings);
+            if (isCollapsed) {
+              e.preventDefault();
+            }
           }}
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            width: "28px",
-            height: "28px",
-            borderRadius: "6px",
-            backgroundColor: showSettings ? "var(--accent)" : "transparent",
-            border: "none",
-            color: showSettings ? "var(--background)" : "var(--foreground-muted)",
-            cursor: "pointer",
-            transition: "all 0.15s",
+            gap: "10px",
+            textDecoration: "none",
+            flex: 1,
+            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
-          <Settings style={{ width: "14px", height: "14px" }} />
-        </button>
-        <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-      </Link>
+          <TrendingUp style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
+          <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)" }}>
+            Market
+          </span>
+        </Link>
+        {!isCollapsed && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowSettings(!showSettings);
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "28px",
+              height: "28px",
+              borderRadius: "6px",
+              backgroundColor: showSettings ? "var(--accent)" : "transparent",
+              border: "none",
+              color: showSettings ? "var(--background)" : "var(--foreground-muted)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+          >
+            <Settings style={{ width: "14px", height: "14px" }} />
+          </button>
+        )}
+        {/* Collapse button (only shown when not collapsed and not in edit mode) */}
+        {!isCollapsed && !isEditMode && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWidgetCollapse("previewWidgets", "stocks");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "24px",
+              height: "24px",
+              borderRadius: "6px",
+              border: "none",
+              backgroundColor: "transparent",
+              color: "var(--foreground-muted)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              flexShrink: 0,
+            }}
+            title="Collapse"
+          >
+            <ChevronUp style={{ width: "16px", height: "16px" }} />
+          </button>
+        )}
+        {!isCollapsed && (
+          <Link
+            href="/tools/market"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textDecoration: "none",
+              flexShrink: 0,
+            }}
+          >
+            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+          </Link>
+        )}
+      </div>
 
       {/* Settings Panel */}
       {showSettings && (

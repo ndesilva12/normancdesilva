@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Mail, Loader2, ExternalLink, RefreshCw, Archive, Trash2 } from "lucide-react";
+import { Mail, Loader2, ExternalLink, RefreshCw, Archive, Trash2, ChevronUp } from "lucide-react";
 import { formatEmailSender } from "@/lib/google-services";
+import { useLayout } from "@/contexts/LayoutContext";
 
 interface EmailWithAccount {
   id: string;
@@ -34,6 +35,10 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ emailId: string; accountEmail?: string; subject: string } | null>(null);
+  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+
+  const config = getWidgetConfig("previewWidgets", "emails");
+  const isCollapsed = config?.size === "collapsed";
 
   useEffect(() => {
     if (isGoogleConnected) {
@@ -207,25 +212,81 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
 
     <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header - clickable to navigate to full page */}
-      <Link
-        href="/tools/emails"
+      <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: "1px solid var(--glass-border)",
-          textDecoration: "none",
-          cursor: "pointer",
+          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           transition: "background 0.15s",
         }}
       >
-        <Mail style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
-        <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)", flex: 1 }}>
-          Emails
-        </span>
-        <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-      </Link>
+        <Link
+          href="/tools/emails"
+          onClick={(e) => {
+            if (isCollapsed) {
+              e.preventDefault();
+            }
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            textDecoration: "none",
+            flex: 1,
+            pointerEvents: isCollapsed ? "none" : "auto",
+          }}
+        >
+          <Mail style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
+          <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)" }}>
+            Emails
+          </span>
+        </Link>
+
+        {/* Collapse button (only shown when not collapsed and not in edit mode) */}
+        {!isCollapsed && !isEditMode && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWidgetCollapse("previewWidgets", "emails");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "24px",
+              height: "24px",
+              borderRadius: "6px",
+              border: "none",
+              backgroundColor: "transparent",
+              color: "var(--foreground-muted)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              flexShrink: 0,
+            }}
+            title="Collapse"
+          >
+            <ChevronUp style={{ width: "16px", height: "16px" }} />
+          </button>
+        )}
+
+        {!isCollapsed && (
+          <Link
+            href="/tools/emails"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textDecoration: "none",
+              flexShrink: 0,
+            }}
+          >
+            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+          </Link>
+        )}
+      </div>
 
       {/* Content */}
       <div style={{ padding: "12px 16px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>

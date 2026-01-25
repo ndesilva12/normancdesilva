@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { StickyNote, Loader2, ExternalLink, RefreshCw } from "lucide-react";
+import { StickyNote, Loader2, ExternalLink, RefreshCw, ChevronUp } from "lucide-react";
+import { useLayout } from "@/contexts/LayoutContext";
 
 interface NotionPage {
   id: string;
@@ -16,6 +17,10 @@ export function NotesPreview() {
   const [pages, setPages] = useState<NotionPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+
+  const config = getWidgetConfig("previewWidgets", "notes");
+  const isCollapsed = config?.size === "collapsed";
 
   const fetchNotes = useCallback(async () => {
     setLoading(true);
@@ -63,12 +68,17 @@ export function NotesPreview() {
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: "1px solid var(--glass-border)",
+          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           flexShrink: 0,
         }}
       >
         <Link
           href="/tools/notes"
+          onClick={(e) => {
+            if (isCollapsed) {
+              e.preventDefault();
+            }
+          }}
           style={{
             display: "flex",
             alignItems: "center",
@@ -77,6 +87,7 @@ export function NotesPreview() {
             flex: 1,
             padding: "4px 0",
             margin: "-4px 0",
+            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <StickyNote style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
@@ -84,38 +95,69 @@ export function NotesPreview() {
             Notes
           </span>
         </Link>
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            fetchNotes();
-          }}
-          disabled={loading}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "28px",
-            height: "28px",
-            borderRadius: "6px",
-            backgroundColor: "rgba(255, 255, 255, 0.05)",
-            border: "none",
-            cursor: loading ? "not-allowed" : "pointer",
-            color: "var(--foreground-muted)",
-          }}
-        >
-          <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
-        </button>
-        <Link
-          href="/tools/notes"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            textDecoration: "none",
-          }}
-        >
-          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-        </Link>
+        {!isCollapsed && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              fetchNotes();
+            }}
+            disabled={loading}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "28px",
+              height: "28px",
+              borderRadius: "6px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              border: "none",
+              cursor: loading ? "not-allowed" : "pointer",
+              color: "var(--foreground-muted)",
+            }}
+          >
+            <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
+          </button>
+        )}
+        {/* Collapse button (only shown when not collapsed and not in edit mode) */}
+        {!isCollapsed && !isEditMode && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWidgetCollapse("previewWidgets", "notes");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "24px",
+              height: "24px",
+              borderRadius: "6px",
+              border: "none",
+              backgroundColor: "transparent",
+              color: "var(--foreground-muted)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              flexShrink: 0,
+            }}
+            title="Collapse"
+          >
+            <ChevronUp style={{ width: "16px", height: "16px" }} />
+          </button>
+        )}
+        {!isCollapsed && (
+          <Link
+            href="/tools/notes"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textDecoration: "none",
+            }}
+          >
+            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+          </Link>
+        )}
       </div>
 
       {/* Content */}

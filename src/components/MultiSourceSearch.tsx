@@ -1502,7 +1502,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                   ) : (
                     <Grid3X3 style={{ width: "14px", height: "14px" }} />
                   )}
-                  {widgetsCollapsed ? "Expand" : "Collapse"}
+                  {widgetsCollapsed ? "Expand All" : "Collapse All"}
                 </button>
               </>
             )}
