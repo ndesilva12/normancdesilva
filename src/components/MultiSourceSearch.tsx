@@ -1123,18 +1123,6 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
             justifyContent: "center",
           }}
         >
-          {/* Hide trending icon on mobile */}
-          {!isMobile && (
-            <TrendingUp
-              style={{
-                width: "14px",
-                height: "14px",
-                color: "var(--foreground-muted)",
-                flexShrink: 0,
-                marginTop: "4px",
-              }}
-            />
-          )}
           {(() => {
             const displayTrends = isMobile ? trends.slice(0, 10) : trends.slice(0, 14);
             const halfLength = Math.ceil(displayTrends.length / 2);
@@ -1370,41 +1358,19 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
             </>
           ) : (
             <>
-              {/* Hide all button - first position */}
-              <button
-                type="button"
-                onClick={() => setSourcesHidden(true)}
-                title="Hide all sources"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: isMobile ? "10px 14px" : "8px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid var(--glass-border)",
-                  backgroundColor: "rgba(255, 255, 255, 0.03)",
-                  color: "var(--foreground-muted)",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-              >
-                <EyeOff style={{ width: "14px", height: "14px" }} />
-                {!isMobile && "hide all"}
-              </button>
-              {/* Currently selected source - second position */}
+              {/* Currently selected source - clicking hides all other sources */}
               {currentSourceConfig && (
                 <button
                   type="button"
-                  disabled
+                  onClick={() => setSourcesHidden(true)}
+                  title="Click to hide other sources"
                   style={{
                     padding: isMobile ? "10px 14px" : "8px 14px",
                     fontSize: "13px",
                     fontWeight: 600,
                     border: "2px solid var(--accent)",
                     borderRadius: "8px",
-                    cursor: "default",
+                    cursor: "pointer",
                     transition: "all 0.15s",
                     backgroundColor: "rgba(var(--accent-rgb), 0.15)",
                     color: "var(--accent)",
