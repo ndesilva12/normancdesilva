@@ -1126,38 +1126,31 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
         >
           {(() => {
             const displayTrends = isMobile ? trends.slice(0, 10) : trends.slice(0, 14);
-            const halfLength = Math.ceil(displayTrends.length / 2);
-            const row1 = displayTrends.slice(0, halfLength);
-            const row2 = displayTrends.slice(halfLength);
 
             return (
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "center", flex: 1 }}>
-                {[row1, row2].map((row, rowIndex) => (
-                  <div key={rowIndex} style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "4px" }}>
-                    {row.map((trend, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleTrendClick(trend)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          padding: "2px 0",
-                          fontSize: "13px",
-                          color: "var(--foreground-muted)",
-                          cursor: "pointer",
-                          transition: "color 0.15s",
-                          whiteSpace: "nowrap",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground-muted)")}
-                      >
-                        {trend.title}
-                        {index < row.length - 1 && (
-                          <span style={{ marginLeft: "8px", opacity: 0.3 }}>•</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "4px", flex: 1 }}>
+                {displayTrends.map((trend, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleTrendClick(trend)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: "2px 0",
+                      fontSize: "13px",
+                      color: "var(--foreground-muted)",
+                      cursor: "pointer",
+                      transition: "color 0.15s",
+                      whiteSpace: "nowrap",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "var(--foreground-muted)")}
+                  >
+                    {trend.title}
+                    {index < displayTrends.length - 1 && (
+                      <span style={{ marginLeft: "8px", opacity: 0.3 }}>•</span>
+                    )}
+                  </button>
                 ))}
               </div>
             );
