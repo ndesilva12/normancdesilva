@@ -123,13 +123,10 @@ const WIDGET_TITLES: Record<string, string> = {
 function CollapsedWidgetBar({ widgets }: { widgets: string[] }) {
   return (
     <div
-      className="glass"
       style={{
         display: "flex",
         justifyContent: "center",
         gap: "8px",
-        padding: "12px 16px",
-        borderRadius: "12px",
         flexWrap: "wrap",
       }}
     >
