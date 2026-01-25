@@ -1,32 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, ReactNode } from "react";
-import { GripVertical, Minimize2, Maximize2, Square, Eye, EyeOff, Pencil, Check, X, FolderOpen, Mail, Users, StickyNote, TrendingUp, Newspaper, BookOpen, BarChart3 } from "lucide-react";
+import { useState, useRef, ReactNode } from "react";
+import { GripVertical, Minimize2, Maximize2, Square, Eye, EyeOff, Pencil, Check, X } from "lucide-react";
 import { useLayout, WidgetSize } from "@/contexts/LayoutContext";
-
-// Widget icon mapping for collapsed state
-const WIDGET_ICONS: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
-  files: FolderOpen,
-  emails: Mail,
-  contacts: Users,
-  notes: StickyNote,
-  stocks: BarChart3,
-  news: Newspaper,
-  trending: TrendingUp,
-  raindrop: BookOpen,
-};
-
-// Widget title mapping for collapsed state
-const WIDGET_TITLES: Record<string, string> = {
-  files: "Files",
-  emails: "Emails",
-  contacts: "Contacts",
-  notes: "Notes",
-  stocks: "Market",
-  news: "News",
-  trending: "Trending",
-  raindrop: "Reading List",
-};
 
 interface DraggableWidgetProps {
   id: string;
@@ -53,11 +29,10 @@ export function DraggableWidget({
   isDragging,
   dragOverIndex,
 }: DraggableWidgetProps) {
-  const { isEditMode, getWidgetConfig, updateWidgetSize, updateWidgetVisibility, updateWidgetName, toggleWidgetCollapse } = useLayout();
+  const { isEditMode, getWidgetConfig, updateWidgetSize, updateWidgetVisibility, updateWidgetName } = useLayout();
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingNameValue, setEditingNameValue] = useState("");
-  const [isMobile, setIsMobile] = useState(false);
   const widgetRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,14 +40,6 @@ export function DraggableWidget({
   const size = config?.size || "default";
   const visible = config?.visible ?? true;
   const displayName = config?.customName || title;
-
-  // Mobile detection for collapsed widget block button sizing
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 640);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   const handleDragStart = (e: React.DragEvent) => {
     if (!isEditMode) return;
@@ -405,49 +372,10 @@ export function DraggableWidget({
   // Normal mode: render children with size adjustments
   if (!visible) return null;
 
-  const isCollapsed = size === "collapsed";
-
-  const handleCollapsedClick = () => {
-    if (isCollapsed) {
-      toggleWidgetCollapse(type, id);
-    }
-  };
-
-  // Render collapsed state as a block button
-  if (isCollapsed) {
-    const Icon = WIDGET_ICONS[id];
-    const widgetTitle = config?.customName || WIDGET_TITLES[id] || title;
-
-    return (
-      <div
-        onClick={handleCollapsedClick}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: isMobile ? "4px" : "6px",
-          padding: isMobile ? "12px" : "16px 20px",
-          minWidth: isMobile ? "60px" : "80px",
-          width: "fit-content",
-          height: "fit-content",
-          borderRadius: isMobile ? "10px" : "12px",
-          backgroundColor: "rgba(255, 255, 255, 0.05)",
-          border: "1px solid var(--glass-border)",
-          cursor: "pointer",
-          transition: "all 0.15s",
-          ...getGridStyles(),
-        }}
-        title={`Expand ${widgetTitle}`}
-      >
-        {Icon && (
-          <Icon style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
-        )}
-        <span style={{ fontSize: isMobile ? "10px" : "12px", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
-          {widgetTitle}
-        </span>
-      </div>
-    );
+  // Collapsed widgets are now rendered in the IndividuallyCollapsedWidgetBar
+  // Return null here so they don't take up grid space
+  if (size === "collapsed") {
+    return null;
   }
 
   return (

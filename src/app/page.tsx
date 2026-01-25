@@ -119,7 +119,7 @@ const WIDGET_TITLES: Record<string, string> = {
   raindrop: "Reading List",
 };
 
-// Collapsed Widget Bar Component
+// Collapsed Widget Bar Component (for "collapse all" mode - links to pages)
 function CollapsedWidgetBar({ widgets }: { widgets: string[] }) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -177,6 +177,65 @@ function CollapsedWidgetBar({ widgets }: { widgets: string[] }) {
   );
 }
 
+// Individually Collapsed Widget Bar (for individual collapse - buttons that expand)
+function IndividuallyCollapsedWidgetBar({
+  widgets,
+  isMobile
+}: {
+  widgets: { id: string; customName?: string }[];
+  isMobile: boolean;
+}) {
+  const { toggleWidgetCollapse } = useLayout();
+
+  if (widgets.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        gap: isMobile ? "8px" : "12px",
+        flexWrap: "wrap",
+        marginBottom: "16px",
+      }}
+    >
+      {widgets.map((widget) => {
+        const Icon = WIDGET_ICONS[widget.id];
+        const title = widget.customName || WIDGET_TITLES[widget.id] || widget.id;
+
+        if (!Icon) return null;
+
+        return (
+          <button
+            key={widget.id}
+            onClick={() => toggleWidgetCollapse("previewWidgets", widget.id)}
+            title={`Expand ${title}`}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: isMobile ? "4px" : "6px",
+              padding: isMobile ? "12px" : "16px 20px",
+              minWidth: isMobile ? "60px" : "80px",
+              borderRadius: isMobile ? "10px" : "12px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid var(--glass-border)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+          >
+            <Icon style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
+            <span style={{ fontSize: isMobile ? "10px" : "12px", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+              {title}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // Data widgets grid - only preview widgets (tools are now in sources)
 function DataWidgetsGrid({
   isGoogleConnected,
@@ -191,12 +250,16 @@ function DataWidgetsGrid({
 
   const previewDragState = useDragState();
 
-  // Data widgets only
-  const previewWidgets = [...layout.previewWidgets]
+  // Data widgets only - all visible widgets (for edit mode we show all)
+  const allPreviewWidgets = [...layout.previewWidgets]
     .filter((w) => w.id !== "contacts") // Contacts is now a source
     .filter((w) => isEditMode || w.visible)
     .sort((a, b) => a.order - b.order)
     .map((w) => ({ ...w, widgetType: "previewWidgets" as const }));
+
+  // Separate collapsed and non-collapsed widgets (in normal mode)
+  const collapsedWidgets = isEditMode ? [] : allPreviewWidgets.filter((w) => w.size === "collapsed");
+  const previewWidgets = isEditMode ? allPreviewWidgets : allPreviewWidgets.filter((w) => w.size !== "collapsed");
 
   const handlePreviewDrop = useCallback(() => {
     if (previewDragState.dragIndex !== null && previewDragState.dragOverIndex !== null && previewDragState.dragIndex !== previewDragState.dragOverIndex) {
@@ -276,18 +339,29 @@ function DataWidgetsGrid({
 
   // Normal mode
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-        gap: "16px",
-        gridAutoRows: "364px",
-        width: "100%",
-        maxWidth: "100%",
-        overflow: "hidden",
-      }}
-    >
-      {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}
+    <div style={{ width: "100%" }}>
+      {/* Collapsed widgets bar - shows individually collapsed widgets */}
+      <IndividuallyCollapsedWidgetBar
+        widgets={collapsedWidgets.map((w) => ({ id: w.id, customName: w.customName }))}
+        isMobile={isMobile}
+      />
+
+      {/* Main grid for non-collapsed widgets */}
+      {previewWidgets.length > 0 && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+            gap: "16px",
+            gridAutoRows: "364px",
+            width: "100%",
+            maxWidth: "100%",
+            overflow: "hidden",
+          }}
+        >
+          {previewWidgets.map((widget, index) => renderPreviewWidget(widget, index))}
+        </div>
+      )}
     </div>
   );
 }
