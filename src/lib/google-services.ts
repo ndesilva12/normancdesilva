@@ -517,10 +517,8 @@ function createEmailMessage(params: SendEmailParams, fromEmail: string): string 
   if (params.bcc) message += `Bcc: ${params.bcc}\r\n`;
   message += `Subject: ${params.subject}\r\n`;
 
-  if (params.replyToMessageId) {
-    message += `In-Reply-To: ${params.replyToMessageId}\r\n`;
-    message += `References: ${params.replyToMessageId}\r\n`;
-  }
+  // Note: We rely on threadId for threading rather than In-Reply-To/References headers
+  // The Gmail API handles threading automatically when threadId is provided in the request body
 
   message += `MIME-Version: 1.0\r\n`;
   message += `Content-Type: multipart/alternative; boundary="${boundary}"\r\n`;

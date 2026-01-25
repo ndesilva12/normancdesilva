@@ -2,7 +2,7 @@
 
 import { useState, useEffect, FormEvent, useCallback, useRef, useMemo } from "react";
 import {
-  Search, ExternalLink, X, Loader2, TrendingUp, ChevronDown, Upload,
+  Search, ExternalLink, X, Loader2, ChevronDown, Upload,
   BookOpen, FileSearch, Link2, User, Target, Sparkles, LayoutGrid, Grid3X3, Eye, EyeOff
 } from "lucide-react";
 import {
@@ -1358,38 +1358,11 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
             </>
           ) : (
             <>
-              {/* Currently selected source - clicking hides all other sources */}
-              {currentSourceConfig && (
-                <button
-                  type="button"
-                  onClick={() => setSourcesHidden(true)}
-                  title="Click to hide other sources"
-                  style={{
-                    padding: isMobile ? "10px 14px" : "8px 14px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    border: "2px solid var(--accent)",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    backgroundColor: "rgba(var(--accent-rgb), 0.15)",
-                    color: "var(--accent)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {currentSourceConfig.name}
-                </button>
-              )}
-              {/* Separator */}
-              <span style={{ color: "var(--foreground-muted)", opacity: 0.2, fontSize: "18px" }}>|</span>
-              {/* All other sources displayed as inline buttons */}
+              {/* All sources displayed as inline buttons - clicking any source selects it and hides others */}
               {orderedSources.map((source) => {
                 const isSelected = selectedSource === source.id;
                 const isHighlighted = highlightedSources.includes(source.id);
                 const isMetaSource = source.type === "meta";
-
-                // Skip the currently selected source (already shown above)
-                if (isSelected) return null;
 
                 // Add separator after Web and before individual AI sources
                 const showSeparatorAfter = source.id === "web" || source.id === "amazon";
@@ -1404,29 +1377,33 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                           ? (isMobile ? "10px 14px" : "8px 16px")
                           : (isMobile ? "10px 12px" : "8px 14px"),
                         fontSize: "13px",
-                        fontWeight: isMetaSource ? 600 : 500,
-                        border: isHighlighted
+                        fontWeight: isSelected || isMetaSource ? 600 : 500,
+                        border: isSelected
+                          ? "2px solid var(--accent)"
+                          : isHighlighted
                           ? "2px solid rgba(var(--accent-rgb), 0.5)"
                           : "1px solid var(--glass-border)",
                         borderRadius: "8px",
                         cursor: "pointer",
                         transition: "all 0.15s",
-                        backgroundColor: isHighlighted
+                        backgroundColor: isSelected
+                          ? "rgba(var(--accent-rgb), 0.15)"
+                          : isHighlighted
                           ? "rgba(var(--accent-rgb), 0.08)"
                           : "rgba(255, 255, 255, 0.03)",
-                        color: isHighlighted
+                        color: isSelected || isHighlighted
                           ? "var(--accent)"
                           : "var(--foreground-muted)",
                         whiteSpace: "nowrap",
                       }}
                       onMouseEnter={(e) => {
-                        if (!isHighlighted) {
+                        if (!isSelected && !isHighlighted) {
                           e.currentTarget.style.borderColor = "rgba(var(--accent-rgb), 0.3)";
                           e.currentTarget.style.color = "var(--foreground)";
                         }
                       }}
                       onMouseLeave={(e) => {
-                        if (!isHighlighted) {
+                        if (!isSelected && !isHighlighted) {
                           e.currentTarget.style.borderColor = "var(--glass-border)";
                           e.currentTarget.style.color = "var(--foreground-muted)";
                         }

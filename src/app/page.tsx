@@ -208,7 +208,7 @@ function CollapsedWidgetBar({
   );
 }
 
-// Mobile Collapsed Widgets Bar - shown below sources on mobile
+// Mobile Collapsed Widgets Bar - shown below sources on mobile as block buttons
 function MobileCollapsedWidgetsBar({
   widgets,
 }: {
@@ -222,16 +222,17 @@ function MobileCollapsedWidgetsBar({
     <div
       style={{
         display: "flex",
+        flexDirection: "row",
         justifyContent: "center",
         gap: "8px",
         flexWrap: "wrap",
         marginTop: "16px",
+        padding: "0 4px",
       }}
     >
       {widgets.map((widget) => {
         const Icon = WIDGET_ICONS[widget.id];
         const title = widget.customName || WIDGET_TITLES[widget.id] || widget.id;
-        const link = WIDGET_LINKS[widget.id];
 
         if (!Icon) return null;
 
@@ -243,17 +244,19 @@ function MobileCollapsedWidgetsBar({
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: "8px",
-              padding: "10px 16px",
+              padding: "12px 20px",
               borderRadius: "10px",
               backgroundColor: "rgba(255, 255, 255, 0.05)",
               border: "1px solid var(--glass-border)",
               cursor: "pointer",
               transition: "all 0.15s",
+              minWidth: "100px",
             }}
           >
             <Icon style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
-            <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)" }}>
+            <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>
               {title}
             </span>
           </button>
