@@ -340,11 +340,13 @@ function DataWidgetsGrid({
   // Normal mode
   return (
     <div style={{ width: "100%" }}>
-      {/* Collapsed widgets bar - shows individually collapsed widgets */}
-      <IndividuallyCollapsedWidgetBar
-        widgets={collapsedWidgets.map((w) => ({ id: w.id, customName: w.customName }))}
-        isMobile={isMobile}
-      />
+      {/* Collapsed widgets bar - shows individually collapsed widgets (desktop only, mobile shows in header) */}
+      {!isMobile && (
+        <IndividuallyCollapsedWidgetBar
+          widgets={collapsedWidgets.map((w) => ({ id: w.id, customName: w.customName }))}
+          isMobile={isMobile}
+        />
+      )}
 
       {/* Main grid for non-collapsed widgets */}
       {previewWidgets.length > 0 && (
@@ -379,7 +381,7 @@ export default function Home() {
     }
     return false;
   });
-  const { isEditMode, layout } = useLayout();
+  const { isEditMode, layout, toggleWidgetCollapse } = useLayout();
 
   // Persist collapse state to localStorage
   useEffect(() => {
@@ -429,7 +431,18 @@ export default function Home() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
-      <Header isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />
+      <Header
+        isGoogleConnected={isGoogleConnected}
+        onConnectGoogle={handleConnectGoogle}
+        collapsedWidgets={
+          isMobile && !isEditMode
+            ? layout.previewWidgets
+                .filter((w) => w.visible && w.size === "collapsed" && w.id !== "contacts")
+                .map((w) => ({ id: w.id, customName: w.customName }))
+            : []
+        }
+        onExpandWidget={(widgetId) => toggleWidgetCollapse("previewWidgets", widgetId)}
+      />
       <LayoutEditor />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px", overflow: "hidden" }}>
