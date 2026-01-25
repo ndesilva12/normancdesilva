@@ -21,6 +21,7 @@ import {
 } from "@/lib/unified-sources";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useRecentSearches } from "@/contexts/RecentSearchesContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TrendingSearch {
   title: string;
@@ -53,6 +54,7 @@ interface ConversationMessage {
 export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive, widgetsCollapsed, onToggleCollapse }: MultiSourceSearchProps) {
   const { settings, updateSettings } = useSettings();
   const { getRecentSearches, addRecentSearch } = useRecentSearches();
+  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [toolResult, setToolResult] = useState<ToolResult | null>(null);
@@ -426,6 +428,11 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
         // Special handling for image-lookup
         if (selectedSource === "image-lookup" && uploadedImage) {
           body.imageData = uploadedImage;
+        }
+
+        // Add userId for tools that need it (like contact-finder)
+        if (user?.uid) {
+          body.userId = user.uid;
         }
 
         response = await fetch(endpoint, {
@@ -827,6 +834,46 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
 
         {/* Tool options */}
         {renderToolOptions()}
+
+        {/* Search button for tools with additional inputs */}
+        {currentSourceConfig.additionalInputs && currentSourceConfig.additionalInputs.length > 0 && (
+          <button
+            type="submit"
+            disabled={isSearching || !hasRequiredInputs}
+            onClick={handleSearch}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              width: "100%",
+              padding: "14px 20px",
+              marginTop: "8px",
+              marginBottom: "16px",
+              borderRadius: "10px",
+              border: "none",
+              backgroundColor: hasRequiredInputs ? "var(--accent)" : "rgba(255, 255, 255, 0.1)",
+              color: hasRequiredInputs ? "var(--background)" : "var(--foreground-muted)",
+              fontSize: "15px",
+              fontWeight: 600,
+              cursor: hasRequiredInputs && !isSearching ? "pointer" : "not-allowed",
+              transition: "all 0.15s",
+              opacity: isSearching ? 0.7 : 1,
+            }}
+          >
+            {isSearching ? (
+              <>
+                <Loader2 style={{ width: "18px", height: "18px", animation: "spin 1s linear infinite" }} />
+                Searching...
+              </>
+            ) : (
+              <>
+                <Search style={{ width: "18px", height: "18px" }} />
+                Search
+              </>
+            )}
+          </button>
+        )}
 
         {/* Recent Searches */}
         {toolRecentSearches.length > 0 && (

@@ -253,7 +253,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     toolHref: "/tools/contact-finder",
     additionalInputs: [
       {
-        id: "personName",
+        id: "query",
         label: "Person/Organization Name",
         placeholder: "Enter name to search...",
         required: true,
