@@ -61,13 +61,14 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
   const [isMobile, setIsMobile] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Sources hidden state (persisted to localStorage)
+  // Sources hidden state (persisted to localStorage, default to collapsed)
   const [sourcesHidden, setSourcesHidden] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("sources-hidden");
-      return saved === "true";
+      // Default to collapsed (true) unless explicitly set to "false"
+      return saved !== "false";
     }
-    return false;
+    return true;
   });
 
   // Persist sources hidden state
