@@ -74,6 +74,21 @@ export function SettingsPopup() {
     }
   }, [isSettingsOpen, activeTab]);
 
+  // Keyboard handler for Escape to close settings
+  useEffect(() => {
+    if (!isSettingsOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeSettings();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSettingsOpen, closeSettings]);
+
   const fetchGoogleAccounts = async () => {
     setLoadingAccounts(true);
     try {

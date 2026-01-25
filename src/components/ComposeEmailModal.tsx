@@ -81,6 +81,21 @@ export function ComposeEmailModal({
     }
   }, [account, accounts]);
 
+  // Keyboard handler for Escape to close modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !sending) {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, sending, onClose]);
+
   const formatDate = (timestamp: string) => {
     const date = new Date(parseInt(timestamp));
     return date.toLocaleString("en-US", {

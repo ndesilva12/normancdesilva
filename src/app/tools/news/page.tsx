@@ -71,6 +71,42 @@ export default function NewsPage() {
     }
   }, [selectedSource, loadContent, sources.length]);
 
+  // Keyboard handler for add source modal
+  useEffect(() => {
+    if (!showAddModal) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && !addingSource && newSourceName.trim() && newSourceRssUrl.trim()) {
+        e.preventDefault();
+        handleAddSource();
+      } else if (e.key === "Escape" && !addingSource) {
+        e.preventDefault();
+        setShowAddModal(false);
+        setNewSourceName("");
+        setNewSourceUrl("");
+        setNewSourceRssUrl("");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showAddModal, addingSource, newSourceName, newSourceRssUrl]);
+
+  // Keyboard handler for reader modal
+  useEffect(() => {
+    if (!readerArticle) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeReader();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [readerArticle]);
+
   const handleSourceChange = (sourceId: string) => {
     setSelectedSource(sourceId);
   };

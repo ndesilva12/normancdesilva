@@ -72,6 +72,25 @@ export default function CalendarPage() {
     }
   }, [currentDate, viewMode, isAuthenticated, loadEvents]);
 
+  // Keyboard handler for add event modal
+  useEffect(() => {
+    if (!showAddModal) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && !isCreating && newEvent.summary && newEvent.date && newEvent.time) {
+        e.preventDefault();
+        createEvent();
+      } else if (e.key === "Escape" && !isCreating) {
+        e.preventDefault();
+        setShowAddModal(false);
+        setNewEvent({ summary: "", description: "", date: "", time: "", endTime: "" });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showAddModal, isCreating, newEvent]);
+
   const checkAuthAndLoadEvents = async () => {
     try {
       const authResponse = await fetch("/api/auth/google/status");

@@ -122,6 +122,24 @@ function EmailsPageContent() {
     }
   }, [selectedAccount, selectedFolder, isConnected, debouncedSearch]);
 
+  // Keyboard handler for delete confirmation modal
+  useEffect(() => {
+    if (!deleteConfirm) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        confirmDelete();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setDeleteConfirm(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [deleteConfirm]);
+
   const checkConnectionAndFetch = async () => {
     try {
       // Check accounts endpoint first

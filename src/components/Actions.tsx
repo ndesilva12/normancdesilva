@@ -115,6 +115,39 @@ export function Reminders({ isGoogleConnected = false, onConnectGoogle, defaultC
     return () => clearInterval(interval);
   }, [reminders, saveReminders]);
 
+  // Keyboard handler for active alarm modal
+  useEffect(() => {
+    if (!activeAlarm) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === "Escape") {
+        e.preventDefault();
+        dismissAlarm();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeAlarm]);
+
+  // Keyboard handler for delete confirmation modal
+  useEffect(() => {
+    if (!deleteConfirm || isDeleting) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleRemoveReminder(deleteConfirm, true);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setDeleteConfirm(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [deleteConfirm, isDeleting]);
+
   const handleAddReminder = async () => {
     if (!newLabel.trim()) return;
 

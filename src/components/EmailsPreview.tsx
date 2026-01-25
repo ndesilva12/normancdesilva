@@ -46,6 +46,25 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
     }
   }, [isGoogleConnected]);
 
+  // Keyboard handler for delete confirmation modal
+  useEffect(() => {
+    if (!deleteConfirm) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        performEmailAction(deleteConfirm.emailId, "trash", deleteConfirm.accountEmail);
+        setDeleteConfirm(null);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setDeleteConfirm(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [deleteConfirm]);
+
   const fetchEmails = async () => {
     setLoading(true);
     setError(null);

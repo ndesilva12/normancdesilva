@@ -67,6 +67,21 @@ export function EmailDetailModal({
     }
   }, [emailId]);
 
+  // Keyboard handler for Escape to close modal
+  useEffect(() => {
+    if (!emailId) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [emailId, onClose]);
+
   const fetchEmail = async () => {
     if (!emailId) return;
 
