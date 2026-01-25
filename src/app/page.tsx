@@ -11,6 +11,8 @@ import {
   Newspaper,
   BookOpen,
   BarChart3,
+  LayoutGrid,
+  Grid3X3,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
@@ -119,8 +121,14 @@ const WIDGET_TITLES: Record<string, string> = {
   raindrop: "Reading List",
 };
 
-// Collapsed Widget Bar Component (for "collapse all" mode - links to pages)
-function CollapsedWidgetBar({ widgets }: { widgets: string[] }) {
+// Collapsed Widget Bar Component (for "collapse all" mode - buttons that expand)
+function CollapsedWidgetBar({
+  widgets,
+  onExpandAll
+}: {
+  widgets: string[];
+  onExpandAll: () => void;
+}) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -139,18 +147,41 @@ function CollapsedWidgetBar({ widgets }: { widgets: string[] }) {
         flexWrap: "wrap",
       }}
     >
+      {/* Show Widgets button - first position */}
+      <button
+        onClick={onExpandAll}
+        title="Show all widgets"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: isMobile ? "4px" : "6px",
+          padding: isMobile ? "12px" : "16px 20px",
+          minWidth: isMobile ? "60px" : "80px",
+          borderRadius: isMobile ? "10px" : "12px",
+          backgroundColor: "rgba(255, 255, 255, 0.05)",
+          border: "1px solid var(--glass-border)",
+          cursor: "pointer",
+          transition: "all 0.15s",
+        }}
+      >
+        <LayoutGrid style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
+        <span style={{ fontSize: isMobile ? "10px" : "12px", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+          Show
+        </span>
+      </button>
       {widgets.map((widgetId) => {
         const Icon = WIDGET_ICONS[widgetId];
-        const link = WIDGET_LINKS[widgetId];
         const title = WIDGET_TITLES[widgetId];
 
-        if (!Icon || !link) return null;
+        if (!Icon) return null;
 
         return (
-          <Link
+          <button
             key={widgetId}
-            href={link}
-            title={title}
+            onClick={onExpandAll}
+            title={`Show ${title}`}
             style={{
               display: "flex",
               flexDirection: "column",
@@ -162,7 +193,7 @@ function CollapsedWidgetBar({ widgets }: { widgets: string[] }) {
               borderRadius: isMobile ? "10px" : "12px",
               backgroundColor: "rgba(255, 255, 255, 0.05)",
               border: "1px solid var(--glass-border)",
-              textDecoration: "none",
+              cursor: "pointer",
               transition: "all 0.15s",
             }}
           >
@@ -170,7 +201,7 @@ function CollapsedWidgetBar({ widgets }: { widgets: string[] }) {
             <span style={{ fontSize: isMobile ? "10px" : "12px", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
               {title}
             </span>
-          </Link>
+          </button>
         );
       })}
     </div>
@@ -180,14 +211,14 @@ function CollapsedWidgetBar({ widgets }: { widgets: string[] }) {
 // Individually Collapsed Widget Bar (for individual collapse - buttons that expand)
 function IndividuallyCollapsedWidgetBar({
   widgets,
-  isMobile
+  isMobile,
+  onHideAll
 }: {
   widgets: { id: string; customName?: string }[];
   isMobile: boolean;
+  onHideAll: () => void;
 }) {
   const { toggleWidgetCollapse } = useLayout();
-
-  if (widgets.length === 0) return null;
 
   return (
     <div
@@ -199,6 +230,30 @@ function IndividuallyCollapsedWidgetBar({
         marginBottom: "16px",
       }}
     >
+      {/* Hide All button - first position */}
+      <button
+        onClick={onHideAll}
+        title="Hide all widgets"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: isMobile ? "4px" : "6px",
+          padding: isMobile ? "12px" : "16px 20px",
+          minWidth: isMobile ? "60px" : "80px",
+          borderRadius: isMobile ? "10px" : "12px",
+          backgroundColor: "rgba(255, 255, 255, 0.05)",
+          border: "1px solid var(--glass-border)",
+          cursor: "pointer",
+          transition: "all 0.15s",
+        }}
+      >
+        <Grid3X3 style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
+        <span style={{ fontSize: isMobile ? "10px" : "12px", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+          Hide
+        </span>
+      </button>
       {widgets.map((widget) => {
         const Icon = WIDGET_ICONS[widget.id];
         const title = widget.customName || WIDGET_TITLES[widget.id] || widget.id;
@@ -241,10 +296,12 @@ function DataWidgetsGrid({
   isGoogleConnected,
   onConnectGoogle,
   isMobile,
+  onHideAll,
 }: {
   isGoogleConnected: boolean;
   onConnectGoogle: () => void;
   isMobile: boolean;
+  onHideAll: () => void;
 }) {
   const { layout, isEditMode, reorderWidgets } = useLayout();
 
@@ -345,6 +402,7 @@ function DataWidgetsGrid({
         <IndividuallyCollapsedWidgetBar
           widgets={collapsedWidgets.map((w) => ({ id: w.id, customName: w.customName }))}
           isMobile={isMobile}
+          onHideAll={onHideAll}
         />
       )}
 
@@ -502,12 +560,14 @@ export default function Home() {
                     .filter((w) => w.visible && w.id !== "contacts")
                     .sort((a, b) => a.order - b.order)
                     .map((w) => w.id)}
+                  onExpandAll={() => setWidgetsCollapsed(false)}
                 />
               ) : (
                 <DataWidgetsGrid
                   isGoogleConnected={isGoogleConnected}
                   onConnectGoogle={handleConnectGoogle}
                   isMobile={isMobile}
+                  onHideAll={() => setWidgetsCollapsed(true)}
                 />
               )}
             </motion.section>

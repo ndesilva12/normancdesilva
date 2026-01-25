@@ -203,6 +203,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
     setUploadedImage(null); // Clear uploaded image
     setToolResult(null); // Clear results
     setDropdownOpen(false);
+    setSourcesHidden(true); // Auto-hide sources when selecting a new source
   };
 
   // Get sources that should be highlighted (for meta sources)
@@ -1322,39 +1323,10 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
             gap: isMobile ? "6px" : "8px",
           }}
         >
-          {/* When sources are hidden, show only "Source:" label + selected source + "show all" button */}
+          {/* When sources are hidden, show "show all" first, then selected source */}
           {sourcesHidden ? (
             <>
-              <span
-                style={{
-                  fontSize: isMobile ? "13px" : "13px",
-                  color: "var(--foreground-muted)",
-                  fontWeight: 500,
-                  marginRight: "4px",
-                }}
-              >
-                Source:
-              </span>
-              {/* Selected source with its outlined container */}
-              <button
-                type="button"
-                onClick={() => setSourcesHidden(false)}
-                style={{
-                  padding: isMobile ? "10px 14px" : "8px 14px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  border: "2px solid var(--accent)",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  backgroundColor: "rgba(var(--accent-rgb), 0.15)",
-                  color: "var(--accent)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {currentSourceConfig?.name || selectedSource}
-              </button>
-              {/* Show all button */}
+              {/* Show all button - first position */}
               <button
                 type="button"
                 onClick={() => setSourcesHidden(false)}
@@ -1376,102 +1348,29 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                 <Eye style={{ width: "14px", height: "14px" }} />
                 show all
               </button>
-              {/* Widget collapse toggle */}
-              {onToggleCollapse && (
-                <>
-                  <span style={{ color: "var(--foreground-muted)", opacity: 0.2, fontSize: "18px" }}>|</span>
-                  <button
-                    type="button"
-                    onClick={onToggleCollapse}
-                    title={widgetsCollapsed ? "Expand Widgets" : "Collapse Widgets"}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: isMobile ? "10px 14px" : "8px 14px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--glass-border)",
-                      backgroundColor: "rgba(255, 255, 255, 0.03)",
-                      color: "var(--foreground-muted)",
-                      fontSize: "13px",
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    {widgetsCollapsed ? (
-                      <LayoutGrid style={{ width: "14px", height: "14px" }} />
-                    ) : (
-                      <Grid3X3 style={{ width: "14px", height: "14px" }} />
-                    )}
-                    {!isMobile && (widgetsCollapsed ? "Expand All" : "Collapse All")}
-                  </button>
-                </>
-              )}
+              {/* Selected source - second position */}
+              <button
+                type="button"
+                onClick={() => setSourcesHidden(false)}
+                style={{
+                  padding: isMobile ? "10px 14px" : "8px 14px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  border: "2px solid var(--accent)",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  backgroundColor: "rgba(var(--accent-rgb), 0.15)",
+                  color: "var(--accent)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {currentSourceConfig?.name || selectedSource}
+              </button>
             </>
           ) : (
             <>
-              {/* All sources displayed as inline buttons */}
-              {orderedSources.map((source) => {
-                const isSelected = selectedSource === source.id;
-                const isHighlighted = highlightedSources.includes(source.id);
-                const isMetaSource = source.type === "meta";
-
-                // Add separator after Web and before individual AI sources
-                const showSeparatorAfter = source.id === "web" || source.id === "amazon";
-
-                return (
-                  <div key={source.id} style={{ display: "flex", alignItems: "center", gap: isMobile ? "6px" : "8px" }}>
-                    <button
-                      type="button"
-                      onClick={() => selectSource(source.id)}
-                      style={{
-                        padding: isMetaSource
-                          ? (isMobile ? "10px 14px" : "8px 16px")
-                          : (isMobile ? "10px 12px" : "8px 14px"),
-                        fontSize: "13px",
-                        fontWeight: isSelected || isMetaSource ? 600 : 500,
-                        border: isSelected
-                          ? "2px solid var(--accent)"
-                          : isHighlighted
-                          ? "2px solid rgba(var(--accent-rgb), 0.5)"
-                          : "1px solid var(--glass-border)",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                        backgroundColor: isSelected
-                          ? "rgba(var(--accent-rgb), 0.15)"
-                          : isHighlighted
-                          ? "rgba(var(--accent-rgb), 0.08)"
-                          : "rgba(255, 255, 255, 0.03)",
-                        color: isSelected || isHighlighted
-                          ? "var(--accent)"
-                          : "var(--foreground-muted)",
-                        whiteSpace: "nowrap",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected && !isHighlighted) {
-                          e.currentTarget.style.borderColor = "rgba(var(--accent-rgb), 0.3)";
-                          e.currentTarget.style.color = "var(--foreground)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected && !isHighlighted) {
-                          e.currentTarget.style.borderColor = "var(--glass-border)";
-                          e.currentTarget.style.color = "var(--foreground-muted)";
-                        }
-                      }}
-                    >
-                      {source.name}
-                    </button>
-                    {showSeparatorAfter && !isMobile && (
-                      <span style={{ color: "var(--foreground-muted)", opacity: 0.2, fontSize: "18px" }}>|</span>
-                    )}
-                  </div>
-                );
-              })}
-              {/* Hide all button */}
-              <span style={{ color: "var(--foreground-muted)", opacity: 0.2, fontSize: "18px" }}>|</span>
+              {/* Hide all button - first position */}
               <button
                 type="button"
                 onClick={() => setSourcesHidden(true)}
@@ -1494,38 +1393,87 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                 <EyeOff style={{ width: "14px", height: "14px" }} />
                 {!isMobile && "hide all"}
               </button>
-              {/* Widget collapse toggle */}
-              {onToggleCollapse && (
-                <>
-                  <span style={{ color: "var(--foreground-muted)", opacity: 0.2, fontSize: "18px" }}>|</span>
-                  <button
-                    type="button"
-                    onClick={onToggleCollapse}
-                    title={widgetsCollapsed ? "Expand Widgets" : "Collapse Widgets"}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: isMobile ? "10px 14px" : "8px 14px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--glass-border)",
-                      backgroundColor: "rgba(255, 255, 255, 0.03)",
-                      color: "var(--foreground-muted)",
-                      fontSize: "13px",
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    {widgetsCollapsed ? (
-                      <LayoutGrid style={{ width: "14px", height: "14px" }} />
-                    ) : (
-                      <Grid3X3 style={{ width: "14px", height: "14px" }} />
-                    )}
-                    {!isMobile && (widgetsCollapsed ? "Expand All" : "Collapse All")}
-                  </button>
-                </>
+              {/* Currently selected source - second position */}
+              {currentSourceConfig && (
+                <button
+                  type="button"
+                  disabled
+                  style={{
+                    padding: isMobile ? "10px 14px" : "8px 14px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    border: "2px solid var(--accent)",
+                    borderRadius: "8px",
+                    cursor: "default",
+                    transition: "all 0.15s",
+                    backgroundColor: "rgba(var(--accent-rgb), 0.15)",
+                    color: "var(--accent)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {currentSourceConfig.name}
+                </button>
               )}
+              {/* Separator */}
+              <span style={{ color: "var(--foreground-muted)", opacity: 0.2, fontSize: "18px" }}>|</span>
+              {/* All other sources displayed as inline buttons */}
+              {orderedSources.map((source) => {
+                const isSelected = selectedSource === source.id;
+                const isHighlighted = highlightedSources.includes(source.id);
+                const isMetaSource = source.type === "meta";
+
+                // Skip the currently selected source (already shown above)
+                if (isSelected) return null;
+
+                // Add separator after Web and before individual AI sources
+                const showSeparatorAfter = source.id === "web" || source.id === "amazon";
+
+                return (
+                  <div key={source.id} style={{ display: "flex", alignItems: "center", gap: isMobile ? "6px" : "8px" }}>
+                    <button
+                      type="button"
+                      onClick={() => selectSource(source.id)}
+                      style={{
+                        padding: isMetaSource
+                          ? (isMobile ? "10px 14px" : "8px 16px")
+                          : (isMobile ? "10px 12px" : "8px 14px"),
+                        fontSize: "13px",
+                        fontWeight: isMetaSource ? 600 : 500,
+                        border: isHighlighted
+                          ? "2px solid rgba(var(--accent-rgb), 0.5)"
+                          : "1px solid var(--glass-border)",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                        backgroundColor: isHighlighted
+                          ? "rgba(var(--accent-rgb), 0.08)"
+                          : "rgba(255, 255, 255, 0.03)",
+                        color: isHighlighted
+                          ? "var(--accent)"
+                          : "var(--foreground-muted)",
+                        whiteSpace: "nowrap",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isHighlighted) {
+                          e.currentTarget.style.borderColor = "rgba(var(--accent-rgb), 0.3)";
+                          e.currentTarget.style.color = "var(--foreground)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isHighlighted) {
+                          e.currentTarget.style.borderColor = "var(--glass-border)";
+                          e.currentTarget.style.color = "var(--foreground-muted)";
+                        }
+                      }}
+                    >
+                      {source.name}
+                    </button>
+                    {showSeparatorAfter && !isMobile && (
+                      <span style={{ color: "var(--foreground-muted)", opacity: 0.2, fontSize: "18px" }}>|</span>
+                    )}
+                  </div>
+                );
+              })}
             </>
           )}
         </div>
