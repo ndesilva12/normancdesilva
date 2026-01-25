@@ -504,60 +504,39 @@ function NotesContent() {
 
     setSavingFullPage(true);
     try {
-      // Step 1: Delete all existing blocks sequentially to avoid rate limiting
-      for (const block of pageContent) {
-        try {
-          const deleteResponse = await fetch(`/api/notion/block?blockId=${block.id}`, {
-            method: "DELETE",
-          });
-          if (!deleteResponse.ok) {
-            console.warn(`Failed to delete block ${block.id}`);
-          }
-        } catch (deleteErr) {
-          console.warn(`Error deleting block ${block.id}:`, deleteErr);
-          // Continue with other blocks
+      // Step 1: Delete all existing blocks in parallel batches (with rate limiting)
+      const blockIds = pageContent.map(b => b.id);
+      const batchSize = 3; // Delete 3 blocks at a time to avoid rate limits
+
+      for (let i = 0; i < blockIds.length; i += batchSize) {
+        const batch = blockIds.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(blockId =>
+            fetch(`/api/notion/block?blockId=${blockId}`, { method: "DELETE" })
+              .catch(err => console.warn(`Error deleting block ${blockId}:`, err))
+          )
+        );
+        // Small delay between batches to avoid rate limiting
+        if (i + batchSize < blockIds.length) {
+          await new Promise(r => setTimeout(r, 100));
         }
       }
 
-      // Step 2: Parse and append new content
-      const lines = fullPageContent.split("\n");
-      const nonEmptyLines = lines.filter((line) => line.trim());
+      // Step 2: Append all new content in a single request
+      const contentToSave = fullPageContent.trim() || " ";
 
-      // If there's no content, add a placeholder
-      if (nonEmptyLines.length === 0) {
-        try {
-          await fetch("/api/notion", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "append",
-              pageId: selectedPage.id,
-              content: " ",
-            }),
-          });
-        } catch (appendErr) {
-          console.warn("Failed to append placeholder:", appendErr);
-        }
-      } else {
-        // Append each line as a new block
-        for (const line of nonEmptyLines) {
-          try {
-            const appendResponse = await fetch("/api/notion", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                action: "append",
-                pageId: selectedPage.id,
-                content: line.trim(),
-              }),
-            });
-            if (!appendResponse.ok) {
-              console.warn(`Failed to append line`);
-            }
-          } catch (appendErr) {
-            console.warn("Error appending line:", appendErr);
-          }
-        }
+      const appendResponse = await fetch("/api/notion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "append",
+          pageId: selectedPage.id,
+          content: contentToSave,
+        }),
+      });
+
+      if (!appendResponse.ok) {
+        throw new Error("Failed to save content");
       }
 
       // Step 3: Refresh the page content
@@ -603,6 +582,11 @@ function NotesContent() {
       code: { fontSize: "14px", fontFamily: "ui-monospace, monospace", padding: "16px 20px", backgroundColor: "rgba(0,0,0,0.4)", borderRadius: "8px", marginBottom: "16px", overflowX: "auto", lineHeight: 1.6 },
       divider: { height: "1px", backgroundColor: "var(--glass-border)", margin: "24px 0" },
       image: { marginBottom: "16px" },
+      toggle: { fontSize: "16px", lineHeight: 1.85, marginBottom: "8px", paddingLeft: "24px" },
+      callout: { fontSize: "16px", lineHeight: 1.85, marginBottom: "16px", padding: "16px 20px", backgroundColor: "rgba(var(--accent-rgb), 0.1)", borderRadius: "8px", borderLeft: "3px solid var(--accent)" },
+      bookmark: { fontSize: "14px", lineHeight: 1.6, marginBottom: "16px", padding: "12px 16px", backgroundColor: "rgba(255,255,255,0.05)", borderRadius: "8px", wordBreak: "break-all" },
+      link_preview: { fontSize: "14px", lineHeight: 1.6, marginBottom: "16px", padding: "12px 16px", backgroundColor: "rgba(255,255,255,0.05)", borderRadius: "8px", wordBreak: "break-all" },
+      child_page: { fontSize: "16px", lineHeight: 1.85, marginBottom: "8px", paddingLeft: "24px", color: "var(--accent)" },
     };
 
     const style = blockStyles[block.type] || blockStyles.paragraph;
@@ -623,12 +607,51 @@ function NotesContent() {
       );
     }
 
+    // Handle bookmark and link_preview blocks
+    if ((block.type === "bookmark" || block.type === "link_preview") && block.content) {
+      return (
+        <div key={block.id} style={style}>
+          <a
+            href={block.content}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "var(--accent)", textDecoration: "underline" }}
+          >
+            {block.content}
+          </a>
+        </div>
+      );
+    }
+
+    // Handle toggle blocks with children
+    if (block.type === "toggle") {
+      return (
+        <div key={block.id} style={{ marginBottom: "8px" }}>
+          <div style={{ ...style, marginBottom: "4px" }}>▸ {block.content}</div>
+          {block.children && block.children.length > 0 && (
+            <div style={{ paddingLeft: "24px" }}>
+              {block.children.map((child, i) => renderBlock(child, i))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Handle child_page blocks
+    if (block.type === "child_page") {
+      return (
+        <div key={block.id} style={style}>
+          📄 {block.content || "Untitled"}
+        </div>
+      );
+    }
+
     const listPrefix = block.type === "bulleted_list_item" ? "• " :
                       block.type === "numbered_list_item" ? `${index + 1}. ` : "";
 
     return (
+      <div key={block.id}>
       <div
-        key={block.id}
         style={{
           ...style,
           position: "relative",
@@ -636,6 +659,7 @@ function NotesContent() {
           alignItems: "flex-start",
           gap: "8px",
           color: "var(--foreground)",
+          marginBottom: block.children && block.children.length > 0 ? "4px" : undefined,
         }}
         className="note-block"
       >
@@ -713,39 +737,56 @@ function NotesContent() {
             >
               {listPrefix}{block.content || (block.type === "paragraph" ? "" : "")}
             </div>
-            <div className="block-actions" style={{ display: "none", gap: "4px" }}>
+            <div className="block-actions" style={{ display: isMobile ? "flex" : "none", gap: isMobile ? "8px" : "4px" }}>
               <button
                 onClick={() => {
                   setEditingBlockId(block.id);
                   setEditedBlockContent(block.content);
                 }}
                 style={{
-                  padding: "4px",
+                  padding: isMobile ? "8px" : "4px",
+                  minWidth: isMobile ? "36px" : "auto",
+                  minHeight: isMobile ? "36px" : "auto",
                   backgroundColor: "rgba(255,255,255,0.1)",
                   color: "var(--foreground-muted)",
                   border: "none",
-                  borderRadius: "4px",
+                  borderRadius: isMobile ? "8px" : "4px",
                   cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <Edit3 style={{ width: "12px", height: "12px" }} />
+                <Edit3 style={{ width: isMobile ? "16px" : "12px", height: isMobile ? "16px" : "12px" }} />
               </button>
               <button
                 onClick={() => handleDeleteBlock(block.id)}
                 style={{
-                  padding: "4px",
+                  padding: isMobile ? "8px" : "4px",
+                  minWidth: isMobile ? "36px" : "auto",
+                  minHeight: isMobile ? "36px" : "auto",
                   backgroundColor: "rgba(255,255,255,0.1)",
                   color: "#f87171",
                   border: "none",
-                  borderRadius: "4px",
+                  borderRadius: isMobile ? "8px" : "4px",
                   cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <Trash2 style={{ width: "12px", height: "12px" }} />
+                <Trash2 style={{ width: isMobile ? "16px" : "12px", height: isMobile ? "16px" : "12px" }} />
               </button>
             </div>
           </>
         )}
+      </div>
+      {/* Render children blocks if any */}
+      {block.children && block.children.length > 0 && (
+        <div style={{ paddingLeft: "24px" }}>
+          {block.children.map((child, i) => renderBlock(child, i))}
+        </div>
+      )}
       </div>
     );
   };
@@ -910,7 +951,8 @@ function NotesContent() {
                         display: "flex",
                         alignItems: "center",
                         gap: "12px",
-                        padding: "12px 16px",
+                        padding: isMobile ? "16px" : "12px 16px",
+                        minHeight: isMobile ? "60px" : "auto",
                         backgroundColor: selectedPage?.id === page.id ? "rgba(255,255,255,0.08)" : "transparent",
                         border: "none",
                         borderBottom: "1px solid var(--glass-border)",

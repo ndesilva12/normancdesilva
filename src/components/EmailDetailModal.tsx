@@ -58,7 +58,7 @@ export function EmailDetailModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [showHtml, setShowHtml] = useState(false);
+  const [showHtml, setShowHtml] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
@@ -186,7 +186,7 @@ export function EmailDetailModal({
           onClick={(e) => e.stopPropagation()}
           style={{
             width: "100%",
-            maxWidth: "800px",
+            maxWidth: "1000px",
             maxHeight: "90vh",
             backgroundColor: "rgba(20, 20, 25, 0.95)",
             border: "1px solid var(--glass-border)",
@@ -342,16 +342,21 @@ export function EmailDetailModal({
                   style={{
                     padding: "16px",
                     borderRadius: "8px",
-                    backgroundColor: "rgba(255, 255, 255, 0.02)",
+                    backgroundColor: showHtml && email.bodyHtml ? "rgba(255, 255, 255, 0.98)" : "rgba(255, 255, 255, 0.02)",
                     fontSize: "14px",
                     lineHeight: 1.6,
-                    color: "var(--foreground)",
+                    color: showHtml && email.bodyHtml ? "#1a1a1a" : "var(--foreground)",
                   }}
                 >
                   {showHtml && email.bodyHtml ? (
                     <div
                       dangerouslySetInnerHTML={{ __html: email.bodyHtml }}
-                      style={{ maxHeight: "400px", overflow: "auto" }}
+                      style={{
+                        maxHeight: "60vh",
+                        overflow: "auto",
+                        color: "#1a1a1a",
+                      }}
+                      className="email-html-content"
                     />
                   ) : (
                     <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0 }}>
@@ -521,6 +526,54 @@ export function EmailDetailModal({
           )}
         </motion.div>
       </motion.div>
+      <style jsx global>{`
+        .email-html-content {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        .email-html-content img {
+          max-width: 100%;
+          height: auto;
+        }
+        .email-html-content table {
+          border-collapse: collapse;
+          max-width: 100%;
+        }
+        .email-html-content a {
+          color: #0066cc;
+          text-decoration: underline;
+        }
+        .email-html-content p {
+          margin: 0 0 1em 0;
+        }
+        .email-html-content blockquote {
+          margin: 1em 0;
+          padding-left: 1em;
+          border-left: 3px solid #ddd;
+          color: #555;
+        }
+        .email-html-content pre, .email-html-content code {
+          background-color: #f5f5f5;
+          font-family: monospace;
+          padding: 2px 4px;
+          border-radius: 3px;
+        }
+        .email-html-content pre {
+          padding: 12px;
+          overflow-x: auto;
+        }
+        .email-html-content h1, .email-html-content h2, .email-html-content h3 {
+          margin: 1em 0 0.5em 0;
+          color: #1a1a1a;
+        }
+        .email-html-content ul, .email-html-content ol {
+          margin: 0.5em 0;
+          padding-left: 2em;
+        }
+        .email-html-content div[style*="display:none"],
+        .email-html-content div[style*="display: none"] {
+          display: none !important;
+        }
+      `}</style>
     </AnimatePresence>
   );
 }

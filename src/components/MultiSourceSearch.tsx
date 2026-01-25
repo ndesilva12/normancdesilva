@@ -1180,19 +1180,19 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
           style={{
             display: "flex",
             alignItems: "flex-start",
-            gap: "8px",
-            borderRadius: "12px",
-            padding: "8px",
+            gap: isMobile ? "10px" : "8px",
+            borderRadius: isMobile ? "14px" : "12px",
+            padding: isMobile ? "12px 12px 12px 16px" : "8px",
             paddingLeft: "16px",
           }}
         >
           <Search
             style={{
-              width: "20px",
-              height: "20px",
+              width: isMobile ? "22px" : "20px",
+              height: isMobile ? "22px" : "20px",
               flexShrink: 0,
               color: "var(--foreground-muted)",
-              marginTop: "10px",
+              marginTop: isMobile ? "8px" : "10px",
             }}
           />
           <textarea
@@ -1212,6 +1212,9 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
                 handleSearch(e as unknown as FormEvent);
               }
             }}
+            onFocus={() => {
+              if (isMobile) setDropdownOpen(true);
+            }}
             rows={1}
             style={{
               flex: 1,
@@ -1219,9 +1222,9 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
               background: "transparent",
               border: "none",
               outline: "none",
-              fontSize: "15px",
+              fontSize: isMobile ? "16px" : "15px",
               color: "var(--foreground)",
-              padding: "8px 0",
+              padding: isMobile ? "6px 0" : "8px 0",
               resize: "none",
               overflow: "hidden",
               lineHeight: 1.5,
@@ -1291,8 +1294,8 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
 
         {/* Source Selector */}
         {isMobile ? (
-          /* Mobile Dropdown */
-          <div style={{ marginTop: "12px", position: "relative" }}>
+          /* Mobile - Expandable Grid */
+          <div style={{ marginTop: "12px" }}>
             <button
               type="button"
               onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -1301,20 +1304,21 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "12px 14px",
+                padding: "14px 16px",
                 borderRadius: "10px",
                 border: "1px solid var(--glass-border)",
                 background: "rgba(255, 255, 255, 0.03)",
                 color: "var(--foreground)",
-                fontSize: "14px",
+                fontSize: "15px",
+                fontWeight: 500,
                 cursor: "pointer",
               }}
             >
               <span>{currentSourceConfig?.name || selectedSource}</span>
               <ChevronDown
                 style={{
-                  width: "16px",
-                  height: "16px",
+                  width: "18px",
+                  height: "18px",
                   transition: "transform 0.2s",
                   transform: dropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
                 }}
@@ -1322,49 +1326,51 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
             </button>
             {dropdownOpen && (
               <div
+                className="glass"
                 style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  right: 0,
-                  marginTop: "4px",
-                  borderRadius: "10px",
-                  border: "1px solid var(--glass-border)",
-                  backgroundColor: "var(--dropdown-bg)",
-                  zIndex: 50,
-                  overflow: "hidden",
-                  maxHeight: "350px",
+                  marginTop: "8px",
+                  borderRadius: "12px",
+                  padding: "12px",
+                  maxHeight: "50vh",
                   overflowY: "auto",
                 }}
               >
-                {orderedSources.map((source) => (
-                  <button
-                    key={source.id}
-                    type="button"
-                    onClick={() => selectSource(source.id)}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "12px 14px",
-                      border: "none",
-                      borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-                      background: "transparent",
-                      color: selectedSource === source.id || highlightedSources.includes(source.id)
-                        ? "var(--accent)"
-                        : "var(--foreground-muted)",
-                      fontSize: "14px",
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
-                  >
-                    {source.name}
-                    {selectedSource === source.id && (
-                      <span style={{ fontSize: "12px" }}>✓</span>
-                    )}
-                  </button>
-                ))}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {orderedSources.map((source) => {
+                    const isSelected = selectedSource === source.id;
+                    const isHighlighted = highlightedSources.includes(source.id);
+                    return (
+                      <button
+                        key={source.id}
+                        type="button"
+                        onClick={() => selectSource(source.id)}
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: "8px",
+                          border: isSelected
+                            ? "2px solid var(--accent)"
+                            : isHighlighted
+                            ? "2px solid rgba(var(--accent-rgb), 0.5)"
+                            : "1px solid var(--glass-border)",
+                          background: isSelected
+                            ? "rgba(var(--accent-rgb), 0.15)"
+                            : isHighlighted
+                            ? "rgba(var(--accent-rgb), 0.08)"
+                            : "rgba(255, 255, 255, 0.03)",
+                          color: isSelected || isHighlighted
+                            ? "var(--accent)"
+                            : "var(--foreground-muted)",
+                          fontSize: "13px",
+                          fontWeight: isSelected ? 600 : 500,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {source.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

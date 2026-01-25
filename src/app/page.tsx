@@ -1,7 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
+import {
+  FolderOpen,
+  Mail,
+  StickyNote,
+  TrendingUp,
+  Newspaper,
+  BookOpen,
+  BarChart3,
+  LayoutGrid,
+  Grid3X3,
+} from "lucide-react";
 import { Header } from "@/components/Header";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { FilesPreview } from "@/components/FilesPreview";
@@ -17,6 +29,28 @@ import { DraggableWidget, useDragState } from "@/components/DraggableWidget";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { useLayout, WidgetConfig } from "@/contexts/LayoutContext";
 import { useSettings } from "@/contexts/SettingsContext";
+
+// Widget icon mapping
+const WIDGET_ICONS: Record<string, React.ComponentType<{ style?: React.CSSProperties }>> = {
+  files: FolderOpen,
+  emails: Mail,
+  notes: StickyNote,
+  stocks: BarChart3,
+  news: Newspaper,
+  trending: TrendingUp,
+  raindrop: BookOpen,
+};
+
+// Widget link mapping
+const WIDGET_LINKS: Record<string, string> = {
+  files: "/tools/files",
+  emails: "/tools/emails",
+  notes: "/tools/notes",
+  stocks: "/tools/stocks",
+  news: "/tools/news",
+  trending: "/tools/trending",
+  raindrop: "/tools/raindrop",
+};
 
 // Mobile Date/Time Banner Component
 function MobileDateTimeBanner() {
@@ -86,6 +120,58 @@ const WIDGET_TITLES: Record<string, string> = {
   trending: "Trending",
   raindrop: "Reading List",
 };
+
+// Collapsed Widget Bar Component
+function CollapsedWidgetBar({ widgets }: { widgets: string[] }) {
+  return (
+    <div
+      className="glass"
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        gap: "8px",
+        padding: "12px 16px",
+        borderRadius: "12px",
+        flexWrap: "wrap",
+      }}
+    >
+      {widgets.map((widgetId) => {
+        const Icon = WIDGET_ICONS[widgetId];
+        const link = WIDGET_LINKS[widgetId];
+        const title = WIDGET_TITLES[widgetId];
+
+        if (!Icon || !link) return null;
+
+        return (
+          <Link
+            key={widgetId}
+            href={link}
+            title={title}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4px",
+              padding: "12px",
+              minWidth: "60px",
+              borderRadius: "10px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid var(--glass-border)",
+              textDecoration: "none",
+              transition: "all 0.15s",
+            }}
+          >
+            <Icon style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+            <span style={{ fontSize: "10px", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+              {title}
+            </span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 
 // Data widgets grid - only preview widgets (tools are now in sources)
 function DataWidgetsGrid({
@@ -207,7 +293,8 @@ export default function Home() {
   const [hasSearchResults, setHasSearchResults] = useState(false);
   const [isToolActive, setIsToolActive] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const { isEditMode } = useLayout();
+  const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
+  const { isEditMode, layout } = useLayout();
 
   // Detect mobile viewport
   useEffect(() => {
@@ -303,11 +390,56 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.1 }}
               style={{ width: "100%" }}
             >
-              <DataWidgetsGrid
-                isGoogleConnected={isGoogleConnected}
-                onConnectGoogle={handleConnectGoogle}
-                isMobile={isMobile}
-              />
+              {/* Collapse Toggle Button */}
+              {!isEditMode && (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
+                  <button
+                    onClick={() => setWidgetsCollapsed(!widgetsCollapsed)}
+                    title={widgetsCollapsed ? "Expand Widgets" : "Collapse Widgets"}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--glass-border)",
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      color: "var(--foreground-muted)",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {widgetsCollapsed ? (
+                      <>
+                        <LayoutGrid style={{ width: "14px", height: "14px" }} />
+                        <span>Expand</span>
+                      </>
+                    ) : (
+                      <>
+                        <Grid3X3 style={{ width: "14px", height: "14px" }} />
+                        <span>Collapse</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Collapsed or Full Widget View */}
+              {widgetsCollapsed && !isEditMode ? (
+                <CollapsedWidgetBar
+                  widgets={layout.previewWidgets
+                    .filter((w) => w.visible && w.id !== "contacts")
+                    .sort((a, b) => a.order - b.order)
+                    .map((w) => w.id)}
+                />
+              ) : (
+                <DataWidgetsGrid
+                  isGoogleConnected={isGoogleConnected}
+                  onConnectGoogle={handleConnectGoogle}
+                  isMobile={isMobile}
+                />
+              )}
             </motion.section>
           )}
 

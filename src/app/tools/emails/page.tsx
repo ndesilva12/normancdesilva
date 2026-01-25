@@ -78,6 +78,9 @@ function EmailsPageContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
+  // Delete confirmation state
+  const [deleteConfirm, setDeleteConfirm] = useState<{ emailId: string; accountEmail?: string; subject: string } | null>(null);
+
   // Handle query params for direct email opening or compose (from dashboard widget or contacts)
   useEffect(() => {
     const emailIdParam = searchParams.get("emailId");
@@ -280,28 +283,110 @@ function EmailsPageContent() {
 
   const handleDeleteEmail = async (e: React.MouseEvent, email: EmailWithAccount) => {
     e.stopPropagation();
-    if (!confirm("Move this email to trash?")) return;
+    // Show confirmation modal with email subject for verification
+    setDeleteConfirm({
+      emailId: email.id,
+      accountEmail: email.accountEmail || (selectedAccount !== "all" ? selectedAccount : undefined),
+      subject: email.subject || "this email",
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
 
     try {
-      const response = await fetch(`/api/gmail/${email.id}/actions`, {
+      const response = await fetch(`/api/gmail/${deleteConfirm.emailId}/actions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "trash",
-          account: email.accountEmail || (selectedAccount !== "all" ? selectedAccount : undefined),
+          account: deleteConfirm.accountEmail,
         }),
       });
 
       if (response.ok) {
-        setEmails((prev) => prev.filter((e) => e.id !== email.id));
+        setEmails((prev) => prev.filter((e) => e.id !== deleteConfirm.emailId));
       }
     } catch (err) {
       console.error("Failed to delete email:", err);
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
   return (
     <SwipeNavigation backPath="/">
+    {/* Delete Confirmation Modal */}
+    {deleteConfirm && (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1100,
+          backdropFilter: "blur(4px)",
+        }}
+        onClick={() => setDeleteConfirm(null)}
+      >
+        <div
+          className="glass"
+          style={{
+            padding: "24px",
+            borderRadius: "12px",
+            maxWidth: "400px",
+            width: "90%",
+            textAlign: "center",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Trash2 style={{ width: "32px", height: "32px", color: "#ef4444", marginBottom: "16px" }} />
+          <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+            Delete Email?
+          </h3>
+          <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginBottom: "20px", lineHeight: 1.5 }}>
+            Are you sure you want to delete &quot;{deleteConfirm.subject.length > 50 ? deleteConfirm.subject.substring(0, 50) + "..." : deleteConfirm.subject}&quot;?
+          </p>
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+            <button
+              onClick={() => setDeleteConfirm(null)}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "8px",
+                border: "1px solid var(--glass-border)",
+                backgroundColor: "transparent",
+                color: "var(--foreground)",
+                fontSize: "14px",
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "8px",
+                border: "none",
+                backgroundColor: "#ef4444",
+                color: "white",
+                fontSize: "14px",
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>

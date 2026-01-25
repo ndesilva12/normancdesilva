@@ -153,7 +153,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     description: "Expert-level research reports",
     longDescription: "Generate comprehensive expert-level research reports focused on nuances, hidden mechanics, and insights that even educated people miss.",
     type: "tool",
-    apiEndpoint: "/api/tools/deep-search",
+    apiEndpoint: "/api/deep-search",
     usesSearchInput: true,
     toolHref: "/tools/deep-search",
     exampleSearches: [
@@ -168,7 +168,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     description: "All perspectives research",
     longDescription: "Comprehensive research exploring all perspectives including alternative, fringe, and controversial viewpoints that mainstream sources often avoid.",
     type: "tool",
-    apiEndpoint: "/api/tools/dark-search",
+    apiEndpoint: "/api/dark-search",
     usesSearchInput: true,
     toolHref: "/tools/dark-search",
     toolOptions: [
@@ -196,7 +196,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     description: "Corporate political analysis",
     longDescription: "Analyze corporate political leanings, donations, lobbying activities, and public statements to understand a company's political stance.",
     type: "tool",
-    apiEndpoint: "/api/tools/company-politics",
+    apiEndpoint: "/api/company/analyze",
     toolHref: "/tools/company-politics",
     additionalInputs: [
       {
@@ -214,7 +214,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     description: "Local business research",
     longDescription: "Deep dive into local businesses with public records, filings, ownership details, and news coverage.",
     type: "tool",
-    apiEndpoint: "/api/tools/business-info",
+    apiEndpoint: "/api/business/search",
     toolHref: "/tools/business-info",
     additionalInputs: [
       {
@@ -249,7 +249,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     description: "AI-powered OSINT research",
     longDescription: "Find publicly available contact information for individuals or organizations using AI-powered OSINT research.",
     type: "tool",
-    apiEndpoint: "/api/tools/contact-finder",
+    apiEndpoint: "/api/contact-finder",
     toolHref: "/tools/contact-finder",
     additionalInputs: [
       {
@@ -321,7 +321,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     description: "Reverse image search",
     longDescription: "Reverse image search using Google Lens and Bing Visual Search to find image sources and similar images.",
     type: "tool",
-    apiEndpoint: "/api/tools/image-lookup",
+    apiEndpoint: "/api/image-lookup",
     toolHref: "/tools/image-lookup",
     toolOptions: [
       {
@@ -344,7 +344,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     description: "AI image search & generation",
     longDescription: "AI-powered image search and generation. Find existing images or create new ones with data visualizations or imagination.",
     type: "tool",
-    apiEndpoint: "/api/tools/visuals",
+    apiEndpoint: "/api/visuals",
     usesSearchInput: true,
     toolHref: "/tools/visuals",
     toolOptions: [
@@ -377,7 +377,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     description: "Sports team rosters",
     longDescription: "View sports team rosters with player details and hometown mapping across NBA, NFL, NCAA, and more.",
     type: "tool",
-    apiEndpoint: "/api/tools/visual-rosters",
+    apiEndpoint: "/api/roster",
     toolHref: "/tools/visual-rosters",
     additionalInputs: [
       {
