@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Mail, Loader2, ExternalLink, RefreshCw, Archive, Trash2, ChevronUp } from "lucide-react";
 import { formatEmailSender } from "@/lib/google-services";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -36,6 +37,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ emailId: string; accountEmail?: string; subject: string } | null>(null);
   const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+  const router = useRouter();
 
   const config = getWidgetConfig("previewWidgets", "emails");
   const isCollapsed = config?.size === "collapsed";
@@ -239,11 +241,18 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
           padding: "18px 16px",
           borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           transition: "background 0.15s",
+          cursor: isCollapsed ? "default" : "pointer",
+        }}
+        onClick={() => {
+          if (!isCollapsed) {
+            router.push("/tools/emails");
+          }
         }}
       >
         <Link
           href="/tools/emails"
           onClick={(e) => {
+            e.stopPropagation();
             if (isCollapsed) {
               e.preventDefault();
             }
@@ -294,6 +303,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
         {!isCollapsed && (
           <Link
             href="/tools/emails"
+            onClick={(e) => e.stopPropagation()}
             style={{
               display: "flex",
               alignItems: "center",

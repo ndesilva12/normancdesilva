@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { StickyNote, Loader2, ExternalLink, RefreshCw, ChevronUp } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 
@@ -18,6 +19,7 @@ export function NotesPreview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+  const router = useRouter();
 
   const config = getWidgetConfig("previewWidgets", "notes");
   const isCollapsed = config?.size === "collapsed";
@@ -70,11 +72,18 @@ export function NotesPreview() {
           padding: "18px 16px",
           borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           flexShrink: 0,
+          cursor: isCollapsed ? "default" : "pointer",
+        }}
+        onClick={() => {
+          if (!isCollapsed) {
+            router.push("/tools/notes");
+          }
         }}
       >
         <Link
           href="/tools/notes"
           onClick={(e) => {
+            e.stopPropagation();
             if (isCollapsed) {
               e.preventDefault();
             }
@@ -99,6 +108,7 @@ export function NotesPreview() {
           <button
             onClick={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               fetchNotes();
             }}
             disabled={loading}
@@ -148,6 +158,7 @@ export function NotesPreview() {
         {!isCollapsed && (
           <Link
             href="/tools/notes"
+            onClick={(e) => e.stopPropagation()}
             style={{
               display: "flex",
               alignItems: "center",

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Bookmark, ExternalLink, Tag, Clock, Loader2, Link as LinkIcon, ChevronUp } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 
@@ -32,6 +33,7 @@ export function RaindropPreview() {
   const [error, setError] = useState<string | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
   const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+  const router = useRouter();
 
   const config = getWidgetConfig("previewWidgets", "raindrop");
   const isCollapsed = config?.size === "collapsed";
@@ -129,11 +131,18 @@ export function RaindropPreview() {
           padding: "18px 16px",
           borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           flexShrink: 0,
+          cursor: isCollapsed ? "default" : "pointer",
+        }}
+        onClick={() => {
+          if (!isCollapsed) {
+            router.push("/tools/raindrop");
+          }
         }}
       >
         <Link
           href="/tools/raindrop"
           onClick={(e) => {
+            e.stopPropagation();
             if (isCollapsed) {
               e.preventDefault();
             }
@@ -169,7 +178,10 @@ export function RaindropPreview() {
             {visibleCollections.map((collection) => (
               <button
                 key={collection.id}
-                onClick={() => setSelectedCollection(collection.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedCollection(collection.id);
+                }}
                 style={{
                   padding: "3px 8px",
                   borderRadius: "10px",
@@ -225,6 +237,7 @@ export function RaindropPreview() {
             href="https://app.raindrop.io"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             style={{
               display: "flex",
               alignItems: "center",

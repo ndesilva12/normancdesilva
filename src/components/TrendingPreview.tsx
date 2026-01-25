@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { TrendingUp, Loader2, RefreshCw, ExternalLink, ChevronUp } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLayout } from "@/contexts/LayoutContext";
 
 interface TrendingTopic {
@@ -18,6 +19,7 @@ export function TrendingPreview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+  const router = useRouter();
 
   const config = getWidgetConfig("previewWidgets", "trending");
   const isCollapsed = config?.size === "collapsed";
@@ -85,11 +87,18 @@ export function TrendingPreview() {
           justifyContent: "space-between",
           padding: "18px 16px",
           borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
+          cursor: isCollapsed ? "default" : "pointer",
+        }}
+        onClick={() => {
+          if (!isCollapsed) {
+            router.push("/tools/trending");
+          }
         }}
       >
         <Link
           href="/tools/trending"
           onClick={(e) => {
+            e.stopPropagation();
             if (isCollapsed) {
               e.preventDefault();
             }
@@ -112,7 +121,10 @@ export function TrendingPreview() {
         {!isCollapsed && (
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button
-              onClick={fetchTrends}
+              onClick={(e) => {
+                e.stopPropagation();
+                fetchTrends();
+              }}
               disabled={loading}
               style={{
                 display: "flex",
@@ -159,6 +171,7 @@ export function TrendingPreview() {
             )}
             <Link
               href="/tools/trending"
+              onClick={(e) => e.stopPropagation()}
               style={{
                 display: "flex",
                 alignItems: "center",

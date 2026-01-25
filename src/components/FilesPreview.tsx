@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FileText, Loader2, ExternalLink, RefreshCw, ChevronUp } from "lucide-react";
 import { DriveFile, getDriveFileIcon, getDriveFileType } from "@/lib/google-services";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -16,6 +17,7 @@ export function FilesPreview({ isGoogleConnected, onConnectGoogle }: FilesPrevie
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+  const router = useRouter();
 
   const config = getWidgetConfig("previewWidgets", "files");
   const isCollapsed = config?.size === "collapsed";
@@ -67,11 +69,18 @@ export function FilesPreview({ isGoogleConnected, onConnectGoogle }: FilesPrevie
           borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           transition: "background 0.15s",
           flexShrink: 0,
+          cursor: isCollapsed ? "default" : "pointer",
+        }}
+        onClick={() => {
+          if (!isCollapsed) {
+            router.push("/tools/files");
+          }
         }}
       >
         <Link
           href="/tools/files"
           onClick={(e) => {
+            e.stopPropagation();
             if (isCollapsed) {
               e.preventDefault();
             }
@@ -122,6 +131,7 @@ export function FilesPreview({ isGoogleConnected, onConnectGoogle }: FilesPrevie
         {!isCollapsed && (
           <Link
             href="/tools/files"
+            onClick={(e) => e.stopPropagation()}
             style={{
               display: "flex",
               alignItems: "center",

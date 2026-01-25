@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { TrendingUp, TrendingDown, Loader2, ExternalLink, Settings, X, ChevronUp } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 
@@ -41,6 +42,7 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
   const [newSymbol, setNewSymbol] = useState("");
   const settingsRef = useRef<HTMLDivElement>(null);
   const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+  const router = useRouter();
 
   const config = getWidgetConfig("previewWidgets", "stocks");
   const isCollapsed = config?.size === "collapsed";
@@ -145,11 +147,18 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
           borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           transition: "background 0.15s",
           flexShrink: 0,
+          cursor: isCollapsed ? "default" : "pointer",
+        }}
+        onClick={() => {
+          if (!isCollapsed) {
+            router.push("/tools/market");
+          }
         }}
       >
         <Link
           href="/tools/market"
           onClick={(e) => {
+            e.stopPropagation();
             if (isCollapsed) {
               e.preventDefault();
             }
@@ -222,6 +231,7 @@ export function StocksPreview({ defaultSymbols = DEFAULT_SYMBOLS }: StocksPrevie
         {!isCollapsed && (
           <Link
             href="/tools/market"
+            onClick={(e) => e.stopPropagation()}
             style={{
               display: "flex",
               alignItems: "center",

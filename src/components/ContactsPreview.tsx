@@ -116,11 +116,18 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
           padding: "18px 16px",
           borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           transition: "background 0.15s",
+          cursor: isCollapsed ? "default" : "pointer",
+        }}
+        onClick={() => {
+          if (!isCollapsed) {
+            router.push("/tools/contacts");
+          }
         }}
       >
         <Link
           href="/tools/contacts"
           onClick={(e) => {
+            e.stopPropagation();
             if (isCollapsed) {
               e.preventDefault();
             }
@@ -171,6 +178,7 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
         {!isCollapsed && (
           <Link
             href="/tools/contacts"
+            onClick={(e) => e.stopPropagation()}
             style={{
               display: "flex",
               alignItems: "center",

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Newspaper, Loader2, ExternalLink, RefreshCw, ChevronUp } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 
@@ -25,6 +26,7 @@ export function NewsPreview() {
   const [error, setError] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<NewsSource>("zerohedge");
   const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+  const router = useRouter();
 
   const config = getWidgetConfig("previewWidgets", "news");
   const isCollapsed = config?.size === "collapsed";
@@ -86,11 +88,18 @@ export function NewsPreview() {
           padding: "18px 16px",
           borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           flexShrink: 0,
+          cursor: isCollapsed ? "default" : "pointer",
+        }}
+        onClick={() => {
+          if (!isCollapsed) {
+            router.push("/tools/news");
+          }
         }}
       >
         <Link
           href="/tools/news"
           onClick={(e) => {
+            e.stopPropagation();
             if (isCollapsed) {
               e.preventDefault();
             }
@@ -128,6 +137,7 @@ export function NewsPreview() {
                 key={source.id}
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   handleSourceChange(source.id);
                 }}
                 style={{
@@ -182,6 +192,7 @@ export function NewsPreview() {
         {!isCollapsed && (
           <Link
             href="/tools/news"
+            onClick={(e) => e.stopPropagation()}
             style={{
               display: "flex",
               alignItems: "center",
