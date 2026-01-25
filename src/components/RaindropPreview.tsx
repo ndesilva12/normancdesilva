@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Bookmark, ExternalLink, Tag, Clock, Loader2, Link as LinkIcon } from "lucide-react";
 
 interface RaindropItem {
@@ -120,24 +121,28 @@ export function RaindropPreview() {
           display: "flex",
           alignItems: "center",
           gap: "10px",
-          padding: "14px 16px",
+          padding: "18px 16px",
           borderBottom: "1px solid var(--glass-border)",
           flexShrink: 0,
         }}
       >
-        <div
+        <Link
+          href="/tools/raindrop"
           style={{
             display: "flex",
             alignItems: "center",
             gap: "10px",
             flexShrink: 0,
+            textDecoration: "none",
+            padding: "4px 8px 4px 0",
+            margin: "-4px 0",
           }}
         >
           <Bookmark style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
           <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)" }}>
             Reading List
           </span>
-        </div>
+        </Link>
 
         {/* Collection Pills */}
         <div

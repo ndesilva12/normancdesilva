@@ -78,7 +78,7 @@ export function NewsPreview() {
           display: "flex",
           alignItems: "center",
           gap: "10px",
-          padding: "14px 16px",
+          padding: "18px 16px",
           borderBottom: "1px solid var(--glass-border)",
           flexShrink: 0,
         }}
@@ -91,6 +91,8 @@ export function NewsPreview() {
             gap: "10px",
             textDecoration: "none",
             flexShrink: 0,
+            padding: "4px 8px 4px 0",
+            margin: "-4px 0",
           }}
         >
           <Newspaper style={{ width: "18px", height: "18px", color: "var(--accent)" }} />

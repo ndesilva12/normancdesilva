@@ -59,7 +59,7 @@ export function FilesPreview({ isGoogleConnected, onConnectGoogle }: FilesPrevie
           display: "flex",
           alignItems: "center",
           gap: "10px",
-          padding: "14px 16px",
+          padding: "18px 16px",
           borderBottom: "1px solid var(--glass-border)",
           textDecoration: "none",
           cursor: "pointer",

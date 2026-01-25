@@ -121,12 +121,21 @@ const WIDGET_TITLES: Record<string, string> = {
 
 // Collapsed Widget Bar Component
 function CollapsedWidgetBar({ widgets }: { widgets: string[] }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   return (
     <div
       style={{
         display: "flex",
         justifyContent: "center",
-        gap: "8px",
+        gap: isMobile ? "8px" : "12px",
         flexWrap: "wrap",
       }}
     >
@@ -147,18 +156,18 @@ function CollapsedWidgetBar({ widgets }: { widgets: string[] }) {
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              gap: "4px",
-              padding: "12px",
-              minWidth: "60px",
-              borderRadius: "10px",
+              gap: isMobile ? "4px" : "6px",
+              padding: isMobile ? "12px" : "16px 20px",
+              minWidth: isMobile ? "60px" : "80px",
+              borderRadius: isMobile ? "10px" : "12px",
               backgroundColor: "rgba(255, 255, 255, 0.05)",
               border: "1px solid var(--glass-border)",
               textDecoration: "none",
               transition: "all 0.15s",
             }}
           >
-            <Icon style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
-            <span style={{ fontSize: "10px", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+            <Icon style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
+            <span style={{ fontSize: isMobile ? "10px" : "12px", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
               {title}
             </span>
           </Link>

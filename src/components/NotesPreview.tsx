@@ -62,7 +62,7 @@ export function NotesPreview() {
           display: "flex",
           alignItems: "center",
           gap: "10px",
-          padding: "14px 16px",
+          padding: "18px 16px",
           borderBottom: "1px solid var(--glass-border)",
           flexShrink: 0,
         }}
@@ -75,6 +75,8 @@ export function NotesPreview() {
             gap: "10px",
             textDecoration: "none",
             flex: 1,
+            padding: "4px 0",
+            margin: "-4px 0",
           }}
         >
           <StickyNote style={{ width: "18px", height: "18px", color: "var(--accent)" }} />

@@ -78,16 +78,26 @@ export function TrendingPreview() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "14px 16px",
+          padding: "18px 16px",
           borderBottom: "1px solid var(--glass-border)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <Link
+          href="/tools/trending"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            textDecoration: "none",
+            padding: "4px 8px 4px 0",
+            margin: "-4px 0",
+          }}
+        >
           <TrendingUp style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
           <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)" }}>
             Trending
           </span>
-        </div>
+        </Link>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <button
             onClick={fetchTrends}
