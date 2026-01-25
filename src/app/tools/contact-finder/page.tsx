@@ -584,26 +584,43 @@ export default function ContactFinderPage() {
 
   // Run search
   const handleSearch = async () => {
-    if (!query.trim() || !user) return;
+    if (!query.trim()) {
+      setError("Please enter a search query");
+      return;
+    }
+
+    if (!user || !user.uid) {
+      setError("Please sign in to use Contact Finder");
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
+      const requestBody = {
+        query: query.trim(),
+        searchType,
+        aiSource,
+        userId: user.uid,
+      };
+
+      // Debug logging for troubleshooting
+      console.log("Contact Finder request:", { searchType, aiSource, hasQuery: !!query.trim(), hasUserId: !!user.uid });
+
       const response = await fetch("/api/contact-finder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: query.trim(),
-          searchType,
-          aiSource,
-          userId: user.uid,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        // Provide more specific error messages
+        if (data.code === "API_KEY_MISSING") {
+          throw new Error(`${data.error}. Please try a different AI source.`);
+        }
         throw new Error(data.error || "Search failed");
       }
 
@@ -613,7 +630,9 @@ export default function ContactFinderPage() {
       const newHistory = [data, ...searchHistory.filter((s) => s.id !== data.id)].slice(0, 50);
       saveHistory(newHistory);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Search failed");
+      const errorMessage = err instanceof Error ? err.message : "Search failed";
+      console.error("Contact Finder error:", errorMessage);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -784,9 +803,38 @@ export default function ContactFinderPage() {
 
               {/* AI Source Selector */}
               <div style={{ marginBottom: "16px" }}>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", marginBottom: "8px", display: "block" }}>
-                  AI Source
-                </label>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)" }}>
+                    AI Source
+                  </label>
+                  {query.trim() && (
+                    <button
+                      onClick={handleSearch}
+                      disabled={loading}
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: "6px",
+                        backgroundColor: loading ? "rgba(var(--accent-rgb), 0.3)" : "var(--accent)",
+                        color: loading ? "rgba(var(--foreground), 0.5)" : "var(--background)",
+                        border: "none",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        cursor: loading ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      {loading ? (
+                        <Loader2 style={{ width: "12px", height: "12px", animation: "spin 1s linear infinite" }} />
+                      ) : (
+                        <Search style={{ width: "12px", height: "12px" }} />
+                      )}
+                      <span>Search</span>
+                    </button>
+                  )}
+                </div>
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                   {(Object.keys(AI_CONFIGS) as AISource[]).map((source) => (
                     <button

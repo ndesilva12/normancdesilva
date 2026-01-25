@@ -321,8 +321,35 @@ export default function DarkSearchPage() {
           >
             {/* Mode Selector */}
             <div style={{ marginBottom: "16px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "10px" }}>
                 <span style={{ fontSize: "13px", color: "var(--foreground-muted)", fontWeight: 500 }}>Output Mode</span>
+                {query.trim() && (
+                  <button
+                    onClick={() => handleSearch()}
+                    disabled={isLoading}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: "6px",
+                      backgroundColor: isLoading ? "rgba(var(--accent-rgb), 0.3)" : "var(--accent)",
+                      color: isLoading ? "rgba(var(--foreground), 0.5)" : "var(--background)",
+                      border: "none",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: isLoading ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {isLoading ? (
+                      <Loader2 style={{ width: "12px", height: "12px", animation: "spin 1s linear infinite" }} />
+                    ) : (
+                      <Search style={{ width: "12px", height: "12px" }} />
+                    )}
+                    <span>Search</span>
+                  </button>
+                )}
               </div>
               <div style={{ display: "flex", gap: "8px" }}>
                 <button

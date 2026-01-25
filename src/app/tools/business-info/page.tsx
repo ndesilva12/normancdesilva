@@ -280,9 +280,38 @@ export default function BusinessInfoPage() {
 
                 {/* Additional Filters */}
                 <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 500, color: "var(--foreground-muted)", marginBottom: "8px" }}>
-                    Additional Filters (optional)
-                  </label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <label style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground-muted)" }}>
+                      Additional Filters (optional)
+                    </label>
+                    {query.trim() && city.trim() && state && (
+                      <button
+                        type="submit"
+                        disabled={isSearching}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          backgroundColor: isSearching ? "rgba(var(--accent-rgb), 0.3)" : "var(--accent)",
+                          color: isSearching ? "rgba(var(--foreground), 0.5)" : "var(--background)",
+                          border: "none",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          cursor: isSearching ? "not-allowed" : "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        {isSearching ? (
+                          <Loader2 style={{ width: "12px", height: "12px", animation: "spin 1s linear infinite" }} />
+                        ) : (
+                          <Search style={{ width: "12px", height: "12px" }} />
+                        )}
+                        <span>Search</span>
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={additionalFilters}
