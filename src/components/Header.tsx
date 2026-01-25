@@ -165,56 +165,6 @@ export function Header({
           </span>
         </Link>
 
-        {/* Mobile: Collapsed widgets displayed in header */}
-        {isMobile && collapsedWidgets.length > 0 && onExpandWidget && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              marginLeft: "8px",
-              flex: 1,
-              justifyContent: "center",
-              overflow: "hidden",
-            }}
-          >
-            {collapsedWidgets.slice(0, 5).map((widget) => {
-              const Icon = WIDGET_ICONS[widget.id];
-              const title = widget.customName || WIDGET_TITLES[widget.id] || widget.id;
-
-              if (!Icon) return null;
-
-              return (
-                <button
-                  key={widget.id}
-                  onClick={() => onExpandWidget(widget.id)}
-                  title={`Expand ${title}`}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "8px",
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
-                    border: "1px solid var(--glass-border)",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Icon style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
-                </button>
-              );
-            })}
-            {collapsedWidgets.length > 5 && (
-              <span style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>
-                +{collapsedWidgets.length - 5}
-              </span>
-            )}
-          </div>
-        )}
-
         {/* Center: Date/Time - Hidden on mobile */}
         {!isMobile && (
           <div

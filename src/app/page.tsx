@@ -208,6 +208,61 @@ function CollapsedWidgetBar({
   );
 }
 
+// Mobile Collapsed Widgets Bar - shown below sources on mobile
+function MobileCollapsedWidgetsBar({
+  widgets,
+}: {
+  widgets: { id: string; customName?: string }[];
+}) {
+  const { toggleWidgetCollapse } = useLayout();
+
+  if (widgets.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        gap: "8px",
+        flexWrap: "wrap",
+        marginTop: "16px",
+      }}
+    >
+      {widgets.map((widget) => {
+        const Icon = WIDGET_ICONS[widget.id];
+        const title = widget.customName || WIDGET_TITLES[widget.id] || widget.id;
+        const link = WIDGET_LINKS[widget.id];
+
+        if (!Icon) return null;
+
+        return (
+          <button
+            key={widget.id}
+            onClick={() => toggleWidgetCollapse("previewWidgets", widget.id)}
+            title={`Expand ${title}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "10px 16px",
+              borderRadius: "10px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid var(--glass-border)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+          >
+            <Icon style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
+            <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--foreground)" }}>
+              {title}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // Individually Collapsed Widget Bar (for individual collapse - buttons that expand)
 function IndividuallyCollapsedWidgetBar({
   widgets,
@@ -492,13 +547,7 @@ export default function Home() {
       <Header
         isGoogleConnected={isGoogleConnected}
         onConnectGoogle={handleConnectGoogle}
-        collapsedWidgets={
-          isMobile && !isEditMode
-            ? layout.previewWidgets
-                .filter((w) => w.visible && w.size === "collapsed" && w.id !== "contacts")
-                .map((w) => ({ id: w.id, customName: w.customName }))
-            : []
-        }
+        collapsedWidgets={[]}
         onExpandWidget={(widgetId) => toggleWidgetCollapse("previewWidgets", widgetId)}
       />
       <LayoutEditor />
@@ -542,6 +591,14 @@ export default function Home() {
                 widgetsCollapsed={widgetsCollapsed}
                 onToggleCollapse={() => setWidgetsCollapsed(!widgetsCollapsed)}
               />
+              {/* Mobile Collapsed Widgets - shown below sources on mobile */}
+              {isMobile && (
+                <MobileCollapsedWidgetsBar
+                  widgets={layout.previewWidgets
+                    .filter((w) => w.visible && w.size === "collapsed" && w.id !== "contacts")
+                    .map((w) => ({ id: w.id, customName: w.customName }))}
+                />
+              )}
             </motion.section>
           )}
 
