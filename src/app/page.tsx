@@ -11,8 +11,6 @@ import {
   Newspaper,
   BookOpen,
   BarChart3,
-  LayoutGrid,
-  Grid3X3,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
@@ -293,8 +291,20 @@ export default function Home() {
   const [hasSearchResults, setHasSearchResults] = useState(false);
   const [isToolActive, setIsToolActive] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [widgetsCollapsed, setWidgetsCollapsed] = useState(false);
+  const [widgetsCollapsed, setWidgetsCollapsed] = useState(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("widgets-collapsed");
+      return saved === "true";
+    }
+    return false;
+  });
   const { isEditMode, layout } = useLayout();
+
+  // Persist collapse state to localStorage
+  useEffect(() => {
+    localStorage.setItem("widgets-collapsed", String(widgetsCollapsed));
+  }, [widgetsCollapsed]);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -378,6 +388,8 @@ export default function Home() {
               <MultiSourceSearch
                 onResultsChange={(hasResults) => setHasSearchResults(hasResults)}
                 onToolActive={(active) => setIsToolActive(active)}
+                widgetsCollapsed={widgetsCollapsed}
+                onToggleCollapse={() => setWidgetsCollapsed(!widgetsCollapsed)}
               />
             </motion.section>
           )}
@@ -390,41 +402,6 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.1 }}
               style={{ width: "100%" }}
             >
-              {/* Collapse Toggle Button */}
-              {!isEditMode && (
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
-                  <button
-                    onClick={() => setWidgetsCollapsed(!widgetsCollapsed)}
-                    title={widgetsCollapsed ? "Expand Widgets" : "Collapse Widgets"}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "8px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--glass-border)",
-                      backgroundColor: "rgba(255, 255, 255, 0.05)",
-                      color: "var(--foreground-muted)",
-                      fontSize: "12px",
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    {widgetsCollapsed ? (
-                      <>
-                        <LayoutGrid style={{ width: "14px", height: "14px" }} />
-                        <span>Expand</span>
-                      </>
-                    ) : (
-                      <>
-                        <Grid3X3 style={{ width: "14px", height: "14px" }} />
-                        <span>Collapse</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-
               {/* Collapsed or Full Widget View */}
               {widgetsCollapsed && !isEditMode ? (
                 <CollapsedWidgetBar

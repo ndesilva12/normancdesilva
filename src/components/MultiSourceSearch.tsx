@@ -3,7 +3,7 @@
 import { useState, useEffect, FormEvent, useCallback, useRef, useMemo } from "react";
 import {
   Search, ExternalLink, X, Loader2, TrendingUp, ChevronDown, Upload,
-  BookOpen, FileSearch, Link2, User, Target, Sparkles
+  BookOpen, FileSearch, Link2, User, Target, Sparkles, LayoutGrid, Grid3X3
 } from "lucide-react";
 import {
   UnifiedSourceId,
@@ -41,6 +41,8 @@ interface MultiSourceSearchProps {
   onResultsChange?: (hasResults: boolean) => void;
   onToolResult?: (result: ToolResult | null) => void;
   onToolActive?: (isActive: boolean) => void;
+  widgetsCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 interface ConversationMessage {
@@ -48,7 +50,7 @@ interface ConversationMessage {
   content: string;
 }
 
-export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive }: MultiSourceSearchProps) {
+export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive, widgetsCollapsed, onToggleCollapse }: MultiSourceSearchProps) {
   const { settings, updateSettings } = useSettings();
   const { getRecentSearches, addRecentSearch } = useRecentSearches();
   const [query, setQuery] = useState("");
@@ -1106,15 +1108,18 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
             justifyContent: "center",
           }}
         >
-          <TrendingUp
-            style={{
-              width: "14px",
-              height: "14px",
-              color: "var(--foreground-muted)",
-              flexShrink: 0,
-              marginTop: "4px",
-            }}
-          />
+          {/* Hide trending icon on mobile */}
+          {!isMobile && (
+            <TrendingUp
+              style={{
+                width: "14px",
+                height: "14px",
+                color: "var(--foreground-muted)",
+                flexShrink: 0,
+                marginTop: "4px",
+              }}
+            />
+          )}
           {(() => {
             const displayTrends = isMobile ? trends.slice(0, 10) : trends.slice(0, 14);
             const halfLength = Math.ceil(displayTrends.length / 2);
@@ -1294,36 +1299,63 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
 
         {/* Source Selector */}
         {isMobile ? (
-          /* Mobile - Expandable Grid */
+          /* Mobile - Expandable Grid with Collapse Button */
           <div style={{ marginTop: "12px" }}>
-            <button
-              type="button"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "14px 16px",
-                borderRadius: "10px",
-                border: "1px solid var(--glass-border)",
-                background: "rgba(255, 255, 255, 0.03)",
-                color: "var(--foreground)",
-                fontSize: "15px",
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
-            >
-              <span>{currentSourceConfig?.name || selectedSource}</span>
-              <ChevronDown
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                type="button"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
                 style={{
-                  width: "18px",
-                  height: "18px",
-                  transition: "transform 0.2s",
-                  transform: dropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "14px 16px",
+                  borderRadius: "10px",
+                  border: "1px solid var(--glass-border)",
+                  background: "rgba(255, 255, 255, 0.03)",
+                  color: "var(--foreground)",
+                  fontSize: "15px",
+                  fontWeight: 500,
+                  cursor: "pointer",
                 }}
-              />
-            </button>
+              >
+                <span>{currentSourceConfig?.name || selectedSource}</span>
+                <ChevronDown
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    transition: "transform 0.2s",
+                    transform: dropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
+                />
+              </button>
+              {onToggleCollapse && (
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  title={widgetsCollapsed ? "Expand Widgets" : "Collapse Widgets"}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "48px",
+                    borderRadius: "10px",
+                    border: "1px solid var(--glass-border)",
+                    background: "rgba(255, 255, 255, 0.03)",
+                    color: "var(--foreground-muted)",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {widgetsCollapsed ? (
+                    <LayoutGrid style={{ width: "18px", height: "18px" }} />
+                  ) : (
+                    <Grid3X3 style={{ width: "18px", height: "18px" }} />
+                  )}
+                </button>
+              )}
+            </div>
             {dropdownOpen && (
               <div
                 className="glass"
@@ -1443,6 +1475,37 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive 
                 </div>
               );
             })}
+            {onToggleCollapse && (
+              <>
+                <span style={{ color: "var(--foreground-muted)", opacity: 0.2, fontSize: "18px" }}>|</span>
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  title={widgetsCollapsed ? "Expand Widgets" : "Collapse Widgets"}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--glass-border)",
+                    backgroundColor: "rgba(255, 255, 255, 0.03)",
+                    color: "var(--foreground-muted)",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {widgetsCollapsed ? (
+                    <LayoutGrid style={{ width: "14px", height: "14px" }} />
+                  ) : (
+                    <Grid3X3 style={{ width: "14px", height: "14px" }} />
+                  )}
+                  {widgetsCollapsed ? "Expand" : "Collapse"}
+                </button>
+              </>
+            )}
           </div>
         )}
 
