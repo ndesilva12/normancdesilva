@@ -1421,31 +1421,10 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
             gap: isMobile ? "6px" : "8px",
           }}
         >
-          {/* When sources are hidden, show "show all" first, then selected source */}
+          {/* When sources are hidden, show selected source with hint text */}
           {sourcesHidden ? (
-            <>
-              {/* Show all button - first position */}
-              <button
-                type="button"
-                onClick={() => setSourcesHidden(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: isMobile ? "10px 14px" : "8px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid var(--glass-border)",
-                  backgroundColor: "rgba(255, 255, 255, 0.03)",
-                  color: "var(--foreground-muted)",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-              >
-                Change Source
-              </button>
-              {/* Selected source - second position */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+              {/* Selected source button */}
               <button
                 type="button"
                 onClick={() => setSourcesHidden(false)}
@@ -1464,7 +1443,11 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
               >
                 {currentSourceConfig?.name || selectedSource}
               </button>
-            </>
+              {/* Hint text */}
+              <span style={{ fontSize: "11px", color: "var(--foreground-muted)", opacity: 0.7 }}>
+                click to change source
+              </span>
+            </div>
           ) : (
             <>
               {/* All sources displayed as inline buttons - clicking any source selects it and hides others */}
