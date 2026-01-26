@@ -1,9 +1,6 @@
 // Unified sources - combines search sources and tools into a single system
 
 export type UnifiedSourceId =
-  // Meta sources (multi-source)
-  | "ai"
-  | "web"
   // Web search sources
   | "google"
   | "images"
@@ -77,25 +74,6 @@ export interface UnifiedSourceConfig {
 
 // Ordered list of all sources as specified
 export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
-  // Meta sources (AI and Web)
-  {
-    id: "ai",
-    name: "Ai",
-    description: "Query all AI models",
-    longDescription: "Get responses from all four AI models simultaneously: Grok, Gemini, Claude, and ChatGPT.",
-    type: "meta",
-    includedSources: ["grok", "gemini", "claude", "chatgpt"],
-    exampleSearches: ["What are the implications of quantum computing?", "Explain dark matter", "Best practices for system design"],
-  },
-  {
-    id: "web",
-    name: "Web",
-    description: "Search all web sources",
-    longDescription: "Search across Google, Images, News, Trends, DuckDuckGo, Wikipedia, and Grokipedia simultaneously.",
-    type: "meta",
-    includedSources: ["google", "images", "news", "trends", "duck", "wikipedia", "grokipedia"],
-    exampleSearches: ["Latest tech news", "Climate change research", "Best restaurants near me"],
-  },
   // Web search sources
   {
     id: "google",

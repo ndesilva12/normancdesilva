@@ -114,6 +114,16 @@ export default function TrendingPage() {
     return source === "x" ? "#1d9bf0" : "#4285f4";
   };
 
+  // Get the appropriate URL for a topic - X topics go to X, Google topics go to Google News
+  const getTopicUrl = (topic: TrendingTopic) => {
+    if (topic.source === "x") {
+      // Link to X search for X topics
+      return `https://x.com/search?q=${encodeURIComponent(topic.topic)}`;
+    }
+    // Use the original search URL for Google topics
+    return topic.searchUrl;
+  };
+
   const getSourceIcon = (source: "x" | "google") => {
     if (source === "x") {
       return (
@@ -318,7 +328,7 @@ export default function TrendingPage() {
                 {filteredTopics.map((topic, index) => (
                   <motion.a
                     key={`${topic.source}-${topic.topic}-${index}`}
-                    href={topic.searchUrl}
+                    href={getTopicUrl(topic)}
                     target="_blank"
                     rel="noopener noreferrer"
                     initial={{ opacity: 0, y: 20 }}

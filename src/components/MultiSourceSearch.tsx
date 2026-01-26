@@ -3,7 +3,7 @@
 import { useState, useEffect, FormEvent, useCallback, useRef, useMemo } from "react";
 import {
   Search, ExternalLink, X, Loader2, ChevronDown, Upload,
-  BookOpen, FileSearch, Link2, User, Target, Sparkles, LayoutGrid, Grid3X3, Eye, EyeOff
+  BookOpen, FileSearch, Link2, User, Target, Sparkles, LayoutGrid, Grid3X3
 } from "lucide-react";
 import {
   UnifiedSourceId,
@@ -353,17 +353,6 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
         return;
       }
 
-      if (selectedSource === "web") {
-        // Open all web sources in tabs
-        const webSources = getIncludedSources(selectedSource);
-        webSources.forEach(source => {
-          if (source.searchUrlTemplate) {
-            const searchUrl = getSearchUrl(source.id, query.trim());
-            window.open(searchUrl, "_blank");
-          }
-        });
-        return;
-      }
     }
 
     // Handle AI and tool sources - fetch and display results
@@ -1290,9 +1279,8 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
 
   // Build ordered source list for display
   const orderedSources = useMemo(() => {
-    // Order: AI, Web | Google, Images, News, Trends, Duck, Wikipedia, Grokipedia | tools | X, Youtube, Rumble, Amazon | individual AI
+    // Order: Google, Images, News, Trends, Duck, Wikipedia, Grokipedia | tools | X, Youtube, Rumble, Amazon | individual AI
     const order: UnifiedSourceId[] = [
-      "ai", "web",
       "google", "images", "news", "trends", "duck", "wikipedia", "grokipedia",
       "deep-search", "dark-search", "corporate-info", "business-info", "contacts", "contact-finder",
       "image-lookup", "visuals", "rosters", "spotify",
@@ -1519,8 +1507,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                   transition: "all 0.15s",
                 }}
               >
-                <Eye style={{ width: "14px", height: "14px" }} />
-                show all
+                Change Source
               </button>
               {/* Selected source - second position */}
               <button
@@ -1550,8 +1537,8 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                 const isHighlighted = highlightedSources.includes(source.id);
                 const isMetaSource = source.type === "meta";
 
-                // Add separator after Web and before individual AI sources
-                const showSeparatorAfter = source.id === "web" || source.id === "amazon";
+                // Add separator after Grokipedia (end of web sources) and before individual AI sources
+                const showSeparatorAfter = source.id === "grokipedia" || source.id === "amazon";
 
                 return (
                   <div key={source.id} style={{ display: "flex", alignItems: "center", gap: isMobile ? "6px" : "8px" }}>
