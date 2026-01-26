@@ -64,7 +64,14 @@ export function EmailDetailModal({
 
   useEffect(() => {
     if (emailId) {
+      // Clear previous email state before fetching new one
+      setEmail(null);
+      setError(null);
       fetchEmail();
+    } else {
+      // Clear state when modal is closed
+      setEmail(null);
+      setError(null);
     }
   }, [emailId]);
 

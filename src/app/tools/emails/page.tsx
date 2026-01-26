@@ -323,6 +323,10 @@ function EmailsPageContent() {
       });
 
       if (response.ok) {
+        // Clear selection if deleted email was selected
+        if (selectedEmailId === deleteConfirm.emailId) {
+          setSelectedEmailId(null);
+        }
         setEmails((prev) => prev.filter((e) => e.id !== deleteConfirm.emailId));
       }
     } catch (err) {
