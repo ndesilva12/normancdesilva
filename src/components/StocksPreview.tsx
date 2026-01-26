@@ -7,6 +7,7 @@ import { TrendingUp, ExternalLink, ChevronUp } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 
 // User's TradingView watchlist symbols
+// Note: Removed VIX, DXY, US10Y, US30Y as they don't display in Market Overview widget
 const WATCHLIST_SYMBOLS = [
   { s: "CAPITALCOM:US500" },
   { s: "AMEX:SPY" },
@@ -17,19 +18,14 @@ const WATCHLIST_SYMBOLS = [
   { s: "TVC:SILVER" },
   { s: "NASDAQ:TLT" },
   { s: "COINBASE:BTCUSD" },
-  { s: "TVC:VIX" },
-  { s: "TVC:DXY" },
-  { s: "TVC:US10Y" },
-  { s: "TVC:US30Y" },
   { s: "FX:USDJPY" },
   { s: "NASDAQ:TSLA" },
   { s: "AMEX:GLD" },
   { s: "AMEX:SLV" },
-  { s: "BLACKBULL:WTI" },
+  { s: "NYMEX:CL1!" },
   { s: "AMEX:XLE" },
   { s: "NYSE:GME" },
   { s: "NYSE:CVNA" },
-  { s: "FRED:MORTGAGE30US" },
   { s: "NYSE:KSS" },
   { s: "NYSE:RKT" },
   { s: "NASDAQ:HTZ" },

@@ -10,6 +10,7 @@ interface TradingViewWidgetProps {
 }
 
 // Default symbols from user's TradingView watchlist
+// Note: Removed VIX, DXY, US10Y, US30Y as they don't display in Market Overview widget
 const DEFAULT_SYMBOLS = [
   ["CAPITALCOM:US500|1D"],
   ["AMEX:SPY|1D"],
@@ -20,19 +21,14 @@ const DEFAULT_SYMBOLS = [
   ["TVC:SILVER|1D"],
   ["NASDAQ:TLT|1D"],
   ["COINBASE:BTCUSD|1D"],
-  ["TVC:VIX|1D"],
-  ["TVC:DXY|1D"],
-  ["TVC:US10Y|1D"],
-  ["TVC:US30Y|1D"],
   ["FX:USDJPY|1D"],
   ["NASDAQ:TSLA|1D"],
   ["AMEX:GLD|1D"],
   ["AMEX:SLV|1D"],
-  ["BLACKBULL:WTI|1D"],
+  ["NYMEX:CL1!|1D"],
   ["AMEX:XLE|1D"],
   ["NYSE:GME|1D"],
   ["NYSE:CVNA|1D"],
-  ["FRED:MORTGAGE30US|1D"],
   ["NYSE:KSS|1D"],
   ["NYSE:RKT|1D"],
   ["NASDAQ:HTZ|1D"],

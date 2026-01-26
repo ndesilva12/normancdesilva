@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, memo } from "react";
+import { useEffect, useRef, memo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, TrendingUp } from "lucide-react";
+import { ArrowLeft, TrendingUp, ExternalLink } from "lucide-react";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { SwipeNavigation } from "@/components/SwipeNavigation";
 
-// User's TradingView watchlist symbols
+// User's TradingView watchlist symbols with descriptions
+// Note: Removed VIX, DXY, US10Y, US30Y as they don't display properly in the widget
 const WATCHLIST_SYMBOLS = [
   { s: "CAPITALCOM:US500", d: "US 500" },
   { s: "AMEX:SPY", d: "SPDR S&P 500 ETF" },
@@ -18,19 +19,14 @@ const WATCHLIST_SYMBOLS = [
   { s: "TVC:SILVER", d: "Silver" },
   { s: "NASDAQ:TLT", d: "20+ Year Treasury Bond" },
   { s: "COINBASE:BTCUSD", d: "Bitcoin USD" },
-  { s: "TVC:VIX", d: "VIX Volatility Index" },
-  { s: "TVC:DXY", d: "US Dollar Index" },
-  { s: "TVC:US10Y", d: "10-Year Treasury Yield" },
-  { s: "TVC:US30Y", d: "30-Year Treasury Yield" },
   { s: "FX:USDJPY", d: "USD/JPY" },
   { s: "NASDAQ:TSLA", d: "Tesla" },
   { s: "AMEX:GLD", d: "SPDR Gold Shares" },
   { s: "AMEX:SLV", d: "iShares Silver Trust" },
-  { s: "BLACKBULL:WTI", d: "Crude Oil WTI" },
+  { s: "NYMEX:CL1!", d: "Crude Oil Futures" },
   { s: "AMEX:XLE", d: "Energy Select Sector" },
   { s: "NYSE:GME", d: "GameStop" },
   { s: "NYSE:CVNA", d: "Carvana" },
-  { s: "FRED:MORTGAGE30US", d: "30-Year Mortgage Rate" },
   { s: "NYSE:KSS", d: "Kohl's" },
   { s: "NYSE:RKT", d: "Rocket Companies" },
   { s: "NASDAQ:HTZ", d: "Hertz" },
@@ -39,21 +35,18 @@ const WATCHLIST_SYMBOLS = [
   { s: "NASDAQ:OPEN", d: "Opendoor Technologies" },
 ];
 
-function TradingViewMarketWidget() {
+function TradingViewWatchlistWidget() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Clear any existing content
     containerRef.current.innerHTML = "";
 
-    // Create the widget container
     const widgetContainer = document.createElement("div");
     widgetContainer.className = "tradingview-widget-container__widget";
     containerRef.current.appendChild(widgetContainer);
 
-    // Create and append the script for Market Overview widget
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js";
     script.type = "text/javascript";
@@ -101,24 +94,121 @@ function TradingViewMarketWidget() {
       className="tradingview-widget-container"
       style={{
         width: "100%",
-        height: "700px",
-        minHeight: "500px",
+        height: "100%",
       }}
     />
   );
 }
 
-const MemoizedMarketWidget = memo(TradingViewMarketWidget);
+const MemoizedWatchlistWidget = memo(TradingViewWatchlistWidget);
+
+function TradingViewTickerTape() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    containerRef.current.innerHTML = "";
+
+    const widgetContainer = document.createElement("div");
+    widgetContainer.className = "tradingview-widget-container__widget";
+    containerRef.current.appendChild(widgetContainer);
+
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";
+    script.type = "text/javascript";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      symbols: WATCHLIST_SYMBOLS.map(s => ({ proName: s.s, title: s.d })),
+      showSymbolLogo: true,
+      isTransparent: true,
+      displayMode: "adaptive",
+      colorTheme: "dark",
+      locale: "en",
+    });
+
+    containerRef.current.appendChild(script);
+
+    return () => {
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
+    };
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="tradingview-widget-container"
+      style={{ width: "100%" }}
+    />
+  );
+}
+
+const MemoizedTickerTape = memo(TradingViewTickerTape);
+
+// Mini chart widget for selected symbol
+function TradingViewMiniChart({ symbol }: { symbol: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    containerRef.current.innerHTML = "";
+
+    const widgetContainer = document.createElement("div");
+    widgetContainer.className = "tradingview-widget-container__widget";
+    containerRef.current.appendChild(widgetContainer);
+
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js";
+    script.type = "text/javascript";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      symbol: symbol,
+      width: "100%",
+      height: "100%",
+      locale: "en",
+      dateRange: "1D",
+      colorTheme: "dark",
+      isTransparent: true,
+      autosize: true,
+      largeChartUrl: "",
+    });
+
+    containerRef.current.appendChild(script);
+
+    return () => {
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
+    };
+  }, [symbol]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="tradingview-widget-container"
+      style={{
+        width: "100%",
+        height: "200px",
+      }}
+    />
+  );
+}
 
 export default function MarketPage() {
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+
   return (
     <SwipeNavigation backPath="/">
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
         <Header />
 
         <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
-          <div style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "24px 24px 100px 24px" }}>
+          <div style={{ width: "100%", maxWidth: "1400px", margin: "0 auto", padding: "24px 24px 100px 24px" }}>
             <RemindersBanner />
+
             {/* Back Link */}
             <div style={{ marginBottom: "24px" }}>
               <Link
@@ -174,20 +264,143 @@ export default function MarketPage() {
               </a>
             </div>
 
-            {/* TradingView Widget */}
+            {/* Ticker Tape */}
             <div
               className="glass"
               style={{
                 borderRadius: "12px",
                 overflow: "hidden",
-                padding: "0",
+                marginBottom: "24px",
               }}
             >
-              <MemoizedMarketWidget />
+              <MemoizedTickerTape />
+            </div>
+
+            {/* Main Content - Watchlist and Chart Side by Side */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "24px",
+              }}
+            >
+              {/* Watchlist Widget */}
+              <div
+                className="glass"
+                style={{
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  height: "600px",
+                }}
+              >
+                <MemoizedWatchlistWidget />
+              </div>
+
+              {/* Quick Access Cards */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <h2 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+                  Quick Access
+                </h2>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, 1fr)",
+                    gap: "12px",
+                  }}
+                >
+                  {WATCHLIST_SYMBOLS.slice(0, 12).map((item) => {
+                    const symbolName = item.s.split(":")[1] || item.s;
+                    return (
+                      <a
+                        key={item.s}
+                        href={`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(item.s)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="glass"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          padding: "14px 16px",
+                          borderRadius: "10px",
+                          textDecoration: "none",
+                          transition: "transform 0.15s, box-shadow 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                          e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)" }}>
+                            {symbolName}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              color: "var(--foreground-muted)",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {item.d}
+                          </div>
+                        </div>
+                        <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)", flexShrink: 0 }} />
+                      </a>
+                    );
+                  })}
+                </div>
+
+                {/* View More */}
+                <div style={{ marginTop: "8px" }}>
+                  <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginBottom: "8px" }}>
+                    Click any symbol in the watchlist to see its chart. Use the TradingView widget to interact with real-time data.
+                  </p>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {WATCHLIST_SYMBOLS.slice(12).map((item) => {
+                      const symbolName = item.s.split(":")[1] || item.s;
+                      return (
+                        <a
+                          key={item.s}
+                          href={`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(item.s)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "6px",
+                            backgroundColor: "rgba(255, 255, 255, 0.05)",
+                            border: "1px solid var(--glass-border)",
+                            color: "var(--foreground-muted)",
+                            fontSize: "12px",
+                            textDecoration: "none",
+                            transition: "all 0.15s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                            e.currentTarget.style.color = "var(--foreground)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                            e.currentTarget.style.color = "var(--foreground-muted)";
+                          }}
+                        >
+                          {symbolName}
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Attribution */}
-            <div style={{ marginTop: "16px", textAlign: "center" }}>
+            <div style={{ marginTop: "24px", textAlign: "center" }}>
               <a
                 href="https://www.tradingview.com/"
                 target="_blank"
@@ -203,6 +416,15 @@ export default function MarketPage() {
             </div>
           </div>
         </main>
+
+        {/* Responsive styles */}
+        <style jsx global>{`
+          @media (max-width: 900px) {
+            .market-grid {
+              grid-template-columns: 1fr !important;
+            }
+          }
+        `}</style>
       </div>
     </SwipeNavigation>
   );
