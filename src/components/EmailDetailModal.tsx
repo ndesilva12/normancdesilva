@@ -35,6 +35,7 @@ interface FullEmail {
   isStarred: boolean;
   labels: string[];
   attachments: { filename: string; mimeType: string; size: number; attachmentId: string }[];
+  accountEmail?: string;
 }
 
 interface EmailDetailModalProps {
@@ -399,7 +400,7 @@ export function EmailDetailModal({
               {/* Left actions */}
               <div style={{ display: "flex", gap: "8px" }}>
                 <button
-                  onClick={() => onReply(email)}
+                  onClick={() => onReply({ ...email, accountEmail: account })}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -418,7 +419,7 @@ export function EmailDetailModal({
                   Reply
                 </button>
                 <button
-                  onClick={() => onForward(email)}
+                  onClick={() => onForward({ ...email, accountEmail: account })}
                   style={{
                     display: "flex",
                     alignItems: "center",

@@ -985,7 +985,7 @@ function EmailsPageContent() {
         onSent={handleEmailSent}
         mode={composeMode}
         replyTo={replyToEmail}
-        account={selectedAccount !== "all" ? selectedAccount : undefined}
+        account={replyToEmail?.accountEmail || (selectedAccount !== "all" ? selectedAccount : undefined)}
         accounts={accounts}
         initialTo={composeRecipient}
       />
