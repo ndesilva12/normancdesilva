@@ -446,11 +446,16 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
           throw new Error((data as { error?: string }).error || "Request failed");
         }
 
+        // Extract content based on response structure
+        let content = (data as { content?: string }).content ||
+                      (data as { report?: string }).report ||
+                      (data as { summary?: string }).summary;
+
         setToolResult({
           source: selectedSource,
           sourceName: sourceConfig.name,
           status: "success",
-          content: (data as { content?: string; report?: string }).content || (data as { report?: string }).report,
+          content,
           data,
         });
       }
@@ -1062,18 +1067,158 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
             </div>
           )}
 
-          {toolResult.status === "success" && toolResult.content && (
+          {toolResult.status === "success" && (toolResult.content || toolResult.data) && (
             <>
-              <div
-                style={{
-                  fontSize: "15px",
-                  lineHeight: 1.8,
-                  color: "var(--foreground)",
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {toolResult.content}
-              </div>
+              {/* Summary/Content */}
+              {toolResult.content && (
+                <div
+                  style={{
+                    fontSize: "15px",
+                    lineHeight: 1.8,
+                    color: "var(--foreground)",
+                    whiteSpace: "pre-wrap",
+                    marginBottom: toolResult.source === "contact-finder" ? "20px" : 0,
+                  }}
+                >
+                  {toolResult.content}
+                </div>
+              )}
+
+              {/* Contact Finder Results */}
+              {toolResult.source === "contact-finder" && toolResult.data && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {((toolResult.data as { results?: Array<{
+                    name: string;
+                    title?: string;
+                    organization?: string;
+                    contacts?: Array<{ type: string; value: string; confidence?: string; source?: string; notes?: string }>;
+                    reasoning?: string;
+                    additionalNotes?: string;
+                  }> }).results || []).map((result, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: "16px",
+                        borderRadius: "10px",
+                        backgroundColor: "rgba(255, 255, 255, 0.03)",
+                        border: "1px solid var(--glass-border)",
+                      }}
+                    >
+                      <div style={{ marginBottom: "12px" }}>
+                        <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)" }}>
+                          {result.name}
+                        </div>
+                        {result.title && (
+                          <div style={{ fontSize: "13px", color: "var(--foreground-muted)", marginTop: "2px" }}>
+                            {result.title}
+                            {result.organization && ` at ${result.organization}`}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Contacts */}
+                      {result.contacts && result.contacts.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          {result.contacts.map((contact, cIdx) => (
+                            <div
+                              key={cIdx}
+                              style={{
+                                display: "flex",
+                                alignItems: "flex-start",
+                                gap: "10px",
+                                padding: "10px 12px",
+                                borderRadius: "8px",
+                                backgroundColor: "rgba(255, 255, 255, 0.02)",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  padding: "4px 8px",
+                                  borderRadius: "4px",
+                                  backgroundColor: contact.confidence === "high"
+                                    ? "rgba(34, 197, 94, 0.15)"
+                                    : contact.confidence === "speculative"
+                                    ? "rgba(234, 179, 8, 0.15)"
+                                    : "rgba(255, 255, 255, 0.1)",
+                                  color: contact.confidence === "high"
+                                    ? "#22c55e"
+                                    : contact.confidence === "speculative"
+                                    ? "#eab308"
+                                    : "var(--foreground-muted)",
+                                  fontSize: "11px",
+                                  fontWeight: 500,
+                                  textTransform: "capitalize",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {contact.type}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontSize: "14px",
+                                    color: "var(--foreground)",
+                                    wordBreak: "break-all",
+                                  }}
+                                >
+                                  {contact.type === "website" || contact.type === "form" ? (
+                                    <a
+                                      href={contact.value}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{ color: "var(--accent)", textDecoration: "none" }}
+                                    >
+                                      {contact.value}
+                                    </a>
+                                  ) : contact.type === "email" ? (
+                                    <a
+                                      href={`mailto:${contact.value}`}
+                                      style={{ color: "var(--accent)", textDecoration: "none" }}
+                                    >
+                                      {contact.value}
+                                    </a>
+                                  ) : (
+                                    contact.value
+                                  )}
+                                </div>
+                                {contact.notes && (
+                                  <div style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "4px" }}>
+                                    {contact.notes}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Reasoning */}
+                      {result.reasoning && (
+                        <div style={{ fontSize: "13px", color: "var(--foreground-muted)", marginTop: "12px", fontStyle: "italic" }}>
+                          {result.reasoning}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Disclaimer */}
+                  {(toolResult.data as { disclaimer?: string }).disclaimer && (
+                    <div
+                      style={{
+                        padding: "12px 16px",
+                        borderRadius: "8px",
+                        backgroundColor: "rgba(234, 179, 8, 0.1)",
+                        border: "1px solid rgba(234, 179, 8, 0.2)",
+                        fontSize: "12px",
+                        color: "#eab308",
+                        marginTop: "8px",
+                      }}
+                    >
+                      {(toolResult.data as { disclaimer: string }).disclaimer}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Follow-up input for AI */}
               {isAI && (
