@@ -272,6 +272,35 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
           </span>
         </Link>
 
+        {/* Refresh button */}
+        {!isCollapsed && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              fetchEmails();
+            }}
+            disabled={loading}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "28px",
+              height: "28px",
+              borderRadius: "6px",
+              backgroundColor: "transparent",
+              border: "none",
+              cursor: loading ? "not-allowed" : "pointer",
+              color: "var(--foreground-muted)",
+              transition: "all 0.15s",
+              flexShrink: 0,
+            }}
+            title="Refresh"
+          >
+            <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
+          </button>
+        )}
+
         {/* Collapse button (only shown when not collapsed and not in edit mode) */}
         {!isCollapsed && !isEditMode && (
           <button

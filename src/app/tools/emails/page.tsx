@@ -299,6 +299,32 @@ function EmailsPageContent() {
     fetchEmails();
   };
 
+  const handleArchiveEmail = async (e: React.MouseEvent, email: EmailWithAccount) => {
+    e.stopPropagation();
+    const accountEmail = email.accountEmail || (selectedAccount !== "all" ? selectedAccount : undefined);
+
+    try {
+      const response = await fetch(`/api/gmail/${email.id}/actions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "archive",
+          account: accountEmail,
+        }),
+      });
+
+      if (response.ok) {
+        // Clear selection if archived email was selected
+        if (selectedEmailId === email.id) {
+          setSelectedEmailId(null);
+        }
+        setEmails((prev) => prev.filter((e) => e.id !== email.id));
+      }
+    } catch (err) {
+      console.error("Failed to archive email:", err);
+    }
+  };
+
   const handleDeleteEmail = async (e: React.MouseEvent, email: EmailWithAccount) => {
     e.stopPropagation();
     // Show confirmation modal with email subject for verification
@@ -915,6 +941,31 @@ function EmailsPageContent() {
                       >
                         <ExternalLink style={{ width: "12px", height: "12px" }} />
                       </a>
+                      <button
+                        onClick={(e) => handleArchiveEmail(e, email)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "24px",
+                          height: "24px",
+                          borderRadius: "4px",
+                          backgroundColor: "rgba(255, 255, 255, 0.05)",
+                          color: "var(--foreground-muted)",
+                          border: "none",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                        title="Archive"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                        }}
+                      >
+                        <Archive style={{ width: "12px", height: "12px" }} />
+                      </button>
                       <button
                         onClick={(e) => handleDeleteEmail(e, email)}
                         style={{
