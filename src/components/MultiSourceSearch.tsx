@@ -8,16 +8,12 @@ import {
 import {
   UnifiedSourceId,
   UNIFIED_SOURCES,
-  AI_SOURCE_IDS,
-  WEB_SOURCE_IDS,
   DEFAULT_SOURCE,
   getSearchUrl,
   getSourceConfig,
   getAIModelUrl,
   sourceNeedsInputs,
   sourceIsTool,
-  sourceIsMeta,
-  getIncludedSources,
 } from "@/lib/unified-sources";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useRecentSearches } from "@/contexts/RecentSearchesContext";
@@ -209,14 +205,8 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
     setSourcesHidden(true); // Auto-hide sources when selecting a new source
   };
 
-  // Get sources that should be highlighted (for meta sources)
-  const highlightedSources = useMemo(() => {
-    if (sourceIsMeta(selectedSource)) {
-      const included = getIncludedSources(selectedSource);
-      return included.map(s => s.id);
-    }
-    return [];
-  }, [selectedSource]);
+  // Highlighted sources (no longer used since meta sources were removed)
+  const highlightedSources: string[] = [];
 
   // Auto-expand textarea
   const adjustTextareaHeight = () => {
@@ -299,60 +289,6 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
       const searchUrl = getSearchUrl(selectedSource, query.trim());
       window.open(searchUrl, "_blank");
       return;
-    }
-
-    // Handle meta sources (AI and Web multi-source)
-    if (sourceConfig.type === "meta") {
-      // For now, treat meta sources similar to their first included source
-      // In a full implementation, this would fetch from all included sources
-      if (selectedSource === "ai") {
-        // Query all AI sources
-        setIsSearching(true);
-        setToolResult({
-          source: selectedSource,
-          sourceName: "AI (All Models)",
-          status: "loading",
-        });
-
-        try {
-          const responses = await Promise.all(
-            AI_SOURCE_IDS.map(async (aiSource) => {
-              try {
-                const resp = await fetch(
-                  `/api/search?q=${encodeURIComponent(query.trim())}&source=${aiSource}`
-                );
-                const data = await resp.json();
-                return { source: aiSource, content: data.content, error: data.error };
-              } catch (err) {
-                return { source: aiSource, error: String(err) };
-              }
-            })
-          );
-
-          const successfulResponses = responses.filter(r => r.content);
-          const formattedContent = successfulResponses
-            .map(r => `**${r.source.charAt(0).toUpperCase() + r.source.slice(1)}:**\n${r.content}`)
-            .join("\n\n---\n\n");
-
-          setToolResult({
-            source: selectedSource,
-            sourceName: "AI (All Models)",
-            status: "success",
-            content: formattedContent || "No responses received from AI models.",
-          });
-        } catch (error) {
-          setToolResult({
-            source: selectedSource,
-            sourceName: "AI (All Models)",
-            status: "error",
-            error: error instanceof Error ? error.message : "Request failed",
-          });
-        } finally {
-          setIsSearching(false);
-        }
-        return;
-      }
-
     }
 
     // Handle AI and tool sources - fetch and display results
@@ -955,7 +891,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
     if (!toolResult) return null;
 
     const sourceConfig = getSourceConfig(toolResult.source);
-    const isAI = sourceConfig?.type === "ai" || toolResult.source === "ai";
+    const isAI = sourceConfig?.type === "ai";
 
     return (
       <div
