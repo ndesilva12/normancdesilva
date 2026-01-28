@@ -31,7 +31,8 @@ const DEFAULT_PREVIEW_WIDGETS: WidgetConfig[] = [
   { id: "files", size: "default", visible: true, order: 4 },
   { id: "notes", size: "default", visible: true, order: 5 },
   { id: "stocks", size: "default", visible: true, order: 6 },
-  { id: "raindrop", size: "default", visible: true, order: 7 },
+  { id: "accounts", size: "default", visible: true, order: 7 },
+  { id: "raindrop", size: "default", visible: true, order: 8 },
 ];
 
 // Tool Widgets (interactive tools and features)

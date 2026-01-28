@@ -13,6 +13,7 @@ import {
   BarChart3,
   LayoutGrid,
   Grid3X3,
+  Wallet,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
@@ -21,6 +22,7 @@ import { EmailsPreview } from "@/components/EmailsPreview";
 import { ContactsPreview } from "@/components/ContactsPreview";
 import { NotesPreview } from "@/components/NotesPreview";
 import { StocksPreview } from "@/components/StocksPreview";
+import { AccountsPreview } from "@/components/AccountsPreview";
 import { NewsPreview } from "@/components/NewsPreview";
 import { RaindropPreview } from "@/components/RaindropPreview";
 import { TrendingPreview } from "@/components/TrendingPreview";
@@ -36,6 +38,7 @@ const WIDGET_ICONS: Record<string, React.ComponentType<{ style?: React.CSSProper
   emails: Mail,
   notes: StickyNote,
   stocks: BarChart3,
+  accounts: Wallet,
   news: Newspaper,
   trending: TrendingUp,
   raindrop: BookOpen,
@@ -47,6 +50,7 @@ const WIDGET_LINKS: Record<string, string> = {
   emails: "/tools/emails",
   notes: "/tools/notes",
   stocks: "/tools/stocks",
+  accounts: "/tools/accounts",
   news: "/tools/news",
   trending: "/tools/trending",
   raindrop: "/tools/raindrop",
@@ -116,6 +120,7 @@ const WIDGET_TITLES: Record<string, string> = {
   contacts: "Contacts",
   notes: "Notes",
   stocks: "Market",
+  accounts: "Accounts",
   news: "News",
   trending: "Trending",
   raindrop: "Reading List",
@@ -398,6 +403,8 @@ function DataWidgetsGrid({
           return <NotesPreview />;
         case "stocks":
           return <StocksPreview />;
+        case "accounts":
+          return <AccountsPreview />;
         case "news":
           return <NewsPreview />;
         case "raindrop":
