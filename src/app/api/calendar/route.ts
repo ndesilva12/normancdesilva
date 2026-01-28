@@ -6,10 +6,66 @@ import {
   getCalendarEvents,
   refreshAccessToken,
   GoogleTokens,
+  GoogleAccountsStore,
   CalendarEvent,
 } from "@/lib/google-calendar";
 
-async function getValidTokens(): Promise<GoogleTokens | null> {
+interface AccountWithTokens {
+  email: string;
+  tokens: GoogleTokens;
+}
+
+// Get all connected accounts with valid tokens
+async function getAllAccountTokens(): Promise<AccountWithTokens[]> {
+  const cookieStore = await cookies();
+  const accountsCookie = cookieStore.get("google_accounts");
+
+  if (!accountsCookie) {
+    // Fall back to legacy single account
+    const tokensCookie = cookieStore.get("google_tokens");
+    if (!tokensCookie) return [];
+
+    try {
+      const tokens: GoogleTokens = JSON.parse(tokensCookie.value);
+      return [{ email: "primary", tokens }];
+    } catch {
+      return [];
+    }
+  }
+
+  try {
+    const accountsStore: GoogleAccountsStore = JSON.parse(accountsCookie.value);
+    const validAccounts: AccountWithTokens[] = [];
+
+    for (const [email, account] of Object.entries(accountsStore.accounts)) {
+      let tokens = account;
+
+      // Check if token is expired (with 5 min buffer) and refresh if needed
+      if (tokens.expires_at < Date.now() + 5 * 60 * 1000) {
+        if (tokens.refresh_token) {
+          try {
+            const newTokens = await refreshAccessToken(tokens.refresh_token);
+            tokens = { ...tokens, ...newTokens };
+          } catch (error) {
+            console.error(`Failed to refresh token for ${email}:`, error);
+            continue; // Skip this account if refresh fails
+          }
+        } else {
+          continue; // Skip expired accounts without refresh token
+        }
+      }
+
+      validAccounts.push({ email, tokens });
+    }
+
+    return validAccounts;
+  } catch {
+    return [];
+  }
+}
+
+// Get primary account tokens (for creating/deleting events)
+async function getPrimaryAccountTokens(): Promise<GoogleTokens | null> {
   const cookieStore = await cookies();
   const tokensCookie = cookieStore.get("google_tokens");
 
@@ -28,10 +84,6 @@ async function getValidTokens(): Promise<GoogleTokens | null> {
 
       // Refresh the token
       const newTokens = await refreshAccessToken(tokens.refresh_token);
-
-      // Update the cookie with new tokens
-      // Note: We can't set cookies in API routes that return JSON
-      // The client should handle token refresh
       return newTokens;
     }
 
@@ -41,11 +93,16 @@ async function getValidTokens(): Promise<GoogleTokens | null> {
   }
 }
 
-// GET - List calendar events
-export async function GET(request: Request) {
-  const tokens = await getValidTokens();
+// Extended event type with account info
+interface CalendarEventWithAccount extends CalendarEvent {
+  accountEmail?: string;
+}
 
-  if (!tokens) {
+// GET - List calendar events from ALL connected accounts
+export async function GET(request: Request) {
+  const accounts = await getAllAccountTokens();
+
+  if (accounts.length === 0) {
     return NextResponse.json({ error: "Not authenticated", needsAuth: true }, { status: 401 });
   }
 
@@ -54,8 +111,41 @@ export async function GET(request: Request) {
   const timeMax = searchParams.get("timeMax") || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   try {
-    const events = await getCalendarEvents(tokens.access_token, timeMin, timeMax);
-    return NextResponse.json({ events });
+    // Fetch events from all accounts in parallel
+    const eventPromises = accounts.map(async (account) => {
+      try {
+        const events = await getCalendarEvents(account.tokens.access_token, timeMin, timeMax);
+        // Add account email to each event for identification
+        return events.map((event: CalendarEventWithAccount) => ({
+          ...event,
+          accountEmail: account.email,
+        }));
+      } catch (error) {
+        console.error(`Error fetching events for ${account.email}:`, error);
+        return []; // Return empty array for failed accounts
+      }
+    });
+
+    const allEventArrays = await Promise.all(eventPromises);
+    const allEvents = allEventArrays.flat();
+
+    // Sort by start time
+    allEvents.sort((a: CalendarEventWithAccount, b: CalendarEventWithAccount) => {
+      const dateA = new Date(a.start.dateTime || a.start.date || "");
+      const dateB = new Date(b.start.dateTime || b.start.date || "");
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    // Remove duplicates (same event ID can appear if calendars are shared)
+    const uniqueEvents = allEvents.filter(
+      (event: CalendarEventWithAccount, index: number, self: CalendarEventWithAccount[]) =>
+        index === self.findIndex((e) => e.id === event.id)
+    );
+
+    return NextResponse.json({
+      events: uniqueEvents,
+      accountCount: accounts.length,
+    });
   } catch (error) {
     console.error("Error fetching events:", error);
     return NextResponse.json(
@@ -65,9 +155,9 @@ export async function GET(request: Request) {
   }
 }
 
-// POST - Create calendar event
+// POST - Create calendar event (uses primary account)
 export async function POST(request: Request) {
-  const tokens = await getValidTokens();
+  const tokens = await getPrimaryAccountTokens();
 
   if (!tokens) {
     return NextResponse.json({ error: "Not authenticated", needsAuth: true }, { status: 401 });
@@ -129,9 +219,9 @@ export async function POST(request: Request) {
   }
 }
 
-// DELETE - Delete calendar event
+// DELETE - Delete calendar event (uses primary account)
 export async function DELETE(request: Request) {
-  const tokens = await getValidTokens();
+  const tokens = await getPrimaryAccountTokens();
 
   if (!tokens) {
     return NextResponse.json({ error: "Not authenticated", needsAuth: true }, { status: 401 });
