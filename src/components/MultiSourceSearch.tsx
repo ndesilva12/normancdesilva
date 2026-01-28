@@ -47,6 +47,288 @@ interface ConversationMessage {
   content: string;
 }
 
+// Deep Search Report Type
+interface DeepSearchReportType {
+  topic: string;
+  briefOverview: string;
+  sections: { title: string; content: string; links?: { title: string; url: string; type: string }[] }[];
+  hiddenMechanics: string[];
+  counterintuitiveInsights: string[];
+  expertDebates: string[];
+  underreportedAngles: string[];
+  socialMediaHighlights: { platform: string; author: string; content: string; url: string }[];
+  podcastReferences: { title: string; episode: string; timestamp?: string; summary: string; url: string }[];
+  links?: { title: string; url: string; type: string }[];
+  timestamp: number;
+}
+
+// Dark Search Report Type
+interface DarkSearchReportType {
+  topic: string;
+  mode: "long" | "short" | "links";
+  summary: string;
+  sections: { title: string; content: string; links?: { title: string; url: string; type: string }[] }[];
+  keyTakeaways: string[];
+  alternativePerspectives: string[];
+  unansweredQuestions: string[];
+  socialMediaHighlights: { platform: string; author: string; content: string; url: string }[];
+  podcastReferences: { title: string; episode: string; timestamp?: string; summary: string; url: string }[];
+  links?: { title: string; url: string; type: string }[];
+  timestamp: number;
+}
+
+// Deep Search Results Component
+function DeepSearchResults({ report }: { report: DeepSearchReportType }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      {/* Brief Overview */}
+      {report.briefOverview && (
+        <div style={{ fontSize: "15px", lineHeight: 1.8, color: "var(--foreground)" }}>
+          {report.briefOverview}
+        </div>
+      )}
+
+      {/* Sections */}
+      {report.sections && report.sections.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {report.sections.map((section, idx) => (
+            <div key={idx} style={{ padding: "16px", borderRadius: "10px", backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid var(--glass-border)" }}>
+              <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "10px" }}>
+                {section.title}
+              </div>
+              <div style={{ fontSize: "14px", lineHeight: 1.7, color: "var(--foreground-muted)", whiteSpace: "pre-wrap" }}>
+                {section.content}
+              </div>
+              {section.links && section.links.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px" }}>
+                  {section.links.map((link, lIdx) => (
+                    <a key={lIdx} href={link.url} target="_blank" rel="noopener noreferrer" style={{ padding: "6px 12px", borderRadius: "6px", backgroundColor: "rgba(255, 255, 255, 0.05)", fontSize: "12px", color: "var(--accent)", textDecoration: "none" }}>
+                      {link.title}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Hidden Mechanics */}
+      {report.hiddenMechanics && report.hiddenMechanics.length > 0 && (
+        <div style={{ padding: "16px", borderRadius: "10px", backgroundColor: "rgba(147, 51, 234, 0.1)", border: "1px solid rgba(147, 51, 234, 0.2)" }}>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "#a855f7", marginBottom: "10px" }}>Hidden Mechanics</div>
+          <ul style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
+            {report.hiddenMechanics.map((item, idx) => (
+              <li key={idx} style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.6 }}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Counterintuitive Insights */}
+      {report.counterintuitiveInsights && report.counterintuitiveInsights.length > 0 && (
+        <div style={{ padding: "16px", borderRadius: "10px", backgroundColor: "rgba(34, 197, 94, 0.1)", border: "1px solid rgba(34, 197, 94, 0.2)" }}>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "#22c55e", marginBottom: "10px" }}>Counterintuitive Insights</div>
+          <ul style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
+            {report.counterintuitiveInsights.map((item, idx) => (
+              <li key={idx} style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.6 }}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Expert Debates */}
+      {report.expertDebates && report.expertDebates.length > 0 && (
+        <div style={{ padding: "16px", borderRadius: "10px", backgroundColor: "rgba(59, 130, 246, 0.1)", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "#3b82f6", marginBottom: "10px" }}>Expert Debates</div>
+          <ul style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
+            {report.expertDebates.map((item, idx) => (
+              <li key={idx} style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.6 }}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Underreported Angles */}
+      {report.underreportedAngles && report.underreportedAngles.length > 0 && (
+        <div style={{ padding: "16px", borderRadius: "10px", backgroundColor: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "#f59e0b", marginBottom: "10px" }}>Underreported Angles</div>
+          <ul style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
+            {report.underreportedAngles.map((item, idx) => (
+              <li key={idx} style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.6 }}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Social Media Highlights */}
+      {report.socialMediaHighlights && report.socialMediaHighlights.length > 0 && (
+        <div>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "10px" }}>Social Media Highlights</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {report.socialMediaHighlights.map((highlight, idx) => (
+              <a key={idx} href={highlight.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", padding: "12px", borderRadius: "8px", backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid var(--glass-border)", textDecoration: "none" }}>
+                <div style={{ fontSize: "12px", color: "var(--accent)", marginBottom: "4px" }}>{highlight.platform} • {highlight.author}</div>
+                <div style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.5 }}>{highlight.content}</div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Podcast References */}
+      {report.podcastReferences && report.podcastReferences.length > 0 && (
+        <div>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "10px" }}>Podcast References</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {report.podcastReferences.map((podcast, idx) => (
+              <a key={idx} href={podcast.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", padding: "12px", borderRadius: "8px", backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid var(--glass-border)", textDecoration: "none" }}>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--foreground)", marginBottom: "2px" }}>{podcast.title}</div>
+                <div style={{ fontSize: "12px", color: "var(--accent)", marginBottom: "4px" }}>{podcast.episode}{podcast.timestamp && ` • ${podcast.timestamp}`}</div>
+                <div style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.5 }}>{podcast.summary}</div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Links */}
+      {report.links && report.links.length > 0 && (
+        <div>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "10px" }}>Sources</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {report.links.map((link, idx) => (
+              <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" style={{ padding: "8px 14px", borderRadius: "8px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid var(--glass-border)", fontSize: "13px", color: "var(--foreground)", textDecoration: "none" }}>
+                {link.title}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Dark Search Results Component
+function DarkSearchResults({ report }: { report: DarkSearchReportType }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      {/* Summary */}
+      {report.summary && (
+        <div style={{ fontSize: "15px", lineHeight: 1.8, color: "var(--foreground)", whiteSpace: "pre-wrap" }}>
+          {report.summary}
+        </div>
+      )}
+
+      {/* Key Takeaways */}
+      {report.keyTakeaways && report.keyTakeaways.length > 0 && (
+        <div style={{ padding: "16px", borderRadius: "10px", backgroundColor: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)" }}>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "#ef4444", marginBottom: "10px" }}>Key Takeaways</div>
+          <ul style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
+            {report.keyTakeaways.map((item, idx) => (
+              <li key={idx} style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.6 }}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Sections */}
+      {report.sections && report.sections.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {report.sections.map((section, idx) => (
+            <div key={idx} style={{ padding: "16px", borderRadius: "10px", backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid var(--glass-border)" }}>
+              <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "10px" }}>
+                {section.title}
+              </div>
+              <div style={{ fontSize: "14px", lineHeight: 1.7, color: "var(--foreground-muted)", whiteSpace: "pre-wrap" }}>
+                {section.content}
+              </div>
+              {section.links && section.links.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px" }}>
+                  {section.links.map((link, lIdx) => (
+                    <a key={lIdx} href={link.url} target="_blank" rel="noopener noreferrer" style={{ padding: "6px 12px", borderRadius: "6px", backgroundColor: "rgba(255, 255, 255, 0.05)", fontSize: "12px", color: "var(--accent)", textDecoration: "none" }}>
+                      {link.title}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Alternative Perspectives */}
+      {report.alternativePerspectives && report.alternativePerspectives.length > 0 && (
+        <div style={{ padding: "16px", borderRadius: "10px", backgroundColor: "rgba(147, 51, 234, 0.1)", border: "1px solid rgba(147, 51, 234, 0.2)" }}>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "#a855f7", marginBottom: "10px" }}>Alternative Perspectives</div>
+          <ul style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
+            {report.alternativePerspectives.map((item, idx) => (
+              <li key={idx} style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.6 }}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Unanswered Questions */}
+      {report.unansweredQuestions && report.unansweredQuestions.length > 0 && (
+        <div style={{ padding: "16px", borderRadius: "10px", backgroundColor: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "#f59e0b", marginBottom: "10px" }}>Unanswered Questions</div>
+          <ul style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
+            {report.unansweredQuestions.map((item, idx) => (
+              <li key={idx} style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.6 }}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Social Media Highlights */}
+      {report.socialMediaHighlights && report.socialMediaHighlights.length > 0 && (
+        <div>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "10px" }}>Social Media Highlights</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {report.socialMediaHighlights.map((highlight, idx) => (
+              <a key={idx} href={highlight.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", padding: "12px", borderRadius: "8px", backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid var(--glass-border)", textDecoration: "none" }}>
+                <div style={{ fontSize: "12px", color: "var(--accent)", marginBottom: "4px" }}>{highlight.platform} • {highlight.author}</div>
+                <div style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.5 }}>{highlight.content}</div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Podcast References */}
+      {report.podcastReferences && report.podcastReferences.length > 0 && (
+        <div>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "10px" }}>Podcast References</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {report.podcastReferences.map((podcast, idx) => (
+              <a key={idx} href={podcast.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", padding: "12px", borderRadius: "8px", backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid var(--glass-border)", textDecoration: "none" }}>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--foreground)", marginBottom: "2px" }}>{podcast.title}</div>
+                <div style={{ fontSize: "12px", color: "var(--accent)", marginBottom: "4px" }}>{podcast.episode}{podcast.timestamp && ` • ${podcast.timestamp}`}</div>
+                <div style={{ fontSize: "13px", color: "var(--foreground-muted)", lineHeight: 1.5 }}>{podcast.summary}</div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Links */}
+      {report.links && report.links.length > 0 && (
+        <div>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "10px" }}>Sources</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {report.links.map((link, idx) => (
+              <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" style={{ padding: "8px 14px", borderRadius: "8px", backgroundColor: "rgba(255, 255, 255, 0.05)", border: "1px solid var(--glass-border)", fontSize: "13px", color: "var(--foreground)", textDecoration: "none" }}>
+                {link.title}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive, widgetsCollapsed, onToggleCollapse }: MultiSourceSearchProps) {
   const { settings, updateSettings } = useSettings();
   const { getRecentSearches, addRecentSearch } = useRecentSearches();
@@ -372,9 +654,17 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
         }
 
         // Extract content based on response structure
-        let content = (data as { content?: string }).content ||
-                      (data as { report?: string }).report ||
-                      (data as { summary?: string }).summary;
+        // For deep-search and dark-search, report is an object, not a string
+        // so we extract summary from the report for display
+        let content: string | undefined;
+        const reportData = (data as { report?: { summary?: string; briefOverview?: string } }).report;
+        if (typeof reportData === "object" && reportData !== null) {
+          // deep-search uses briefOverview, dark-search uses summary
+          content = reportData.briefOverview || reportData.summary;
+        } else {
+          content = (data as { content?: string }).content ||
+                    (data as { summary?: string }).summary;
+        }
 
         setToolResult({
           source: selectedSource,
@@ -994,8 +1284,8 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
 
           {toolResult.status === "success" && (toolResult.content || toolResult.data) && (
             <>
-              {/* Summary/Content */}
-              {toolResult.content && (
+              {/* Summary/Content - skip for tools with dedicated renderers */}
+              {toolResult.content && toolResult.source !== "deep-search" && toolResult.source !== "dark-search" && (
                 <div
                   style={{
                     fontSize: "15px",
@@ -1143,6 +1433,16 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Deep Search Results */}
+              {toolResult.source === "deep-search" && toolResult.data && (toolResult.data as { report?: object }).report && (
+                <DeepSearchResults report={(toolResult.data as { report: DeepSearchReportType }).report} />
+              )}
+
+              {/* Dark Search Results */}
+              {toolResult.source === "dark-search" && toolResult.data && (toolResult.data as { report?: object }).report && (
+                <DarkSearchResults report={(toolResult.data as { report: DarkSearchReportType }).report} />
               )}
 
               {/* Follow-up input for AI */}
