@@ -26,13 +26,14 @@ export interface LayoutConfig {
 const DEFAULT_PREVIEW_WIDGETS: WidgetConfig[] = [
   { id: "news", size: "default", visible: true, order: 0 },
   { id: "trending", size: "default", visible: true, order: 1 },
-  { id: "emails", size: "default", visible: true, order: 2 },
-  { id: "contacts", size: "default", visible: true, order: 3 },
-  { id: "files", size: "default", visible: true, order: 4 },
-  { id: "notes", size: "default", visible: true, order: 5 },
-  { id: "stocks", size: "default", visible: true, order: 6 },
-  { id: "accounts", size: "default", visible: true, order: 7 },
-  { id: "raindrop", size: "default", visible: true, order: 8 },
+  { id: "calendar", size: "default", visible: true, order: 2 },
+  { id: "emails", size: "default", visible: true, order: 3 },
+  { id: "contacts", size: "default", visible: true, order: 4 },
+  { id: "files", size: "default", visible: true, order: 5 },
+  { id: "notes", size: "default", visible: true, order: 6 },
+  { id: "stocks", size: "default", visible: true, order: 7 },
+  { id: "accounts", size: "default", visible: true, order: 8 },
+  { id: "raindrop", size: "default", visible: true, order: 9 },
 ];
 
 // Tool Widgets (interactive tools and features)
