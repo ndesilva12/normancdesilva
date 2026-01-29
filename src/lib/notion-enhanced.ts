@@ -178,10 +178,10 @@ function convertBlock(block: BlockObjectResponse): NotionBlock {
       content = block.link_preview.url;
       break;
     case "child_page":
-      content = extractPlainText(block.child_page.title || []);
+      content = block.child_page?.title ? extractPlainText(block.child_page.title) : "";
       break;
     case "child_database":
-      content = extractPlainText(block.child_database.title || []);
+      content = block.child_database?.title ? extractPlainText(block.child_database.title) : "";
       break;
     default:
       content = "";
