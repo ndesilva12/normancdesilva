@@ -22,33 +22,46 @@ export interface WorkspaceItem {
 
 // Helper to extract plain text from rich text array
 function extractPlainText(richText: any[]): string {
-  return richText.map((text) => text.plain_text).join("");
+  try {
+    if (!Array.isArray(richText)) return "";
+    return richText.map((text) => text?.plain_text || "").join("");
+  } catch (error) {
+    return "";
+  }
 }
 
 // Helper to get title from page or database  
 function getTitle(item: any): string {
-  if ("properties" in item && item.properties) {
-    // This is a page
-    const titleProperty = Object.values(item.properties).find(
-      (prop: any) => prop.type === "title"
-    );
-    if (titleProperty && titleProperty.type === "title") {
-      return extractPlainText(titleProperty.title);
+  try {
+    if (item?.properties) {
+      // This is a page
+      const titleProperty = Object.values(item.properties).find(
+        (prop: any) => prop?.type === "title"
+      );
+      if (titleProperty && (titleProperty as any).type === "title") {
+        return extractPlainText((titleProperty as any).title || []);
+      }
+    } else if (item?.title) {
+      // This is a database
+      return extractPlainText(item.title || []);
     }
-  } else if ("title" in item) {
-    // This is a database
-    return extractPlainText(item.title);
+    return "Untitled";
+  } catch (error) {
+    return "Untitled";
   }
-  return "Untitled";
 }
 
 // Helper to get icon
 function getIcon(item: any): string | undefined {
-  if (!item.icon) return undefined;
-  if (item.icon.type === "emoji") return item.icon.emoji;
-  if (item.icon.type === "external") return item.icon.external.url;
-  if (item.icon.type === "file") return item.icon.file.url;
-  return undefined;
+  try {
+    if (!item?.icon) return undefined;
+    if (item.icon.type === "emoji") return item.icon.emoji;
+    if (item.icon.type === "external") return item.icon.external?.url;
+    if (item.icon.type === "file") return item.icon.file?.url;
+    return undefined;
+  } catch (error) {
+    return undefined;
+  }
 }
 
 // Get all databases in the workspace
