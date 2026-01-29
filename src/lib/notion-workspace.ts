@@ -184,20 +184,34 @@ export async function getWorkspaceItems(): Promise<WorkspaceItem[]> {
 // Get pages within a specific database
 export async function getDatabasePages(databaseId: string, limit = 50): Promise<WorkspaceItem[]> {
   try {
-    const response = await notion.databases.query({
-      database_id: databaseId,
-      page_size: limit,
-      sorts: [
-        {
-          timestamp: "last_edited_time",
-          direction: "descending",
-        },
-      ],
+    // Use raw fetch to avoid SDK type issues
+    const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        page_size: limit,
+        sorts: [
+          {
+            timestamp: "last_edited_time",
+            direction: "descending",
+          },
+        ],
+      }),
     });
 
-    return response.results
-      .filter((item): item is PageObjectResponse => "properties" in item)
-      .map((page) => ({
+    if (!response.ok) {
+      throw new Error(`Notion API error: ${response.statusText}`);
+    }
+
+    const data = await response.json() as any;
+
+    return data.results
+      .filter((item: any) => item?.properties)
+      .map((page: any) => ({
         id: page.id,
         type: "page" as const,
         title: getTitle(page),
