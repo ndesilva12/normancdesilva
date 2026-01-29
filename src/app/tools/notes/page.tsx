@@ -830,25 +830,47 @@ function NotesContent() {
                 Your Notion notes
               </p>
             </div>
-            <button
-              onClick={() => setShowNewNote(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "10px 16px",
-                borderRadius: "8px",
-                backgroundColor: "var(--accent)",
-                color: "var(--background)",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: 500,
-              }}
-            >
-              <Plus style={{ width: "16px", height: "16px" }} />
-              New Note
-            </button>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Link
+                href="/tools/notion-browser"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "10px 16px",
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  color: "var(--foreground)",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                }}
+              >
+                <StickyNote style={{ width: "16px", height: "16px" }} />
+                Browse Workspace
+              </Link>
+              <button
+                onClick={() => setShowNewNote(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "10px 16px",
+                  borderRadius: "8px",
+                  backgroundColor: "var(--accent)",
+                  color: "var(--background)",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                }}
+              >
+                <Plus style={{ width: "16px", height: "16px" }} />
+                New Note
+              </button>
+            </div>
           </motion.div>
 
           {/* Main Content */}
