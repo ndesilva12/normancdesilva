@@ -59,19 +59,34 @@ function getIcon(item: PageObjectResponse | DatabaseObjectResponse): string | un
 // Get all databases in the workspace
 export async function getWorkspaceDatabases(): Promise<WorkspaceItem[]> {
   try {
-    const response = await notion.search({
-      filter: {
-        property: "object",
-        value: "database" as any, // Type workaround for Notion SDK
+    // Use raw fetch to avoid SDK type issues
+    const response = await fetch("https://api.notion.com/v1/search", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
       },
-      sort: {
-        direction: "descending", 
-        timestamp: "last_edited_time",
-      },
-      page_size: 100,
+      body: JSON.stringify({
+        filter: {
+          property: "object",
+          value: "database",
+        },
+        sort: {
+          direction: "descending",
+          timestamp: "last_edited_time",
+        },
+        page_size: 100,
+      }),
     });
 
-    return response.results
+    if (!response.ok) {
+      throw new Error(`Notion API error: ${response.statusText}`);
+    }
+
+    const data = await response.json() as SearchResponse;
+
+    return data.results
       .filter((item): item is DatabaseObjectResponse => item.object === "database")
       .map((database) => ({
         id: database.id,
@@ -91,19 +106,34 @@ export async function getWorkspaceDatabases(): Promise<WorkspaceItem[]> {
 // Get top-level pages (pages not in databases)
 export async function getWorkspacePages(): Promise<WorkspaceItem[]> {
   try {
-    const response = await notion.search({
-      filter: {
-        property: "object",
-        value: "page" as any, // Type workaround for Notion SDK
+    // Use raw fetch to avoid SDK type issues
+    const response = await fetch("https://api.notion.com/v1/search", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
       },
-      sort: {
-        direction: "descending",
-        timestamp: "last_edited_time", 
-      },
-      page_size: 100,
+      body: JSON.stringify({
+        filter: {
+          property: "object",
+          value: "page",
+        },
+        sort: {
+          direction: "descending",
+          timestamp: "last_edited_time",
+        },
+        page_size: 100,
+      }),
     });
 
-    return response.results
+    if (!response.ok) {
+      throw new Error(`Notion API error: ${response.statusText}`);
+    }
+
+    const data = await response.json() as SearchResponse;
+
+    return data.results
       .filter((item): item is PageObjectResponse => item.object === "page")
       // Filter out pages that are in databases (we want top-level pages only)
       .filter((page) => !page.parent || page.parent.type !== "database_id")
