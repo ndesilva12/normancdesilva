@@ -1,35 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { refreshAccessToken, GoogleAccountsStore } from "@/lib/google-calendar";
 import { sendEmail, SendEmailParams, getRecentEmails, searchGoogleContacts } from "@/lib/google-services";
-
-// Helper to get valid access token for Jimmy's use
-async function getJimmyAccessToken(): Promise<{ token: string; email: string } | null> {
-  const cookieStore = await cookies();
-
-  // Try multi-account cookie first
-  const accountsCookie = cookieStore.get("google_accounts");
-  if (accountsCookie) {
-    try {
-      const accountsStore: GoogleAccountsStore = JSON.parse(accountsCookie.value);
-      const primaryEmail = accountsStore.primaryAccount || Object.keys(accountsStore.accounts)[0];
-      const account = accountsStore.accounts[primaryEmail];
-
-      if (account) {
-        // Refresh token if needed
-        if (account.expires_at < Date.now() + 60 * 1000 && account.refresh_token) {
-          const refreshed = await refreshAccessToken(account.refresh_token);
-          return { token: refreshed.access_token, email: primaryEmail };
-        }
-        return { token: account.access_token, email: primaryEmail };
-      }
-    } catch (error) {
-      console.error("Error parsing accounts:", error);
-    }
-  }
-
-  return null;
-}
+import { getJimmyAccessToken } from "@/lib/jimmy-auth";
 
 // POST - Send email (for Jimmy)
 export async function POST(request: NextRequest) {
@@ -40,7 +11,7 @@ export async function POST(request: NextRequest) {
     const auth = await getJimmyAccessToken();
     if (!auth) {
       return NextResponse.json(
-        { error: "Gmail not authenticated. Please ensure Google account is connected in dashboard." },
+        { error: "Jimmy not authenticated. Please run Jimmy auth setup first." },
         { status: 401 }
       );
     }
@@ -98,11 +69,21 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET - Check authentication status
+// GET - Check authentication status  
 export async function GET() {
-  const auth = await getJimmyAccessToken();
-  return NextResponse.json({
-    authenticated: !!auth,
-    email: auth?.email || null,
-  });
+  try {
+    const auth = await getJimmyAccessToken();
+    return NextResponse.json({
+      authenticated: true,
+      email: auth.email,
+      status: "Jimmy has valid Gmail access"
+    });
+  } catch (error) {
+    return NextResponse.json({
+      authenticated: false,
+      email: null,
+      status: error instanceof Error ? error.message : "Authentication failed",
+      setup_needed: true
+    });
+  }
 }
