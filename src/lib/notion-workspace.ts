@@ -1,9 +1,4 @@
 import { Client } from "@notionhq/client";
-import {
-  PageObjectResponse,
-  DatabaseObjectResponse,
-  SearchResponse,
-} from "@notionhq/client/build/src/api-endpoints";
 
 // Initialize Notion client
 const notion = new Client({
@@ -30,8 +25,8 @@ function extractPlainText(richText: any[]): string {
   return richText.map((text) => text.plain_text).join("");
 }
 
-// Helper to get title from page or database
-function getTitle(item: PageObjectResponse | DatabaseObjectResponse): string {
+// Helper to get title from page or database  
+function getTitle(item: any): string {
   if ("properties" in item && item.properties) {
     // This is a page
     const titleProperty = Object.values(item.properties).find(
@@ -48,7 +43,7 @@ function getTitle(item: PageObjectResponse | DatabaseObjectResponse): string {
 }
 
 // Helper to get icon
-function getIcon(item: PageObjectResponse | DatabaseObjectResponse): string | undefined {
+function getIcon(item: any): string | undefined {
   if (!item.icon) return undefined;
   if (item.icon.type === "emoji") return item.icon.emoji;
   if (item.icon.type === "external") return item.icon.external.url;
@@ -84,10 +79,10 @@ export async function getWorkspaceDatabases(): Promise<WorkspaceItem[]> {
       throw new Error(`Notion API error: ${response.statusText}`);
     }
 
-    const data = await response.json() as SearchResponse;
+    const data = await response.json() as any;
 
     return data.results
-      .filter((item): item is DatabaseObjectResponse => item.object === "database")
+      .filter((item: any) => item.object === "database")
       .map((database) => ({
         id: database.id,
         type: "database" as const,
@@ -131,10 +126,10 @@ export async function getWorkspacePages(): Promise<WorkspaceItem[]> {
       throw new Error(`Notion API error: ${response.statusText}`);
     }
 
-    const data = await response.json() as SearchResponse;
+    const data = await response.json() as any;
 
     return data.results
-      .filter((item): item is PageObjectResponse => item.object === "page")
+      .filter((item: any) => item.object === "page")
       // Filter out pages that are in databases (we want top-level pages only)
       .filter((page) => !page.parent || page.parent.type !== "database_id")
       .map((page) => ({
@@ -217,7 +212,7 @@ export async function searchWorkspace(query: string): Promise<WorkspaceItem[]> {
     });
 
     return response.results
-      .filter((item): item is PageObjectResponse | DatabaseObjectResponse => 
+      .filter((item: any) => 
         item.object === "page" || item.object === "database"
       )
       .map((item) => ({
