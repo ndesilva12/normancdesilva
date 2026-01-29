@@ -233,11 +233,11 @@ export async function getWorkspaceItems(): Promise<NotionWorkspaceItem[]> {
       }
     }
 
-    // Also search for databases
+    // Also search for databases (use data_source instead of database)
     const dbResponse = await notion.search({
       filter: {
         property: "object",
-        value: "database",
+        value: "data_source",
       },
       sort: {
         direction: "descending",
@@ -279,7 +279,7 @@ export async function getAllDatabases(): Promise<NotionDatabase[]> {
     const response = await notion.search({
       filter: {
         property: "object",
-        value: "database",
+        value: "data_source",
       },
       sort: {
         direction: "descending",
@@ -570,7 +570,7 @@ export async function searchNotionContent(query: string): Promise<NotionWorkspac
             url: page.url,
             parent: page.parent,
           });
-        } else if (result.object === "database") {
+        } else if (result.object === "data_source") {
           const database = result as DatabaseObjectResponse;
           items.push({
             id: database.id,
