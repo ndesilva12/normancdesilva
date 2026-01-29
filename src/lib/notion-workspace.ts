@@ -62,7 +62,7 @@ export async function getWorkspaceDatabases(): Promise<WorkspaceItem[]> {
     const response = await notion.search({
       filter: {
         property: "object",
-        value: "database",
+        value: "database" as any, // Type workaround for Notion SDK
       },
       sort: {
         direction: "descending", 
@@ -94,7 +94,7 @@ export async function getWorkspacePages(): Promise<WorkspaceItem[]> {
     const response = await notion.search({
       filter: {
         property: "object",
-        value: "page",
+        value: "page" as any, // Type workaround for Notion SDK
       },
       sort: {
         direction: "descending",

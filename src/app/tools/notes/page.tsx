@@ -36,6 +36,16 @@ interface NotionPage {
   url: string;
 }
 
+interface OverviewItem {
+  id: string;
+  type: "database" | "page" | "note";
+  title: string;
+  icon?: string;
+  lastEditedTime: string;
+  url: string;
+  category: string;
+}
+
 interface NotionBlock {
   id: string;
   type: string;
@@ -102,6 +112,10 @@ function NotesContent() {
   const initialNoteId = searchParams.get("id");
 
   const [pages, setPages] = useState<NotionPage[]>([]);
+  const [organizationalItems, setOrganizationalItems] = useState<OverviewItem[]>([]);
+  const [recentNotes, setRecentNotes] = useState<OverviewItem[]>([]);
+  const [showOverview, setShowOverview] = useState(true);
+  const [hasNotesDatabase, setHasNotesDatabase] = useState(false);
   const [selectedPage, setSelectedPage] = useState<NotionPage | null>(null);
   const [pageContent, setPageContent] = useState<NotionBlock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,6 +174,26 @@ function NotesContent() {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const newContentRef = useRef<HTMLTextAreaElement>(null);
 
+  const fetchOverview = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/notion-overview?view=overview");
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch workspace overview");
+      }
+      setOrganizationalItems(data.organizationalItems || []);
+      setRecentNotes(data.recentNotes || []);
+      setHasNotesDatabase(data.hasNotesDatabase || false);
+      setShowOverview(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load workspace overview");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -170,6 +204,7 @@ function NotesContent() {
         throw new Error(data.error || "Failed to fetch notes");
       }
       setPages(data.pages || []);
+      setShowOverview(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load notes");
     } finally {
@@ -212,7 +247,7 @@ function NotesContent() {
 
   const searchNotes = useCallback(async (query: string) => {
     if (!query.trim()) {
-      fetchNotes();
+      fetchOverview();
       return;
     }
 
@@ -222,17 +257,18 @@ function NotesContent() {
       const data = await response.json();
       if (response.ok) {
         setPages(data.pages || []);
+        setShowOverview(false);
       }
     } catch (err) {
       console.error("Search error:", err);
     } finally {
       setIsSearching(false);
     }
-  }, [fetchNotes]);
+  }, [fetchOverview]);
 
   useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
+    fetchOverview();
+  }, [fetchOverview]);
 
   useEffect(() => {
     if (initialNoteId && pages.length > 0) {
@@ -250,11 +286,11 @@ function NotesContent() {
       if (searchQuery) {
         searchNotes(searchQuery);
       } else if (searchQuery === "") {
-        fetchNotes();
+        fetchOverview();
       }
     }, 300);
     return () => clearTimeout(debounce);
-  }, [searchQuery, searchNotes, fetchNotes]);
+  }, [searchQuery, searchNotes, fetchOverview]);
 
   const handleSelectPage = (page: NotionPage) => {
     setSelectedPage(page);
@@ -827,7 +863,7 @@ function NotesContent() {
                 <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>Notes</h1>
               </div>
               <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginTop: "4px" }}>
-                Your Notion notes • <Link href="/workspace" style={{ color: "var(--accent)", textDecoration: "none", fontSize: "12px" }}>Browse full workspace</Link>
+                Your Notion notes • <Link href="/tools/notion-browser" style={{ color: "var(--accent)", textDecoration: "none", fontSize: "12px" }}>Browse full workspace</Link>
               </p>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
@@ -906,7 +942,7 @@ function NotesContent() {
                   }} />
                   <input
                     type="text"
-                    placeholder="Search notes..."
+                    placeholder="Search workspace..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{
@@ -934,7 +970,7 @@ function NotesContent() {
                 </div>
               </div>
 
-              {/* Notes List */}
+              {/* Content List */}
               <div style={{ flex: 1, overflowY: "auto" }}>
                 {loading ? (
                   <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>
@@ -944,7 +980,7 @@ function NotesContent() {
                   <div style={{ padding: "20px", textAlign: "center" }}>
                     <p style={{ color: "#f87171", fontSize: "13px", marginBottom: "12px" }}>{error}</p>
                     <button
-                      onClick={fetchNotes}
+                      onClick={showOverview ? fetchOverview : fetchNotes}
                       style={{
                         padding: "8px 16px",
                         borderRadius: "6px",
@@ -958,72 +994,243 @@ function NotesContent() {
                       Retry
                     </button>
                   </div>
-                ) : pages.length === 0 ? (
-                  <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--foreground-muted)" }}>
-                    <StickyNote style={{ width: "32px", height: "32px", margin: "0 auto 12px", opacity: 0.5 }} />
-                    <p style={{ fontSize: "14px" }}>No notes found</p>
+                ) : showOverview ? (
+                  <div>
+                    {/* Organizational Items Section */}
+                    {organizationalItems.length > 0 && (
+                      <div>
+                        <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid var(--glass-border)", backgroundColor: "rgba(255,255,255,0.02)" }}>
+                          <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                            Databases & Pages
+                          </span>
+                        </div>
+                        {organizationalItems.slice(0, 8).map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              if (item.type === "database") {
+                                // Navigate to full workspace browser for databases
+                                window.location.href = `/tools/notion-browser`;
+                              } else {
+                                // Open page directly
+                                window.open(item.url, "_blank");
+                              }
+                            }}
+                            style={{
+                              width: "100%",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "12px",
+                              padding: isMobile ? "16px" : "12px 16px",
+                              minHeight: isMobile ? "60px" : "auto",
+                              backgroundColor: "transparent",
+                              border: "none",
+                              borderBottom: "1px solid var(--glass-border)",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              transition: "background 0.15s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "transparent";
+                            }}
+                          >
+                            <span style={{ fontSize: "18px", flexShrink: 0 }}>{item.icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontSize: "14px",
+                                fontWeight: 500,
+                                color: "var(--foreground)",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}>
+                                {item.title || "Untitled"}
+                              </div>
+                              <div style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "2px" }}>
+                                {item.category} • {formatDate(item.lastEditedTime)}
+                              </div>
+                            </div>
+                            <ChevronRight style={{
+                              width: "14px",
+                              height: "14px",
+                              color: "var(--foreground-muted)",
+                              opacity: 0.7,
+                            }} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Recent Notes Section */}
+                    {recentNotes.length > 0 && hasNotesDatabase && (
+                      <div>
+                        <div style={{ 
+                          padding: "12px 16px 8px", 
+                          borderBottom: "1px solid var(--glass-border)", 
+                          backgroundColor: "rgba(255,255,255,0.02)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between"
+                        }}>
+                          <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--foreground-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                            Recent Notes
+                          </span>
+                          <button
+                            onClick={fetchNotes}
+                            style={{
+                              fontSize: "11px",
+                              color: "var(--accent)",
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              textDecoration: "underline",
+                            }}
+                          >
+                            View All
+                          </button>
+                        </div>
+                        {recentNotes.map((note) => (
+                          <button
+                            key={note.id}
+                            onClick={() => {
+                              // Convert to NotionPage format and handle normally
+                              const page: NotionPage = {
+                                id: note.id,
+                                title: note.title,
+                                icon: note.icon,
+                                lastEditedTime: note.lastEditedTime,
+                                url: note.url,
+                              };
+                              handleSelectPage(page);
+                            }}
+                            style={{
+                              width: "100%",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "12px",
+                              padding: isMobile ? "16px" : "12px 16px",
+                              minHeight: isMobile ? "60px" : "auto",
+                              backgroundColor: "transparent",
+                              border: "none",
+                              borderBottom: "1px solid var(--glass-border)",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              transition: "background 0.15s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "transparent";
+                            }}
+                          >
+                            <span style={{ fontSize: "18px", flexShrink: 0 }}>{note.icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontSize: "14px",
+                                fontWeight: 500,
+                                color: "var(--foreground)",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}>
+                                {note.title || "Untitled"}
+                              </div>
+                              <div style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "2px" }}>
+                                {formatDate(note.lastEditedTime)}
+                              </div>
+                            </div>
+                            <ChevronRight style={{
+                              width: "14px",
+                              height: "14px",
+                              color: "var(--foreground-muted)",
+                              opacity: 0.7,
+                            }} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Empty state */}
+                    {organizationalItems.length === 0 && recentNotes.length === 0 && (
+                      <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--foreground-muted)" }}>
+                        <StickyNote style={{ width: "32px", height: "32px", margin: "0 auto 12px", opacity: 0.5 }} />
+                        <p style={{ fontSize: "14px" }}>No content found</p>
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  pages.map((page) => (
-                    <button
-                      key={page.id}
-                      onClick={() => handleSelectPage(page)}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        padding: isMobile ? "16px" : "12px 16px",
-                        minHeight: isMobile ? "60px" : "auto",
-                        backgroundColor: selectedPage?.id === page.id ? "rgba(255,255,255,0.08)" : "transparent",
-                        border: "none",
-                        borderBottom: "1px solid var(--glass-border)",
-                        cursor: "pointer",
-                        textAlign: "left",
-                        transition: "background 0.15s",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (selectedPage?.id !== page.id) {
-                          e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (selectedPage?.id !== page.id) {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                        }
-                      }}
-                    >
-                      <span style={{ fontSize: "18px", flexShrink: 0 }}>{page.icon || "📝"}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontSize: "14px",
-                          fontWeight: 500,
-                          color: "var(--foreground)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}>
-                          {page.title || "Untitled"}
+                  /* Search Results - show pages as before */
+                  pages.length === 0 ? (
+                    <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--foreground-muted)" }}>
+                      <StickyNote style={{ width: "32px", height: "32px", margin: "0 auto 12px", opacity: 0.5 }} />
+                      <p style={{ fontSize: "14px" }}>No notes found</p>
+                    </div>
+                  ) : (
+                    pages.map((page) => (
+                      <button
+                        key={page.id}
+                        onClick={() => handleSelectPage(page)}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          padding: isMobile ? "16px" : "12px 16px",
+                          minHeight: isMobile ? "60px" : "auto",
+                          backgroundColor: selectedPage?.id === page.id ? "rgba(255,255,255,0.08)" : "transparent",
+                          border: "none",
+                          borderBottom: "1px solid var(--glass-border)",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          transition: "background 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedPage?.id !== page.id) {
+                            e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedPage?.id !== page.id) {
+                            e.currentTarget.style.backgroundColor = "transparent";
+                          }
+                        }}
+                      >
+                        <span style={{ fontSize: "18px", flexShrink: 0 }}>{page.icon || "📝"}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: "14px",
+                            fontWeight: 500,
+                            color: "var(--foreground)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}>
+                            {page.title || "Untitled"}
+                          </div>
+                          <div style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "2px" }}>
+                            {formatDate(page.lastEditedTime)}
+                          </div>
                         </div>
-                        <div style={{ fontSize: "12px", color: "var(--foreground-muted)", marginTop: "2px" }}>
-                          {formatDate(page.lastEditedTime)}
-                        </div>
-                      </div>
-                      <ChevronRight style={{
-                        width: "14px",
-                        height: "14px",
-                        color: "var(--foreground-muted)",
-                        opacity: selectedPage?.id === page.id ? 1 : 0,
-                      }} />
-                    </button>
-                  ))
+                        <ChevronRight style={{
+                          width: "14px",
+                          height: "14px",
+                          color: "var(--foreground-muted)",
+                          opacity: selectedPage?.id === page.id ? 1 : 0,
+                        }} />
+                      </button>
+                    ))
+                  )
                 )}
               </div>
 
               {/* Refresh Button */}
               <div style={{ padding: "12px", borderTop: "1px solid var(--glass-border)" }}>
                 <button
-                  onClick={fetchNotes}
+                  onClick={showOverview ? fetchOverview : fetchNotes}
                   disabled={loading}
                   style={{
                     width: "100%",
