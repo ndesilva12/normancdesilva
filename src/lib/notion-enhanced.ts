@@ -178,10 +178,12 @@ function convertBlock(block: BlockObjectResponse): NotionBlock {
       content = block.link_preview.url;
       break;
     case "child_page":
-      content = block.child_page?.title ? extractPlainText(block.child_page.title) : "";
+      // Child pages don't have accessible title in block format
+      content = "Child Page";
       break;
     case "child_database":
-      content = block.child_database?.title ? extractPlainText(block.child_database.title) : "";
+      // Child databases don't have accessible title in block format  
+      content = "Child Database";
       break;
     default:
       content = "";
