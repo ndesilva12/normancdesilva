@@ -827,7 +827,7 @@ function NotesContent() {
                 <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>Notes</h1>
               </div>
               <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginTop: "4px" }}>
-                Your Notion notes
+                Your Notion notes • <a href="/api/workspace" target="_blank" style={{ color: "var(--accent)", textDecoration: "none", fontSize: "12px" }}>Workspace features coming soon</a>
               </p>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
