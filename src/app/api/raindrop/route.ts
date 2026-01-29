@@ -101,6 +101,26 @@ async function fetchCollections(token: string): Promise<RaindropCollection[]> {
   return data.items || [];
 }
 
+// Add a bookmark to Raindrop.io
+async function addBookmark(token: string, data: any): Promise<any> {
+  const response = await fetch("https://api.raindrop.io/rest/v1/raindrop", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to add bookmark: ${response.status} - ${error}`);
+  }
+
+  const result = await response.json();
+  return result.item;
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const collectionId = parseInt(searchParams.get("collection") || "0", 10);
@@ -160,6 +180,55 @@ export async function GET(request: NextRequest) {
     console.error("Raindrop API error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to fetch from Raindrop.io" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const token = await getRaindropToken();
+  if (!token) {
+    return NextResponse.json(
+      {
+        error: "Not connected to Raindrop.io. Please connect your account or add RAINDROP_TOKEN to environment variables.",
+        needsAuth: true
+      },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+    const { action, url, title, excerpt, tags, collectionId, important } = body;
+
+    if (action === "add") {
+      if (!url) {
+        return NextResponse.json({ error: "URL is required" }, { status: 400 });
+      }
+
+      const bookmark = await addBookmark(token, {
+        link: url,
+        title: title || url,
+        excerpt: excerpt || "",
+        tags: tags || ["added-by-jimmy"],
+        collection: {
+          $id: collectionId || 0, // 0 = Unsorted
+        },
+        important: important || false,
+      });
+
+      return NextResponse.json({
+        success: true,
+        bookmark,
+        message: `Successfully added "${bookmark.title}" to your reading list`
+      });
+    }
+
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  } catch (error) {
+    console.error("Raindrop POST error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to add to Raindrop.io" },
       { status: 500 }
     );
   }
