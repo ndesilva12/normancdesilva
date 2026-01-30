@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
+import { OpenSourceButton } from "@/components/OpenSourceButton";
 
 interface WorkspaceItem {
   id: string;
@@ -234,6 +235,7 @@ export default function NotionBrowser() {
                 )}
               </div>
             </div>
+            <OpenSourceButton href="https://notion.so" label="Open Notion" />
           </motion.div>
 
           {/* Search */}
