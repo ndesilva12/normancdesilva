@@ -160,6 +160,30 @@ export default function NotionBrowser() {
           {/* Breadcrumb and Title */}
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Link
+                href="/"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid var(--glass-border)",
+                  color: "var(--foreground)",
+                  textDecoration: "none",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                }}
+              >
+                <ArrowLeft style={{ width: "18px", height: "18px" }} />
+                Back to Dashboard
+              </Link>
               {currentView === "workspace" ? (
                 <Folder style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
               ) : (
@@ -396,8 +420,8 @@ export default function NotionBrowser() {
                             if (item.type === "database") {
                               fetchDatabasePages(item.id, item.title);
                             } else {
-                              // TODO: Fetch page content in-app when API is ready
-                              window.open(item.url, "_blank", "noopener noreferrer");
+                              // Placeholder for in-app page content view
+                              alert("In-app viewing and editing of pages will be available in a future update.");
                             }
                           }}
                           style={{
@@ -430,16 +454,7 @@ export default function NotionBrowser() {
                       <span style={{ fontSize: "13px", color: "var(--foreground-muted)", width: "120px", textAlign: "right" }}>
                         {formatDate(item.lastEditedTime)}
                       </span>
-                      <ExternalLink
-                        style={{
-                          width: "16px",
-                          height: "16px",
-                          color: "var(--foreground-muted)",
-                          cursor: "pointer",
-                          marginLeft: "16px",
-                        }}
-                        onClick={() => window.open(item.url, "_blank", "noopener noreferrer")}
-                      />
+                      {/* External link button removed to prioritize in-app navigation */}
                     </motion.div>
                   ))}
                 </div>
