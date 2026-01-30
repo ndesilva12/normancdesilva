@@ -342,20 +342,33 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
   const [isMobile, setIsMobile] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Sources hidden state (persisted to localStorage, default to collapsed)
+  // Sources hidden state (respects layout setting for "Always Show Sources")
   const [sourcesHidden, setSourcesHidden] = useState(() => {
+    // If "Always Show Sources" is enabled, sources should not be hidden
+    if (layout.searchSourceMode === "alwaysShowing") {
+      return false;
+    }
+    // Otherwise check localStorage
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("sources-hidden");
-      // Default to collapsed (true) unless explicitly set to "false"
       return saved !== "false";
     }
     return true;
   });
 
-  // Persist sources hidden state
+  // Sync sources visibility with layout setting
   useEffect(() => {
-    localStorage.setItem("sources-hidden", String(sourcesHidden));
-  }, [sourcesHidden]);
+    if (layout.searchSourceMode === "alwaysShowing") {
+      setSourcesHidden(false);
+    }
+  }, [layout.searchSourceMode]);
+
+  // Persist sources hidden state (only when not in "Always Show" mode)
+  useEffect(() => {
+    if (layout.searchSourceMode !== "alwaysShowing") {
+      localStorage.setItem("sources-hidden", String(sourcesHidden));
+    }
+  }, [sourcesHidden, layout.searchSourceMode]);
 
   // Tool-specific input values
   const [toolInputs, setToolInputs] = useState<Record<string, string>>({});
@@ -485,7 +498,10 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
     setUploadedImage(null); // Clear uploaded image
     setToolResult(null); // Clear results
     setDropdownOpen(false);
-    setSourcesHidden(true); // Auto-hide sources when selecting a new source
+    // Only auto-hide sources if "Always Show Sources" is disabled
+    if (layout.searchSourceMode !== "alwaysShowing") {
+      setSourcesHidden(true);
+    }
   };
 
   // Highlighted sources (no longer used since meta sources were removed)
