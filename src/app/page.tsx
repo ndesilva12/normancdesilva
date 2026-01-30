@@ -133,14 +133,16 @@ export default function Home() {
   return (
     <div style={{ minHeight: "100vh", padding: isMobile ? "12px" : "24px" }}>
       <Header />
-      <RemindersBanner />
+      
+      <div style={{ maxWidth: isMobile ? "100%" : "1400px", margin: "0 auto", paddingTop: "64px" }}>
+        <RemindersBanner />
 
-      {isMobile && <MobileDateTimeBanner />}
+        {isMobile && <MobileDateTimeBanner />}
 
-      {/* Search Bar */}
-      <div style={{ marginBottom: "24px" }}>
-        <MultiSourceSearch />
-      </div>
+        {/* Search Bar */}
+        <div style={{ marginBottom: "24px" }}>
+          <MultiSourceSearch />
+        </div>
 
       {/* Widget Navigation Bar - Permanent, Icons Link to Tool Pages */}
       <div
@@ -251,39 +253,14 @@ export default function Home() {
               style={{
                 borderRadius: "12px",
                 overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
               }}
             >
-              {/* Widget Header */}
-              <div
-                style={{
-                  padding: "16px",
-                  borderBottom: "1px solid var(--glass-border)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  {(() => {
-                    const Icon = widget.icon;
-                    return <Icon style={{ width: "18px", height: "18px", color: "var(--accent)" }} />;
-                  })()}
-                  <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)" }}>
-                    {widget.title}
-                  </h3>
-                </div>
-              </div>
-
-              {/* Widget Content */}
-              <div style={{ flex: 1, overflow: "auto" }}>
-                {renderWidgetContent(widget.id)}
-              </div>
+              {renderWidgetContent(widget.id)}
             </div>
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -8,17 +8,31 @@ import {
   Rss,
   Loader2,
   ExternalLink,
-  Folder,
   RefreshCw,
-  Settings,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
-import { OpenSourceButton } from "@/components/OpenSourceButton";
+
+interface RSSArticle {
+  title: string;
+  link: string;
+  pubDate: string;
+  description?: string;
+  source: string;
+}
+
+const RSS_FEEDS = [
+  { name: "TechCrunch", url: "https://techcrunch.com/feed/" },
+  { name: "Hacker News", url: "https://hnrss.org/frontpage" },
+  { name: "The Verge", url: "https://www.theverge.com/rss/index.xml" },
+  { name: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/index" },
+];
 
 export default function InoreaderPage() {
+  const [articles, setArticles] = useState<RSSArticle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -26,6 +40,42 @@ export default function InoreaderPage() {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  const fetchArticles = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/rss-feeds");
+      if (!response.ok) throw new Error("Failed to fetch RSS feeds");
+      const data = await response.json();
+      setArticles(data.articles || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load RSS feeds");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchArticles();
+  }, [fetchArticles]);
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+      if (diffHours < 1) {
+        const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+        return `${diffMinutes}m ago`;
+      }
+      if (diffHours < 24) return `${diffHours}h ago`;
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    } catch {
+      return "";
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
@@ -61,86 +111,114 @@ export default function InoreaderPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                 <Rss style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
                 <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>
-                  RSS Reader
+                  RSS Feeds
                 </h1>
               </div>
               <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-                Read and organize your RSS feeds from Inoreader
+                Latest articles from your RSS feeds
               </p>
             </div>
-            <OpenSourceButton href="https://www.inoreader.com" label="Open Inoreader" />
+            <button
+              onClick={fetchArticles}
+              disabled={loading}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "10px 18px",
+                borderRadius: "8px",
+                border: "1px solid var(--glass-border)",
+                backgroundColor: "transparent",
+                color: "var(--foreground-muted)",
+                fontSize: "14px",
+                fontWeight: 500,
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.5 : 1,
+              }}
+            >
+              <RefreshCw style={{ width: "16px", height: "16px", animation: loading ? "spin 1s linear infinite" : "none" }} />
+              Refresh
+            </button>
           </motion.div>
 
-          {/* Setup Required Message */}
+          {/* Content */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="glass"
-            style={{
-              borderRadius: "12px",
-              padding: isMobile ? "40px 20px" : "60px 40px",
-              textAlign: "center",
-            }}
+            style={{ borderRadius: "12px", overflow: "hidden" }}
           >
-            <Rss style={{ width: "64px", height: "64px", color: "var(--accent)", margin: "0 auto 24px", opacity: 0.7 }} />
-            
-            <h2 style={{ fontSize: "20px", fontWeight: 600, color: "var(--foreground)", marginBottom: "12px" }}>
-              Inoreader Integration Coming Soon
-            </h2>
-            
-            <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginBottom: "24px", maxWidth: "500px", margin: "0 auto 24px" }}>
-              Connect your Inoreader account to read and organize your RSS feeds directly from the dashboard.
-            </p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "400px", margin: "0 auto" }}>
-              <div
-                style={{
-                  padding: "16px",
-                  backgroundColor: "rgba(255,255,255,0.03)",
-                  borderRadius: "8px",
-                  border: "1px solid var(--glass-border)",
-                }}
-              >
-                <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
-                  Features (When Enabled):
-                </h3>
-                <ul style={{ fontSize: "13px", color: "var(--foreground-muted)", textAlign: "left", lineHeight: "1.8" }}>
-                  <li>Read articles from your RSS subscriptions</li>
-                  <li>Organize feeds into folders and tags</li>
-                  <li>Mark articles as read/unread</li>
-                  <li>Star important articles</li>
-                  <li>Full-text search across all feeds</li>
-                  <li>Sync with your Inoreader account</li>
-                </ul>
+            {loading ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: "60px" }}>
+                <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
               </div>
-
-              <a
-                href="https://www.inoreader.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  padding: "12px 24px",
-                  backgroundColor: "var(--accent)",
-                  color: "var(--background)",
-                  borderRadius: "8px",
-                  textDecoration: "none",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                }}
-              >
-                Visit Inoreader
-                <ExternalLink style={{ width: "16px", height: "16px" }} />
-              </a>
-
-              <p style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                Inoreader API authentication will be configured by your admin
-              </p>
-            </div>
+            ) : error ? (
+              <div style={{ padding: "60px 20px", textAlign: "center" }}>
+                <p style={{ color: "#f87171", fontSize: "16px", marginBottom: "16px" }}>{error}</p>
+                <button
+                  onClick={fetchArticles}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    backgroundColor: "var(--accent)",
+                    color: "var(--background)",
+                    border: "none",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            ) : articles.length === 0 ? (
+              <div style={{ padding: "60px 20px", textAlign: "center", color: "var(--foreground-muted)" }}>
+                <Rss style={{ width: "48px", height: "48px", margin: "0 auto 16px", opacity: 0.5 }} />
+                <p style={{ fontSize: "18px", fontWeight: 500, marginBottom: "8px" }}>No articles found</p>
+                <p style={{ fontSize: "14px" }}>Check back later for updates</p>
+              </div>
+            ) : (
+              <div>
+                {articles.map((article, index) => (
+                  <a
+                    key={index}
+                    href={article.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "block",
+                      padding: isMobile ? "16px" : "20px",
+                      borderBottom: index < articles.length - 1 ? "1px solid var(--glass-border)" : "none",
+                      textDecoration: "none",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "8px" }}>
+                      <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", flex: 1, lineHeight: "1.4" }}>
+                        {article.title}
+                      </h3>
+                      <ExternalLink style={{ width: "16px", height: "16px", color: "var(--foreground-muted)", flexShrink: 0, marginTop: "2px" }} />
+                    </div>
+                    {article.description && (
+                      <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginBottom: "12px", lineHeight: "1.5" }}>
+                        {article.description.substring(0, 200)}{article.description.length > 200 ? "..." : ""}
+                      </p>
+                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <span style={{ fontSize: "13px", color: "var(--accent)", fontWeight: 500 }}>
+                        {article.source}
+                      </span>
+                      <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>•</span>
+                      <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
+                        {formatDate(article.pubDate)}
+                      </span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
           </motion.div>
         </div>
       </main>
