@@ -97,9 +97,11 @@ export default function NotionBrowser() {
       const data = await response.json();
       if (response.ok) {
         setItems(data.items || []);
+      } else {
+        throw new Error(data.error || "Failed to search items");
       }
     } catch (err) {
-      console.error("Search error:", err);
+      setError(err instanceof Error ? err.message : "Failed to search");
     } finally {
       setIsSearching(false);
     }
@@ -110,7 +112,6 @@ export default function NotionBrowser() {
     setCurrentDatabaseId(null);
     setCurrentDatabaseTitle("");
     setBreadcrumbs([]);
-    setSearchQuery("");
     fetchWorkspaceItems();
   }, [fetchWorkspaceItems]);
 
@@ -119,17 +120,20 @@ export default function NotionBrowser() {
   }, [fetchWorkspaceItems]);
 
   useEffect(() => {
-    const debounce = setTimeout(() => {
-      if (currentView === "workspace") {
-        if (searchQuery) {
-          searchItems(searchQuery);
-        } else {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchQuery) {
+        searchItems(searchQuery);
+      } else {
+        if (currentView === "workspace") {
           fetchWorkspaceItems();
+        } else if (currentDatabaseId) {
+          fetchDatabasePages(currentDatabaseId, currentDatabaseTitle);
         }
       }
-    }, 300);
-    return () => clearTimeout(debounce);
-  }, [searchQuery, searchItems, fetchWorkspaceItems, currentView]);
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, currentView, currentDatabaseId, currentDatabaseTitle, fetchWorkspaceItems, fetchDatabasePages, searchItems]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -147,156 +151,116 @@ export default function NotionBrowser() {
     }
   };
 
-  const renderIcon = (item: WorkspaceItem) => {
-    if (item.icon) {
-      return <span style={{ fontSize: "20px" }}>{item.icon}</span>;
-    }
-    if (item.type === "database") {
-      return <Database style={{ width: "20px", height: "20px", color: "var(--accent)" }} />;
-    }
-    return <FileText style={{ width: "20px", height: "20px", color: "var(--foreground-muted)" }} />;
-  };
-
-  const handleItemClick = (item: WorkspaceItem) => {
-    if (item.type === "database" && currentView === "workspace") {
-      fetchDatabasePages(item.id, item.title);
-    } else {
-      // For pages, open directly in Notion
-      window.open(item.url, "_blank");
-    }
-  };
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+    <div style={{ minHeight: "100vh", padding: "24px" }}>
       <Header />
+      <div style={{ maxWidth: "1200px", margin: "0 auto", paddingTop: "64px" }}>
+        <RemindersBanner />
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingTop: "24px" }}>
+          {/* Breadcrumb and Title */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {currentView === "workspace" ? (
+                <Folder style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
+              ) : (
+                <FolderOpen style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
+              )}
+              <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>
+                {currentView === "workspace" ? "Notion Workspace" : currentDatabaseTitle}
+              </h1>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+              {breadcrumbs.map((crumb, index) => (
+                <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <button
+                    onClick={crumb.action}
+                    style={{
+                      fontSize: "14px",
+                      color: index === breadcrumbs.length - 1 ? "var(--foreground-muted)" : "var(--accent)",
+                      background: "none",
+                      border: "none",
+                      cursor: index === breadcrumbs.length - 1 ? "default" : "pointer",
+                      textDecoration: index === breadcrumbs.length - 1 ? "none" : "underline",
+                    }}
+                  >
+                    {crumb.title}
+                  </button>
+                  {index < breadcrumbs.length - 1 && (
+                    <ChevronRight style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
 
-      <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px" }}>
-          <RemindersBanner />
-
-          {/* Page Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}
-          >
-            <Link
-              href="/tools/notes"
+          {/* Search Bar */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
+                flex: 1,
                 backgroundColor: "rgba(255, 255, 255, 0.05)",
-                color: "var(--foreground-muted)",
-                textDecoration: "none",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "12px",
+                padding: "0 16px",
+                height: "48px",
               }}
             >
-              <ArrowLeft style={{ width: "20px", height: "20px" }} />
-            </Link>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                {currentView === "workspace" ? (
-                  <Folder style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
-                ) : (
-                  <FolderOpen style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
-                )}
-                <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>
-                  {currentView === "workspace" ? "Notion Workspace" : currentDatabaseTitle}
-                </h1>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-                {breadcrumbs.map((crumb, index) => (
-                  <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <button
-                      onClick={crumb.action}
-                      style={{
-                        fontSize: "14px",
-                        color: index === breadcrumbs.length - 1 ? "var(--foreground-muted)" : "var(--accent)",
-                        background: "none",
-                        border: "none",
-                        cursor: index === breadcrumbs.length - 1 ? "default" : "pointer",
-                        textDecoration: index === breadcrumbs.length - 1 ? "none" : "underline",
-                      }}
-                    >
-                      {crumb.title}
-                    </button>
-                    {index < breadcrumbs.length - 1 && (
-                      <ChevronRight style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-                    )}
-                  </div>
-                ))}
-                {breadcrumbs.length === 0 && (
-                  <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-                    Browse your entire Notion workspace • Databases and top-level pages
-                  </p>
-                )}
-              </div>
-            </div>
-            <OpenSourceButton href="https://notion.so" label="Open Notion" />
-          </motion.div>
-
-          {/* Search */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass"
-            style={{
-              padding: "16px",
-              borderRadius: "12px",
-              marginBottom: "20px",
-            }}
-          >
-            <div style={{ position: "relative" }}>
-              <Search style={{
-                position: "absolute",
-                left: "12px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: "18px",
-                height: "18px",
-                color: "var(--foreground-muted)",
-              }} />
+              {isSearching ? (
+                <Loader2 style={{ width: "20px", height: "20px", color: "var(--foreground-muted)", animation: "spin 1s linear infinite" }} />
+              ) : (
+                <Search style={{ width: "20px", height: "20px", color: "var(--foreground-muted)" }} />
+              )}
               <input
                 type="text"
-                placeholder={currentView === "workspace" ? "Search workspace..." : "Use workspace search above to find across all content"}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                disabled={currentView !== "workspace"}
+                placeholder="Search Notion..."
                 style={{
-                  width: "100%",
-                  padding: "12px 16px 12px 44px",
-                  backgroundColor: "rgba(255,255,255,0.05)",
-                  border: "1px solid var(--glass-border)",
-                  borderRadius: "8px",
+                  flex: 1,
+                  border: "none",
+                  background: "transparent",
                   color: "var(--foreground)",
-                  fontSize: "16px",
-                  opacity: currentView !== "workspace" ? 0.5 : 1,
+                  fontSize: "15px",
+                  padding: "0 12px",
+                  height: "100%",
+                  outline: "none",
                 }}
               />
-              {isSearching && (
-                <Loader2 style={{
-                  position: "absolute",
-                  right: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  width: "18px",
-                  height: "18px",
-                  color: "var(--accent)",
-                  animation: "spin 1s linear infinite",
-                }} />
-              )}
             </div>
-          </motion.div>
+            {currentView !== "workspace" && (
+              <button
+                onClick={backToWorkspace}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "0 16px",
+                  height: "48px",
+                  borderRadius: "12px",
+                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid var(--glass-border)",
+                  color: "var(--foreground)",
+                  fontSize: "15px",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                }}
+              >
+                <ArrowLeft style={{ width: "18px", height: "18px" }} />
+                Back
+              </button>
+            )}
+            <OpenSourceButton />
+          </div>
 
-          {/* Content */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
             className="glass"
             style={{
               borderRadius: "12px",
@@ -327,6 +291,13 @@ export default function NotionBrowser() {
                     border: "none",
                     fontSize: "14px",
                     cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "var(--accent-hover)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "var(--accent)";
                   }}
                 >
                   Retry
@@ -358,94 +329,98 @@ export default function NotionBrowser() {
                 <div style={{
                   padding: "16px 20px",
                   borderBottom: "1px solid var(--glass-border)",
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto auto",
+                  display: "flex",
                   alignItems: "center",
-                  gap: "16px",
-                  backgroundColor: "rgba(255,255,255,0.02)",
+                  justifyContent: "space-between",
+                  color: "var(--foreground-muted)",
+                  fontSize: "13px",
+                  fontWeight: 500
                 }}>
-                  <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground-muted)" }}>
-                    {currentView === "workspace" ? "NAME" : "PAGE"}
-                  </span>
-                  <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground-muted)" }}>
-                    LAST EDITED
-                  </span>
-                  <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground-muted)" }}>
-                    TYPE
-                  </span>
+                  <span style={{ flex: 1 }}>Name</span>
+                  <span style={{ width: "120px", textAlign: "right" }}>Last Edited</span>
+                  <span style={{ width: "60px", textAlign: "right" }}>Actions</span>
                 </div>
-
                 {/* Items List */}
-                {items.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleItemClick(item)}
-                    style={{
-                      width: "100%",
-                      display: "grid",
-                      gridTemplateColumns: "1fr auto auto",
-                      alignItems: "center",
-                      gap: "16px",
-                      padding: "16px 20px",
-                      backgroundColor: "transparent",
-                      border: "none",
-                      borderBottom: "1px solid var(--glass-border)",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "background 0.15s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    {/* Name column */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-                      {renderIcon(item)}
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{
-                          fontSize: "15px",
-                          fontWeight: 500,
-                          color: "var(--foreground)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}>
-                          {item.title || "Untitled"}
-                        </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "8px 0" }}>
+                  {items.map((item) => (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "16px 20px",
+                        borderRadius: "8px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid var(--glass-border)",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, overflow: "hidden" }}>
+                        {item.type === "database" ? (
+                          <Database style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+                        ) : (
+                          <FileText style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+                        )}
+                        <button
+                          onClick={() => {
+                            if (item.type === "database") {
+                              fetchDatabasePages(item.id, item.title);
+                            } else {
+                              // TODO: Fetch page content in-app when API is ready
+                              window.open(item.url, "_blank", "noopener noreferrer");
+                            }
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            color: "var(--foreground)",
+                            textDecoration: "none",
+                            flex: 1,
+                            overflow: "hidden",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            textAlign: "left",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "15px",
+                              fontWeight: 500,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {item.title || "Untitled"}
+                          </span>
+                        </button>
                       </div>
-                      {item.type === "database" && currentView === "workspace" && (
-                        <ChevronRight style={{ width: "16px", height: "16px", color: "var(--foreground-muted)", opacity: 0.7 }} />
-                      )}
-                      {item.type === "page" && (
-                        <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)", opacity: 0.5 }} />
-                      )}
-                    </div>
-
-                    {/* Last edited column */}
-                    <div style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
-                      {formatDate(item.lastEditedTime)}
-                    </div>
-
-                    {/* Type column */}
-                    <div style={{ 
-                      fontSize: "12px", 
-                      fontWeight: 500,
-                      color: item.type === "database" ? "var(--accent)" : "var(--foreground-muted)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}>
-                      {item.type === "database" ? "Database" : "Page"}
-                    </div>
-                  </button>
-                ))}
+                      <span style={{ fontSize: "13px", color: "var(--foreground-muted)", width: "120px", textAlign: "right" }}>
+                        {formatDate(item.lastEditedTime)}
+                      </span>
+                      <ExternalLink
+                        style={{
+                          width: "16px",
+                          height: "16px",
+                          color: "var(--foreground-muted)",
+                          cursor: "pointer",
+                          marginLeft: "16px",
+                        }}
+                        onClick={() => window.open(item.url, "_blank", "noopener noreferrer")}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             )}
           </motion.div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

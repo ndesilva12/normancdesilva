@@ -12,6 +12,7 @@ import {
   searchNotionPages,
   NOTION_DATABASE_ID,
 } from "@/lib/notion";
+import { getRootPageChildren } from "@/lib/notion-workspace";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -64,8 +65,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ page });
     }
 
-    // Get all pages from database
-    const pages = await getNotionPages(limit);
+    // Get list of items from root page
+    const pages = await getRootPageChildren();
     return NextResponse.json({ pages });
   } catch (error) {
     console.error("Notion API error:", error);
