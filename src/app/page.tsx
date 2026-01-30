@@ -99,6 +99,14 @@ export default function Home() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  useEffect(() => {
+    // Check Google auth status
+    fetch("/api/auth/google/status")
+      .then(res => res.json())
+      .then(data => setIsGoogleConnected(data.authenticated))
+      .catch(() => setIsGoogleConnected(false));
+  }, []);
+
   const handleConnectGoogle = () => {
     window.location.href = "/api/auth/google";
   };
