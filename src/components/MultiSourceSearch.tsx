@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent, useCallback, useRef, useMemo } from "react";
+import { useLayout } from "@/contexts/LayoutContext";
 import {
   Search, ExternalLink, X, Loader2, ChevronDown, Upload,
   BookOpen, FileSearch, Link2, User, Target, Sparkles, LayoutGrid, Grid3X3

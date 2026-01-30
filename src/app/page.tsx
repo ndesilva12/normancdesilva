@@ -44,8 +44,7 @@ const WIDGET_META: Record<string, { title: string; icon: React.ComponentType<any
   files: { title: "Files", icon: FolderOpen, href: "/tools/files" },
   notes: { title: "Notes", icon: StickyNote, href: "/tools/notes" },
   stocks: { title: "Market", icon: BarChart3, href: "/tools/market" },
-  raindrop: { title: "Reading List", icon: BookOpen, href: "/tools/raindrop" },
-  inoreader: { title: "RSS Reader", icon: Rss, href: "/tools/inoreader" },
+  reading: { title: "Reading", icon: BookOpen, href: "/tools/reading" },
 };
 
 // Mobile Date/Time Banner

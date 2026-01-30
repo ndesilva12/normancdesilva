@@ -47,6 +47,7 @@ export default function RaindropPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -56,9 +57,27 @@ export default function RaindropPage() {
   }, []);
 
   useEffect(() => {
-    fetchCollections();
-    fetchItems();
+    checkConnectionStatus();
   }, []);
+
+  const checkConnectionStatus = async () => {
+    try {
+      const response = await fetch("/api/auth/raindrop/status");
+      const data = await response.json();
+      setIsConnected(data.authenticated);
+      if (data.authenticated) {
+        fetchCollections();
+        fetchItems();
+      }
+    } catch (err) {
+      setError("Failed to check Raindrop connection");
+      setLoading(false);
+    }
+  };
+
+  const handleConnectRaindrop = () => {
+    window.location.href = "/api/auth/raindrop";
+  };
 
   const fetchCollections = async () => {
     try {
@@ -103,148 +122,167 @@ export default function RaindropPage() {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    if (diffHours < 1) {
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      return `${diffMinutes}m ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours}h ago`;
+    } else {
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
+  };
+
+  const getDomain = (url: string) => {
+    try {
+      return new URL(url).hostname.replace(/^www\./, "");
+    } catch {
+      return url;
+    }
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+    <div style={{ minHeight: "100vh", padding: "24px" }}>
       <Header />
+      <div style={{ maxWidth: "1200px", margin: "0 auto", paddingTop: "64px" }}>
+        <RemindersBanner />
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingTop: "24px" }}>
+          {/* Title */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <BookOpen style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
+            <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>
+              Reading List
+            </h1>
+          </div>
 
-      <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto", padding: isMobile ? "16px" : "20px" }}>
-          <RemindersBanner />
-
-          {/* Page Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}
-          >
-            <Link
-              href="/"
+          {/* Action Bar */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: isMobile ? "wrap" : "nowrap" }}>
+            <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
                 backgroundColor: "rgba(255, 255, 255, 0.05)",
-                color: "var(--foreground-muted)",
-                textDecoration: "none",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "12px",
+                padding: "0 16px",
+                height: "48px",
+                flex: 1,
+                minWidth: isMobile ? "100%" : "300px",
+                marginBottom: isMobile ? "12px" : "0",
               }}
             >
-              <ArrowLeft style={{ width: "20px", height: "20px" }} />
-            </Link>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-                <BookOpen style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
-                <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>
-                  Reading List
-                </h1>
-              </div>
-              <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
-                Organize and read your saved articles from Raindrop.io
-              </p>
-            </div>
-            <OpenSourceButton href="https://raindrop.io" label="Open Raindrop.io" />
-          </motion.div>
-
-          {/* Layout */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "280px 1fr",
-              gap: "20px",
-            }}
-          >
-            {/* Sidebar - Collections */}
-            {!isMobile && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-                className="glass"
+              {/* Search functionality to be implemented */}
+              <input
+                type="text"
+                placeholder="Search reading list..."
                 style={{
-                  borderRadius: "12px",
-                  padding: "16px",
-                  height: "fit-content",
-                  maxHeight: "calc(100vh - 200px)",
-                  overflow: "auto",
+                  flex: 1,
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--foreground)",
+                  fontSize: "15px",
+                  padding: "0 12px",
+                  height: "100%",
+                  outline: "none",
                 }}
-              >
-                <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "12px" }}>
-                  Collections
-                </h3>
+              />
+            </div>
 
-                {/* All Items */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              {selectedCollection ? (
                 <button
                   onClick={handleShowAll}
                   style={{
-                    width: "100%",
                     display: "flex",
                     alignItems: "center",
-                    gap: "10px",
-                    padding: "10px 12px",
-                    backgroundColor: selectedCollection === null ? "rgba(255,255,255,0.1)" : "transparent",
-                    border: "none",
-                    borderRadius: "8px",
+                    gap: "8px",
+                    padding: "0 16px",
+                    height: "48px",
+                    borderRadius: "12px",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid var(--glass-border)",
+                    color: "var(--foreground)",
+                    fontSize: "15px",
                     cursor: "pointer",
-                    textAlign: "left",
-                    marginBottom: "8px",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
                   }}
                 >
-                  <Globe style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
-                  <span style={{ fontSize: "14px", color: "var(--foreground)" }}>All Items</span>
+                  <Globe style={{ width: "18px", height: "18px" }} />
+                  Show All
                 </button>
+              ) : null}
+              <button
+                onClick={() => fetchItems(selectedCollection || undefined)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "0 16px",
+                  height: "48px",
+                  borderRadius: "12px",
+                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid var(--glass-border)",
+                  color: "var(--foreground)",
+                  fontSize: "15px",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                }}
+              >
+                <RefreshCw style={{ width: "18px", height: "18px" }} />
+                Refresh
+              </button>
+              <OpenSourceButton />
+            </div>
+          </div>
 
-                {/* Collection List */}
-                {collections.map((collection) => (
-                  <button
-                    key={collection._id}
-                    onClick={() => handleCollectionClick(collection._id)}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "10px",
-                      padding: "10px 12px",
-                      backgroundColor: selectedCollection === collection._id ? "rgba(255,255,255,0.1)" : "transparent",
-                      border: "none",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                      <Folder style={{ width: "16px", height: "16px", color: "var(--foreground-muted)", flexShrink: 0 }} />
-                      <span style={{ fontSize: "14px", color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {collection.title}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: "12px", color: "var(--foreground-muted)", flexShrink: 0 }}>
-                      {collection.count}
-                    </span>
-                  </button>
-                ))}
-              </motion.div>
-            )}
-
-            {/* Main Content - Items List */}
+          {!isConnected ? (
+            <div style={{ padding: "40px", textAlign: "center" }}>
+              <BookOpen style={{ width: "48px", height: "48px", color: "var(--foreground-muted)", margin: "0 auto 16px" }} />
+              <p style={{ fontSize: "16px", color: "var(--foreground-muted)", marginBottom: "16px" }}>
+                Raindrop.io is not connected. Connect your account to view your reading list.
+              </p>
+              <button
+                onClick={handleConnectRaindrop}
+                style={{
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  backgroundColor: "var(--accent)",
+                  color: "var(--background)",
+                  border: "none",
+                  fontSize: "15px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = "0.9";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
+              >
+                Connect Raindrop.io
+              </button>
+            </div>
+          ) : (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
               className="glass"
               style={{
                 borderRadius: "12px",
+                minHeight: "600px",
                 overflow: "hidden",
               }}
             >
@@ -253,7 +291,7 @@ export default function RaindropPage() {
                   <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
                 </div>
               ) : error ? (
-                <div style={{ padding: "60px 20px", textAlign: "center" }}>
+                <div style={{ padding: "40px", textAlign: "center" }}>
                   <p style={{ color: "#f87171", fontSize: "16px", marginBottom: "16px" }}>{error}</p>
                   <button
                     onClick={() => fetchItems(selectedCollection || undefined)}
@@ -265,119 +303,208 @@ export default function RaindropPage() {
                       border: "none",
                       fontSize: "14px",
                       cursor: "pointer",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = "0.9";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = "1";
                     }}
                   >
                     Retry
                   </button>
                 </div>
               ) : items.length === 0 ? (
-                <div style={{ padding: "60px 20px", textAlign: "center", color: "var(--foreground-muted)" }}>
-                  <BookOpen style={{ width: "48px", height: "48px", margin: "0 auto 16px", opacity: 0.5 }} />
-                  <p style={{ fontSize: "18px", fontWeight: 500, marginBottom: "8px" }}>No saved articles</p>
-                  <p style={{ fontSize: "14px" }}>Your reading list is empty</p>
+                <div style={{ padding: "40px", textAlign: "center" }}>
+                  <p style={{ color: "var(--foreground-muted)", fontSize: "16px" }}>
+                    No items in your reading list
+                  </p>
                 </div>
               ) : (
-                <div style={{ maxHeight: "calc(100vh - 200px)", overflow: "auto" }}>
-                  {items.map((item, index) => (
+                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "16px" }}>
+                  {/* Sidebar */}
+                  <div
+                    style={{
+                      width: isMobile ? "100%" : "240px",
+                      borderRight: isMobile ? "none" : "1px solid var(--glass-border)",
+                      borderBottom: isMobile ? "1px solid var(--glass-border)" : "none",
+                      padding: "16px 0",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
                     <div
-                      key={item._id}
                       style={{
-                        padding: isMobile ? "16px" : "20px",
-                        borderBottom: index < items.length - 1 ? "1px solid var(--glass-border)" : "none",
+                        padding: "8px 16px",
+                        margin: "0 8px",
+                        borderRadius: "8px",
+                        backgroundColor: selectedCollection === null ? "rgba(255, 255, 255, 0.1)" : "transparent",
+                        fontSize: "15px",
+                        fontWeight: selectedCollection === null ? 600 : 400,
+                        color: selectedCollection === null ? "var(--foreground)" : "var(--foreground-muted)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                      onClick={handleShowAll}
+                    >
+                      <Globe style={{ width: "18px", height: "18px", color: selectedCollection === null ? "var(--accent)" : "var(--foreground-muted)" }} />
+                      All Items
+                    </div>
+                    {collections.map((collection) => (
+                      <div
+                        key={collection._id}
+                        style={{
+                          padding: "8px 16px",
+                          margin: "0 8px",
+                          borderRadius: "8px",
+                          backgroundColor: selectedCollection === collection._id ? "rgba(255, 255, 255, 0.1)" : "transparent",
+                          fontSize: "15px",
+                          fontWeight: selectedCollection === collection._id ? 600 : 400,
+                          color: selectedCollection === collection._id ? "var(--foreground)" : "var(--foreground-muted)",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                        onClick={() => handleCollectionClick(collection._id)}
+                      >
+                        <Folder style={{ width: "18px", height: "18px", color: selectedCollection === collection._id ? "var(--accent)" : "var(--foreground-muted)" }} />
+                        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{collection.title}</span>
+                        <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>{collection.count}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Main Content */}
+                  <div style={{ flex: 1, padding: "16px 0", display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {/* Header Row */}
+                    <div
+                      style={{
+                        padding: "0 16px",
+                        borderBottom: "1px solid var(--glass-border)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        color: "var(--foreground-muted)",
+                        fontSize: "13px",
+                        fontWeight: 500,
                       }}
                     >
-                      {/* Cover Image (if exists) */}
-                      {item.cover && (
-                        <img
-                          src={item.cover}
-                          alt={item.title}
+                      <span style={{ flex: 1 }}>Title</span>
+                      <span style={{ width: "200px" }}>Source</span>
+                      <span style={{ width: "120px", textAlign: "right" }}>Added</span>
+                      <span style={{ width: "60px", textAlign: "right" }}>Actions</span>
+                    </div>
+
+                    {/* Items List */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "0 8px" }}>
+                      {items.map((item) => (
+                        <motion.div
+                          key={item._id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2 }}
                           style={{
-                            width: "100%",
-                            height: "160px",
-                            objectFit: "cover",
+                            display: "flex",
+                            alignItems: "center",
+                            padding: "16px",
                             borderRadius: "8px",
-                            marginBottom: "12px",
+                            backgroundColor: "rgba(255, 255, 255, 0.05)",
+                            border: "1px solid var(--glass-border)",
+                            justifyContent: "space-between",
                           }}
-                        />
-                      )}
-
-                      {/* Title */}
-                      <a
-                        href={item.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: "8px",
-                          textDecoration: "none",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", flex: 1 }}>
-                          {item.title}
-                        </h3>
-                        <ExternalLink style={{ width: "16px", height: "16px", color: "var(--foreground-muted)", flexShrink: 0 }} />
-                      </a>
-
-                      {/* Excerpt */}
-                      {item.excerpt && (
-                        <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginBottom: "12px", lineHeight: "1.5" }}>
-                          {item.excerpt.substring(0, 200)}{item.excerpt.length > 200 ? "..." : ""}
-                        </p>
-                      )}
-
-                      {/* Meta Info */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
-                          {item.domain}
-                        </span>
-                        <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
-                          •
-                        </span>
-                        <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
-                          {formatDate(item.created)}
-                        </span>
-                        {item.collection && (
-                          <>
-                            <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
-                              •
-                            </span>
-                            <span style={{ fontSize: "13px", color: "var(--accent)" }}>
-                              {item.collection.title}
-                            </span>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Tags */}
-                      {item.tags && item.tags.length > 0 && (
-                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "12px" }}>
-                          {item.tags.map((tag, tagIndex) => (
+                        >
+                          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px", overflow: "hidden" }}>
                             <span
-                              key={tagIndex}
                               style={{
-                                fontSize: "12px",
-                                padding: "4px 10px",
-                                backgroundColor: "rgba(255,255,255,0.05)",
-                                border: "1px solid var(--glass-border)",
-                                borderRadius: "12px",
-                                color: "var(--foreground-muted)",
+                                fontSize: "15px",
+                                fontWeight: 500,
+                                color: "var(--foreground)",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
                               }}
                             >
-                              #{tag}
+                              {item.title}
                             </span>
-                          ))}
-                        </div>
-                      )}
+                            {item.excerpt && (
+                              <span
+                                style={{
+                                  fontSize: "13px",
+                                  color: "var(--foreground-muted)",
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  lineHeight: "1.4",
+                                }}
+                              >
+                                {item.excerpt}
+                              </span>
+                            )}
+                            {item.tags && item.tags.length > 0 && (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+                                {item.tags.slice(0, 3).map((tag) => (
+                                  <span
+                                    key={tag}
+                                    style={{
+                                      fontSize: "12px",
+                                      padding: "2px 6px",
+                                      borderRadius: "4px",
+                                      backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                      color: "var(--foreground-muted)",
+                                    }}
+                                  >
+                                    #{tag}
+                                  </span>
+                                ))}
+                                {item.tags.length > 3 && (
+                                  <span
+                                    style={{
+                                      fontSize: "12px",
+                                      padding: "2px 6px",
+                                      borderRadius: "4px",
+                                      backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                      color: "var(--foreground-muted)",
+                                    }}
+                                  >
+                                    +{item.tags.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <span style={{ fontSize: "13px", color: "var(--foreground-muted)", width: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {item.domain || getDomain(item.link)}
+                          </span>
+                          <span style={{ fontSize: "13px", color: "var(--foreground-muted)", width: "120px", textAlign: "right" }}>
+                            {formatDate(item.created)}
+                          </span>
+                          <ExternalLink
+                            style={{
+                              width: "16px",
+                              height: "16px",
+                              color: "var(--foreground-muted)",
+                              cursor: "pointer",
+                              marginLeft: "16px",
+                            }}
+                            onClick={() => window.open(item.link, "_blank", "noopener noreferrer")}
+                          />
+                        </motion.div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
               )}
             </motion.div>
-          </div>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

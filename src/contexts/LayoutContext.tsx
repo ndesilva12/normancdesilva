@@ -20,6 +20,7 @@ export interface LayoutConfig {
   previewWidgets: WidgetConfig[];
   toolCards: WidgetConfig[];
   version: number;
+  searchSourceMode: "alwaysShowing" | "onlySelection";
 }
 
 // Default widget configurations - Data Widgets (connected services)
@@ -54,6 +55,7 @@ const DEFAULT_LAYOUT: LayoutConfig = {
   previewWidgets: DEFAULT_PREVIEW_WIDGETS,
   toolCards: DEFAULT_TOOL_CARDS,
   version: 1,
+  searchSourceMode: "onlySelection",
 };
 
 interface LayoutContextType {
@@ -69,6 +71,7 @@ interface LayoutContextType {
   resetLayout: () => void;
   getWidgetConfig: (type: "previewWidgets" | "toolCards", id: string) => WidgetConfig | undefined;
   toggleWidgetCollapse: (type: "previewWidgets" | "toolCards", id: string) => void;
+  setSearchSourceMode: (mode: "alwaysShowing" | "onlySelection") => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | null>(null);
@@ -104,6 +107,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
           previewWidgets: mergedPreviewWidgets,
           toolCards: mergedToolCards,
           version: parsed.version || 1,
+          searchSourceMode: parsed.searchSourceMode || "onlySelection",
         });
       } catch {
         setLayout(DEFAULT_LAYOUT);
@@ -226,6 +230,20 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     [isEditMode, pendingLayout, layout, saveLayout]
   );
 
+  const setSearchSourceMode = useCallback(
+    (mode: "alwaysShowing" | "onlySelection") => {
+      const currentLayout = isEditMode && pendingLayout ? pendingLayout : layout;
+      const newLayout = { ...currentLayout, searchSourceMode: mode };
+
+      if (isEditMode) {
+        setPendingLayout(newLayout);
+      } else {
+        saveLayout(newLayout);
+      }
+    },
+    [isEditMode, pendingLayout, layout, saveLayout]
+  );
+
   // Get the active layout (pending if in edit mode, otherwise saved)
   const activeLayout = isEditMode && pendingLayout ? pendingLayout : layout;
 
@@ -244,6 +262,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
         resetLayout,
         getWidgetConfig,
         toggleWidgetCollapse,
+        setSearchSourceMode,
       }}
     >
       {children}

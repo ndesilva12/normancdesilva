@@ -1,12 +1,12 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, RotateCcw, Move, GripVertical, Eye, EyeOff } from "lucide-react";
+import { Check, X, RotateCcw, Move, GripVertical, Eye, EyeOff, Search } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useState } from "react";
 
 export function LayoutEditor() {
-  const { isEditMode, exitEditMode, resetLayout, layout, reorderWidgets, updateWidgetVisibility } = useLayout();
+  const { isEditMode, exitEditMode, resetLayout, layout, reorderWidgets, updateWidgetVisibility, setSearchSourceMode } = useLayout();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
@@ -238,6 +238,35 @@ export function LayoutEditor() {
             <p style={{ fontSize: "12px", color: "var(--foreground-muted)", textAlign: "center", marginTop: "12px" }}>
               Drag to reorder widgets on your dashboard
             </p>
+
+            {/* Search Source Display Mode Setting */}
+            <div style={{ marginTop: "20px", borderTop: "1px solid var(--glass-border)", paddingTop: "16px" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "12px", textAlign: "center" }}>
+                Search Source Display
+              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 14px", borderRadius: "8px", backgroundColor: layout.searchSourceMode === "alwaysShowing" ? "rgba(100, 255, 100, 0.1)" : "rgba(255, 255, 255, 0.05)", border: "1px solid var(--glass-border)", cursor: "pointer" }}
+                  onClick={() => setSearchSourceMode("alwaysShowing")}
+                >
+                  <Search style={{ width: "18px", height: "18px", color: layout.searchSourceMode === "alwaysShowing" ? "var(--accent)" : "var(--foreground-muted)" }} />
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>Always Show All Sources</span>
+                    <p style={{ fontSize: "12px", color: "var(--foreground-muted)", margin: 0 }}>All search sources visible, selection highlighted</p>
+                  </div>
+                  {layout.searchSourceMode === "alwaysShowing" && <Check style={{ width: "16px", height: "16px", color: "var(--accent)" }} />}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 14px", borderRadius: "8px", backgroundColor: layout.searchSourceMode === "onlySelection" ? "rgba(100, 255, 100, 0.1)" : "rgba(255, 255, 255, 0.05)", border: "1px solid var(--glass-border)", cursor: "pointer" }}
+                  onClick={() => setSearchSourceMode("onlySelection")}
+                >
+                  <Search style={{ width: "18px", height: "18px", color: layout.searchSourceMode === "onlySelection" ? "var(--accent)" : "var(--foreground-muted)" }} />
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>Show Only Selected Source</span>
+                    <p style={{ fontSize: "12px", color: "var(--foreground-muted)", margin: 0 }}>Only the selected source is visible</p>
+                  </div>
+                  {layout.searchSourceMode === "onlySelection" && <Check style={{ width: "16px", height: "16px", color: "var(--accent)" }} />}
+                </div>
+              </div>
+            </div>
           </motion.div>
         </>
       )}
