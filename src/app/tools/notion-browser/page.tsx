@@ -229,6 +229,33 @@ export default function NotionBrowser() {
                 }}
               />
             </div>
+            <Link
+              href="/"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "0 16px",
+                height: "48px",
+                borderRadius: "12px",
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid var(--glass-border)",
+                color: "var(--foreground)",
+                fontSize: "15px",
+                cursor: "pointer",
+                textDecoration: "none",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+              }}
+            >
+              <ArrowLeft style={{ width: "18px", height: "18px" }} />
+              Back to Dashboard
+            </Link>
             {currentView !== "workspace" && (
               <button
                 onClick={backToWorkspace}
@@ -254,7 +281,7 @@ export default function NotionBrowser() {
                 }}
               >
                 <ArrowLeft style={{ width: "18px", height: "18px" }} />
-                Back
+                Back to Workspace
               </button>
             )}
             <OpenSourceButton />
@@ -396,7 +423,7 @@ export default function NotionBrowser() {
                               textOverflow: "ellipsis",
                             }}
                           >
-                            {item.title || "Untitled"}
+                            {item.title && item.title !== "Untitled" ? item.title : item.type === "database" ? "Untitled Database" : "Untitled Page"}
                           </span>
                         </button>
                       </div>

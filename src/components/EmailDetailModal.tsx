@@ -100,16 +100,11 @@ export function EmailDetailModal({
       if (account) params.set("account", account);
 
       const response = await fetch(`/api/gmail/${emailId}?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch email");
-      }
       const data = await response.json();
-      setEmail(data.email);
-
-      // Auto-mark as read
-      if (data.email.isUnread) {
-        await performAction("read");
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch email details");
       }
+      setEmail(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load email");
     } finally {
@@ -117,42 +112,46 @@ export function EmailDetailModal({
     }
   };
 
-  const performAction = async (action: string) => {
-    if (!emailId) return;
+  const handleEmailAction = async (action: "archive" | "trash" | "star" | "unstar" | "mark-read" | "mark-unread") => {
+    if (!email || !email.accountEmail) return;
 
     setActionLoading(action);
     try {
-      const response = await fetch(`/api/gmail/${emailId}/actions`, {
+      const response = await fetch(`/api/gmail/${email.id}/actions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, account }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action,
+          account: email.accountEmail,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to ${action}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${action} email`);
       }
 
-      // Update local state
-      if (email) {
-        switch (action) {
-          case "read":
-            setEmail({ ...email, isUnread: false });
-            break;
-          case "unread":
-            setEmail({ ...email, isUnread: true });
-            break;
-          case "star":
-            setEmail({ ...email, isStarred: true });
-            break;
-          case "unstar":
-            setEmail({ ...email, isStarred: false });
-            break;
-          case "archive":
-          case "trash":
-            onEmailUpdated();
-            onClose();
-            return;
-        }
+      // After successful action, update state
+      switch (action) {
+        case "star":
+          setEmail({ ...email, isStarred: true });
+          break;
+        case "unstar":
+          setEmail({ ...email, isStarred: false });
+          break;
+        case "mark-read":
+          setEmail({ ...email, isUnread: false });
+          break;
+        case "mark-unread":
+          setEmail({ ...email, isUnread: true });
+          break;
+        case "archive":
+        case "trash":
+          onEmailUpdated();
+          onClose();
+          return;
       }
 
       onEmailUpdated();
@@ -177,426 +176,488 @@ export function EmailDetailModal({
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${Math.round(bytes / (1024 * 1024))} MB`;
   };
 
-  if (!emailId) return null;
+  const getAttachmentUrl = (attachmentId: string) => {
+    if (!email || !email.accountEmail) return "#";
+    return `/api/gmail/${email.id}/attachment/${attachmentId}?account=${encodeURIComponent(email.accountEmail)}`;
+  };
+
+  // Render email body - either HTML or plain text
+  const renderEmailBody = () => {
+    if (!email) return null;
+
+    if (showHtml && email.bodyHtml) {
+      return (
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "16px 0",
+            color: "var(--foreground)",
+            lineHeight: 1.6,
+          }}
+          dangerouslySetInnerHTML={{ __html: email.bodyHtml }}
+        />
+      );
+    }
+
+    return (
+      <pre
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "16px 0",
+          color: "var(--foreground)",
+          lineHeight: 1.6,
+          fontFamily: "inherit",
+          whiteSpace: "pre-wrap",
+        }}
+      >
+        {email.body}
+      </pre>
+    );
+  };
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        style={{
-          position: "fixed",
-          inset: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.7)",
-          backdropFilter: "blur(4px)",
-          zIndex: 1000,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "20px",
-        }}
-      >
+      {emailId && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          onClick={(e) => e.stopPropagation()}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
           style={{
-            width: "100%",
-            maxWidth: "1000px",
-            maxHeight: "90vh",
-            backgroundColor: "rgba(20, 20, 25, 0.95)",
-            border: "1px solid var(--glass-border)",
-            borderRadius: "16px",
-            overflow: "hidden",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            backdropFilter: "blur(5px)",
+            zIndex: 999,
             display: "flex",
-            flexDirection: "column",
-            backdropFilter: "blur(20px)",
+            alignItems: "center",
+            justifyContent: "center",
           }}
+          onClick={onClose}
         >
-          {/* Header */}
-          <div
+          <motion.div
+            initial={{ scale: 0.95, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.95, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
             style={{
+              position: "fixed",
+              top: "15vh",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "90%",
+              maxWidth: "900px",
+              height: "80vh",
+              backgroundColor: "rgba(26, 26, 26, 0.95)",
+              backdropFilter: "blur(20px)",
+              border: "1px solid var(--glass-border)",
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+              zIndex: 1000,
+              overflow: "hidden",
               display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "16px 20px",
-              borderBottom: "1px solid var(--glass-border)",
+              flexDirection: "column",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <Mail style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
-              <span style={{ fontWeight: 600, fontSize: "16px", color: "var(--foreground)" }}>
-                Email
-              </span>
-            </div>
-            <button
-              onClick={onClose}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                border: "none",
-                cursor: "pointer",
-                color: "var(--foreground-muted)",
-              }}
-            >
-              <X style={{ width: "18px", height: "18px" }} />
-            </button>
-          </div>
-
-          {/* Content */}
-          <div style={{ flex: 1, overflow: "auto", padding: "20px" }}>
-            {loading && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px" }}>
-                <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
-              </div>
-            )}
-
-            {error && (
-              <div style={{ textAlign: "center", padding: "40px", color: "#f87171" }}>
-                {error}
-              </div>
-            )}
-
-            {email && !loading && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {/* Subject */}
-                <h2 style={{ fontSize: "20px", fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
-                  {email.subject}
-                </h2>
-
-                {/* From/To */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>
-                      {formatEmailSender(email.from)}
-                    </span>
-                    <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                      {formatDate(email.date)}
-                    </span>
-                    {email.isStarred && (
-                      <Star style={{ width: "14px", height: "14px", color: "#fbbf24", fill: "#fbbf24" }} />
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setShowDetails(!showDetails)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      fontSize: "12px",
-                      color: "var(--foreground-muted)",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 0,
-                    }}
-                  >
-                    to {email.to.split(",")[0]}
-                    {showDetails ? <ChevronUp style={{ width: "12px", height: "12px" }} /> : <ChevronDown style={{ width: "12px", height: "12px" }} />}
-                  </button>
-
-                  {showDetails && (
-                    <div style={{ fontSize: "12px", color: "var(--foreground-muted)", paddingLeft: "8px" }}>
-                      <div>From: {email.from}</div>
-                      <div>To: {email.to}</div>
-                      {email.cc && <div>Cc: {email.cc}</div>}
-                    </div>
-                  )}
-                </div>
-
-                {/* Attachments */}
-                {email.attachments.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                    {email.attachments.map((att, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          padding: "6px 10px",
-                          borderRadius: "6px",
-                          backgroundColor: "rgba(255, 255, 255, 0.05)",
-                          fontSize: "12px",
-                          color: "var(--foreground-muted)",
-                        }}
-                      >
-                        <Paperclip style={{ width: "12px", height: "12px" }} />
-                        <span>{att.filename}</span>
-                        <span>({formatFileSize(att.size)})</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Toggle HTML/Text */}
-                {email.bodyHtml && (
-                  <button
-                    onClick={() => setShowHtml(!showHtml)}
-                    style={{
-                      alignSelf: "flex-start",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      backgroundColor: "rgba(255, 255, 255, 0.05)",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: "11px",
-                      color: "var(--foreground-muted)",
-                    }}
-                  >
-                    {showHtml ? "Show Plain Text" : "Show HTML"}
-                  </button>
-                )}
-
-                {/* Body */}
-                <div
-                  style={{
-                    padding: "16px",
-                    borderRadius: "8px",
-                    backgroundColor: showHtml && email.bodyHtml ? "rgba(255, 255, 255, 0.98)" : "rgba(255, 255, 255, 0.02)",
-                    fontSize: "14px",
-                    lineHeight: 1.6,
-                    color: showHtml && email.bodyHtml ? "#1a1a1a" : "var(--foreground)",
-                  }}
-                >
-                  {showHtml && email.bodyHtml ? (
-                    <div
-                      dangerouslySetInnerHTML={{ __html: email.bodyHtml }}
-                      style={{
-                        maxHeight: "60vh",
-                        overflow: "auto",
-                        color: "#1a1a1a",
-                      }}
-                      className="email-html-content"
-                    />
-                  ) : (
-                    <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0 }}>
-                      {email.body}
-                    </pre>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Actions Footer */}
-          {email && !loading && (
+            {/* Header */}
             <div
               style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--glass-border)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "16px 20px",
-                borderTop: "1px solid var(--glass-border)",
-                gap: "12px",
-                flexWrap: "wrap",
               }}
             >
-              {/* Left actions */}
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <Mail style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+                <h2 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
+                  Email Details
+                </h2>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                {email && email.accountEmail && (
+                  <button
+                    onClick={() => {
+                      const url = getSuperhumanUrl(email.accountEmail, email.threadId);
+                      window.open(url, "_blank", "noopener noreferrer");
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 10px",
+                      borderRadius: "8px",
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      color: "var(--foreground-muted)",
+                      fontSize: "13px",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <ExternalLink style={{ width: "14px", height: "14px" }} />
+                    <span className="hidden sm:inline">Open in Gmail</span>
+                  </button>
+                )}
                 <button
-                  onClick={() => onReply({ ...email, accountEmail: account })}
+                  onClick={onClose}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "6px",
+                    justifyContent: "center",
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(255, 100, 100, 0.1)",
+                    border: "1px solid rgba(255, 100, 100, 0.2)",
+                    color: "var(--foreground-muted)",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <X style={{ width: "16px", height: "16px" }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content Area */}
+            {loading ? (
+              <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+              </div>
+            ) : error ? (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: "16px" }}>
+                <p style={{ color: "#f87171", fontSize: "16px" }}>{error}</p>
+                <button
+                  onClick={fetchEmail}
+                  style={{
                     padding: "8px 16px",
                     borderRadius: "8px",
                     backgroundColor: "var(--accent)",
                     color: "var(--background)",
                     border: "none",
+                    fontSize: "14px",
                     cursor: "pointer",
-                    fontSize: "13px",
-                    fontWeight: 500,
                   }}
                 >
-                  <Reply style={{ width: "14px", height: "14px" }} />
-                  Reply
+                  Retry
                 </button>
-                <button
-                  onClick={() => onForward({ ...email, accountEmail: account })}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
-                    color: "var(--foreground)",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                  }}
-                >
-                  <Forward style={{ width: "14px", height: "14px" }} />
-                  Forward
-                </button>
-                <a
-                  href={getSuperhumanUrl(email.threadId)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
-                    color: "var(--foreground)",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    textDecoration: "none",
-                  }}
-                >
-                  <ExternalLink style={{ width: "14px", height: "14px" }} />
-                  Superhuman
-                </a>
               </div>
+            ) : !email ? (
+              <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <p style={{ color: "var(--foreground-muted)", fontSize: "16px" }}>No email data</p>
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                {/* Email Header */}
+                <div
+                  style={{
+                    padding: "16px 20px",
+                    borderBottom: "1px solid var(--glass-border)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
+                    <h3 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)", margin: 0, flex: 1 }}>
+                      {email.subject || "(No Subject)"}
+                    </h3>
+                    <span style={{ fontSize: "13px", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+                      {formatDate(email.date)}
+                    </span>
+                  </div>
 
-              {/* Right actions */}
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  onClick={() => performAction(email.isUnread ? "read" : "unread")}
-                  disabled={actionLoading === "read" || actionLoading === "unread"}
-                  title={email.isUnread ? "Mark as read" : "Mark as unread"}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>
+                        {formatEmailSender(email.from, false)}
+                      </span>
+                      {email.isUnread ? (
+                        <span style={{ fontSize: "12px", color: "var(--accent)", fontWeight: 500 }}>
+                          Unread
+                        </span>
+                      ) : null}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "13px", color: "var(--foreground-muted)" }}>
+                        to: {email.to}
+                      </span>
+                      {email.cc && (
+                        <button
+                          onClick={() => setShowDetails(!showDetails)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "var(--foreground-muted)",
+                            fontSize: "13px",
+                          }}
+                        >
+                          {showDetails ? (
+                            <ChevronUp style={{ width: "14px", height: "14px" }} />
+                          ) : (
+                            <ChevronDown style={{ width: "14px", height: "14px" }} />
+                          )}
+                          details
+                        </button>
+                      )}
+                    </div>
+                    {showDetails && email.cc && (
+                      <div style={{ marginTop: "4px", fontSize: "13px", color: "var(--foreground-muted)" }}>
+                        <div>CC: {email.cc}</div>
+                        {email.bcc && <div>BCC: {email.bcc}</div>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Bar */}
+                <div
                   style={{
+                    padding: "12px 20px",
+                    borderBottom: "1px solid var(--glass-border)",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "8px",
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
-                    color: "var(--foreground-muted)",
-                    border: "none",
-                    cursor: "pointer",
+                    gap: "12px",
+                    flexShrink: 0,
                   }}
                 >
-                  <MailOpen style={{ width: "16px", height: "16px" }} />
-                </button>
-                <button
-                  onClick={() => performAction(email.isStarred ? "unstar" : "star")}
-                  disabled={actionLoading === "star" || actionLoading === "unstar"}
-                  title={email.isStarred ? "Unstar" : "Star"}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "8px",
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
-                    color: email.isStarred ? "#fbbf24" : "var(--foreground-muted)",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Star style={{ width: "16px", height: "16px", fill: email.isStarred ? "#fbbf24" : "none" }} />
-                </button>
-                <button
-                  onClick={() => performAction("archive")}
-                  disabled={actionLoading === "archive"}
-                  title="Archive"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "8px",
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
-                    color: "var(--foreground-muted)",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Archive style={{ width: "16px", height: "16px" }} />
-                </button>
-                <button
-                  onClick={() => performAction("trash")}
-                  disabled={actionLoading === "trash"}
-                  title="Delete"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "8px",
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
-                    color: "#f87171",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Trash2 style={{ width: "16px", height: "16px" }} />
-                </button>
+                  <button
+                    onClick={() => handleEmailAction(email.isUnread ? "mark-read" : "mark-unread")}
+                    disabled={!!actionLoading}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      backgroundColor: email.isUnread ? "rgba(100, 255, 100, 0.1)" : "rgba(255, 255, 255, 0.05)",
+                      border: email.isUnread ? "1px solid rgba(100, 255, 100, 0.2)" : "1px solid rgba(255, 255, 255, 0.1)",
+                      color: email.isUnread ? "var(--foreground)" : "var(--foreground-muted)",
+                      fontSize: "13px",
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      transition: "all 0.15s",
+                      opacity: actionLoading === (email.isUnread ? "mark-read" : "mark-unread") ? 0.5 : 1,
+                    }}
+                  >
+                    {actionLoading === (email.isUnread ? "mark-read" : "mark-unread") ? (
+                      <Loader2 style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite" }} />
+                    ) : (
+                      <MailOpen style={{ width: "14px", height: "14px" }} />
+                    )}
+                    <span className="hidden sm:inline">
+                      {email.isUnread ? "Mark Read" : "Mark Unread"}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => handleEmailAction(email.isStarred ? "unstar" : "star")}
+                    disabled={!!actionLoading}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      backgroundColor: email.isStarred ? "rgba(255, 215, 0, 0.1)" : "rgba(255, 255, 255, 0.05)",
+                      border: email.isStarred ? "1px solid rgba(255, 215, 0, 0.2)" : "1px solid rgba(255, 255, 255, 0.1)",
+                      color: email.isStarred ? "var(--foreground)" : "var(--foreground-muted)",
+                      fontSize: "13px",
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      transition: "all 0.15s",
+                      opacity: actionLoading === (email.isStarred ? "unstar" : "star") ? 0.5 : 1,
+                    }}
+                  >
+                    {actionLoading === (email.isStarred ? "unstar" : "star") ? (
+                      <Loader2 style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite" }} />
+                    ) : (
+                      <Star style={{ width: "14px", height: "14px", fill: email.isStarred ? "var(--foreground)" : "none" }} />
+                    )}
+                    <span className="hidden sm:inline">{email.isStarred ? "Unstar" : "Star"}</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleEmailAction("archive")}
+                    disabled={!!actionLoading}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      color: "var(--foreground-muted)",
+                      fontSize: "13px",
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      transition: "all 0.15s",
+                      opacity: actionLoading === "archive" ? 0.5 : 1,
+                    }}
+                  >
+                    {actionLoading === "archive" ? (
+                      <Loader2 style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite" }} />
+                    ) : (
+                      <Archive style={{ width: "14px", height: "14px" }} />
+                    )}
+                    <span className="hidden sm:inline">Archive</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleEmailAction("trash")}
+                    disabled={!!actionLoading}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      backgroundColor: "rgba(255, 100, 100, 0.1)",
+                      border: "1px solid rgba(255, 100, 100, 0.2)",
+                      color: "var(--foreground-muted)",
+                      fontSize: "13px",
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      transition: "all 0.15s",
+                      opacity: actionLoading === "trash" ? 0.5 : 1,
+                    }}
+                  >
+                    {actionLoading === "trash" ? (
+                      <Loader2 style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite" }} />
+                    ) : (
+                      <Trash2 style={{ width: "14px", height: "14px" }} />
+                    )}
+                    <span className="hidden sm:inline">Delete</span>
+                  </button>
+
+                  <div style={{ flex: 1 }} />
+
+                  <button
+                    onClick={() => {
+                      onReply(email);
+                      onClose();
+                    }}
+                    disabled={!!actionLoading}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      color: "var(--foreground-muted)",
+                      fontSize: "13px",
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <Reply style={{ width: "14px", height: "14px" }} />
+                    <span className="hidden sm:inline">Reply</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onForward(email);
+                      onClose();
+                    }}
+                    disabled={!!actionLoading}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      color: "var(--foreground-muted)",
+                      fontSize: "13px",
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <Forward style={{ width: "14px", height: "14px" }} />
+                    <span className="hidden sm:inline">Forward</span>
+                  </button>
+                </div>
+
+                {/* Email Body */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+                  {renderEmailBody()}
+                </div>
+
+                {/* Attachments if any */}
+                {email && email.attachments && email.attachments.length > 0 && (
+                  <div
+                    style={{
+                      padding: "12px 20px",
+                      borderTop: "1px solid var(--glass-border)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>
+                      Attachments ({email.attachments.length})
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+                      {email.attachments.map((attachment) => (
+                        <div
+                          key={attachment.attachmentId}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            backgroundColor: "rgba(255, 255, 255, 0.05)",
+                            border: "1px solid var(--glass-border)",
+                          }}
+                        >
+                          <Paperclip style={{ width: "16px", height: "16px", color: "var(--foreground-muted)" }} />
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <span style={{ fontSize: "13px", color: "var(--foreground)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {attachment.filename}
+                            </span>
+                            <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                              {formatFileSize(attachment.size)}
+                            </span>
+                          </div>
+                          <Link
+                            href={getAttachmentUrl(attachment.attachmentId)}
+                            target="_blank"
+                            download={attachment.filename}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              color: "var(--accent)",
+                              textDecoration: "none",
+                            }}
+                          >
+                            <ExternalLink style={{ width: "14px", height: "14px", marginLeft: "8px" }} />
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )}
+          </motion.div>
         </motion.div>
-      </motion.div>
-      <style jsx global>{`
-        .email-html-content {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        }
-        .email-html-content img {
-          max-width: 100%;
-          height: auto;
-        }
-        .email-html-content table {
-          border-collapse: collapse;
-          max-width: 100%;
-        }
-        .email-html-content a {
-          color: #0066cc;
-          text-decoration: underline;
-        }
-        .email-html-content p {
-          margin: 0 0 1em 0;
-        }
-        .email-html-content blockquote {
-          margin: 1em 0;
-          padding-left: 1em;
-          border-left: 3px solid #ddd;
-          color: #555;
-        }
-        .email-html-content pre, .email-html-content code {
-          background-color: #f5f5f5;
-          font-family: monospace;
-          padding: 2px 4px;
-          border-radius: 3px;
-        }
-        .email-html-content pre {
-          padding: 12px;
-          overflow-x: auto;
-        }
-        .email-html-content h1, .email-html-content h2, .email-html-content h3 {
-          margin: 1em 0 0.5em 0;
-          color: #1a1a1a;
-        }
-        .email-html-content ul, .email-html-content ol {
-          margin: 0.5em 0;
-          padding-left: 2em;
-        }
-        .email-html-content div[style*="display:none"],
-        .email-html-content div[style*="display: none"] {
-          display: none !important;
-        }
-      `}</style>
+      )}
     </AnimatePresence>
   );
 }
