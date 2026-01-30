@@ -181,7 +181,7 @@ export default function Home() {
   };
 
   // Filter visible widgets
-  const visibleWidgets = previewWidgets.filter(w => w.visible);
+  const visibleWidgets = (previewWidgets || []).filter(w => w.visible);
 
   return (
     <div style={{ minHeight: "100vh", padding: isMobile ? "12px" : "24px" }}>
@@ -306,7 +306,7 @@ export default function Home() {
           >
             {isEditMode ? (
               // Edit mode: show all widgets with drag handles
-              previewWidgets.map((widget, index) => renderWidget(widget, index))
+              (previewWidgets || []).map((widget, index) => renderWidget(widget, index))
             ) : (
               // Normal mode: show only visible widgets without drag handles
               visibleWidgets.map((widget) => {
