@@ -1,13 +1,41 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, RotateCcw, Move } from "lucide-react";
+import { Check, X, RotateCcw, Move, GripVertical, Eye, EyeOff } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useState } from "react";
 
 export function LayoutEditor() {
-  const { isEditMode, exitEditMode, resetLayout } = useLayout();
+  const { isEditMode, exitEditMode, resetLayout, layout, reorderWidgets, updateWidgetVisibility } = useLayout();
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   if (!isEditMode) return null;
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== index) {
+      reorderWidgets("previewWidgets", draggedIndex, index);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   return (
     <AnimatePresence>
@@ -61,7 +89,7 @@ export function LayoutEditor() {
                     Layout Editor
                   </h2>
                   <p style={{ fontSize: "12px", color: "var(--foreground-muted)", margin: 0 }}>
-                    Drag to reorder • Click size to resize • Toggle visibility
+                    Drag to reorder • Toggle visibility
                   </p>
                 </div>
               </div>
@@ -98,7 +126,7 @@ export function LayoutEditor() {
                     borderRadius: "8px",
                     backgroundColor: "rgba(255, 100, 100, 0.1)",
                     border: "1px solid rgba(255, 100, 100, 0.2)",
-                    color: "#f87171",
+                    color: "var(--foreground-muted)",
                     fontSize: "13px",
                     cursor: "pointer",
                     transition: "all 0.15s",
@@ -116,11 +144,10 @@ export function LayoutEditor() {
                     gap: "6px",
                     padding: "8px 12px",
                     borderRadius: "8px",
-                    backgroundColor: "var(--accent)",
-                    border: "none",
-                    color: "var(--background)",
+                    backgroundColor: "rgba(100, 255, 100, 0.1)",
+                    border: "1px solid rgba(100, 255, 100, 0.2)",
+                    color: "var(--foreground)",
                     fontSize: "13px",
-                    fontWeight: 500,
                     cursor: "pointer",
                     transition: "all 0.15s",
                   }}
@@ -132,22 +159,86 @@ export function LayoutEditor() {
             </div>
           </motion.div>
 
-          {/* Spacer to push content down */}
-          <div style={{ height: "65px" }} />
-
-          {/* Overlay to indicate edit mode */}
+          {/* Mini Ordering View */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.3 }}
             style={{
               position: "fixed",
-              inset: 0,
-              background: "rgba(0, 0, 0, 0.3)",
-              pointerEvents: "none",
-              zIndex: 40,
+              top: "60px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "90%",
+              maxWidth: "500px",
+              backgroundColor: "rgba(26, 26, 26, 0.95)",
+              backdropFilter: "blur(10px)",
+              border: "1px solid var(--glass-border)",
+              borderRadius: "12px",
+              padding: "16px",
+              zIndex: 999,
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+              maxHeight: "70vh",
+              overflowY: "auto",
             }}
-          />
+          >
+            <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "12px", textAlign: "center" }}>
+              Reorder Widgets
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {layout.previewWidgets.map((widget, index) => (
+                <motion.div
+                  key={widget.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    backgroundColor: draggedIndex === index 
+                      ? "rgba(255, 255, 255, 0.15)" 
+                      : dragOverIndex === index 
+                        ? "rgba(255, 255, 255, 0.08)" 
+                        : "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid var(--glass-border)",
+                    cursor: "grab",
+                    userSelect: "none",
+                  }}
+                  whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.08)" }}
+                  whileDrag={{ cursor: "grabbing" }}
+                >
+                  <GripVertical style={{ width: "18px", height: "18px", color: "var(--foreground-muted)", marginRight: "8px" }} />
+                  <span style={{ flex: 1, fontSize: "14px", color: "var(--foreground)" }}>
+                    {widget.id.charAt(0).toUpperCase() + widget.id.slice(1)}
+                  </span>
+                  <button
+                    onClick={() => updateWidgetVisibility("previewWidgets", widget.id, !widget.visible)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: widget.visible ? "var(--accent)" : "var(--foreground-muted)",
+                      padding: "4px",
+                    }}
+                  >
+                    {widget.visible ? (
+                      <Eye style={{ width: "16px", height: "16px" }} />
+                    ) : (
+                      <EyeOff style={{ width: "16px", height: "16px" }} />
+                    )}
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+            <p style={{ fontSize: "12px", color: "var(--foreground-muted)", textAlign: "center", marginTop: "12px" }}>
+              Drag to reorder widgets on your dashboard
+            </p>
+          </motion.div>
         </>
       )}
     </AnimatePresence>

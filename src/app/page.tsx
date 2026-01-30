@@ -96,7 +96,6 @@ export default function Home() {
   const [widgetsVisible, setWidgetsVisible] = useState(true);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
 
-  const previewDragState = useDragState();
   const previewWidgets = layout.previewWidgets;
 
   useEffect(() => {
@@ -118,14 +117,9 @@ export default function Home() {
     window.location.href = "/api/auth/google";
   };
 
+  // Drag-and-drop now handled in LayoutEditor
   const handlePreviewDrop = () => {
-    if (previewDragState.draggedIndex === null || previewDragState.dragOverIndex === null) {
-      previewDragState.handleDragEnd();
-      return;
-    }
-
-    reorderWidgets("previewWidgets", previewDragState.draggedIndex, previewDragState.dragOverIndex);
-    previewDragState.handleDragEnd();
+    // No-op
   };
 
   const renderWidgetContent = (id: string) => {
@@ -160,20 +154,16 @@ export default function Home() {
     if (!meta || !widget.visible) return null;
 
     return (
-      <DraggableWidget
+      <div
         key={widget.id}
-        id={widget.id}
-        type="previewWidgets"
-        title={meta.title}
-        index={index}
-        onDragStart={previewDragState.handleDragStart}
-        onDragOver={previewDragState.handleDragOver}
-        onDragEnd={handlePreviewDrop}
-        isDragging={previewDragState.isDragging}
-        dragOverIndex={previewDragState.dragOverIndex}
+        className="glass"
+        style={{
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
       >
         {renderWidgetContent(widget.id)}
-      </DraggableWidget>
+      </div>
     );
   };
 
