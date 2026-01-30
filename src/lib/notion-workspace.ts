@@ -160,8 +160,99 @@ export async function getWorkspacePages(): Promise<WorkspaceItem[]> {
   }
 }
 
+// Get children from root page
+export async function getRootPageChildren(): Promise<WorkspaceItem[]> {
+  const rootPageId = process.env.NOTION_ROOT_PAGE_ID || process.env.NOTION_DATABASE_ID;
+  
+  if (!rootPageId) {
+    throw new Error("NOTION_ROOT_PAGE_ID or NOTION_DATABASE_ID not configured");
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.notion.com/v1/blocks/${rootPageId}/children`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+          "Notion-Version": "2022-06-28",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Notion API error: ${response.statusText}`);
+    }
+
+    const data = await response.json() as any;
+    const items: WorkspaceItem[] = [];
+
+    for (const block of data.results || []) {
+      if (block.type === "child_database") {
+        // Fetch database details
+        const dbResponse = await fetch(
+          `https://api.notion.com/v1/databases/${block.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+              "Notion-Version": "2022-06-28",
+            },
+          }
+        );
+        if (dbResponse.ok) {
+          const database = await dbResponse.json();
+          items.push({
+            id: database.id,
+            type: "database",
+            title: getTitle(database),
+            icon: getIcon(database),
+            lastEditedTime: database.last_edited_time,
+            url: database.url,
+          });
+        }
+      } else if (block.type === "child_page") {
+        // Fetch page details
+        const pageResponse = await fetch(
+          `https://api.notion.com/v1/pages/${block.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+              "Notion-Version": "2022-06-28",
+            },
+          }
+        );
+        if (pageResponse.ok) {
+          const page = await pageResponse.json();
+          items.push({
+            id: page.id,
+            type: "page",
+            title: getTitle(page),
+            icon: getIcon(page),
+            lastEditedTime: page.last_edited_time,
+            url: page.url,
+          });
+        }
+      }
+    }
+
+    // Sort by last edited time
+    items.sort((a, b) => 
+      new Date(b.lastEditedTime).getTime() - new Date(a.lastEditedTime).getTime()
+    );
+
+    return items;
+  } catch (error) {
+    console.error("Error fetching root page children:", error);
+    throw error;
+  }
+}
+
 // Get all workspace items (databases + top-level pages)
 export async function getWorkspaceItems(): Promise<WorkspaceItem[]> {
+  // Use root page children if configured, otherwise fall back to workspace search
+  if (process.env.NOTION_ROOT_PAGE_ID || process.env.NOTION_DATABASE_ID) {
+    return getRootPageChildren();
+  }
+
   try {
     const [databases, pages] = await Promise.all([
       getWorkspaceDatabases(),
