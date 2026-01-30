@@ -91,12 +91,13 @@ function MobileDateTimeBanner() {
 }
 
 export default function Home() {
-  const { isEditMode, previewWidgets, updatePreviewWidgetsOrder } = useLayout();
+  const { isEditMode, layout, reorderWidgets } = useLayout();
   const [isMobile, setIsMobile] = useState(false);
   const [widgetsVisible, setWidgetsVisible] = useState(true);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
 
   const previewDragState = useDragState();
+  const previewWidgets = layout.previewWidgets;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640);
@@ -123,11 +124,7 @@ export default function Home() {
       return;
     }
 
-    const newOrder = [...previewWidgets];
-    const [removed] = newOrder.splice(previewDragState.draggedIndex, 1);
-    newOrder.splice(previewDragState.dragOverIndex, 0, removed);
-
-    updatePreviewWidgetsOrder(newOrder.map(w => w.id));
+    reorderWidgets("previewWidgets", previewDragState.draggedIndex, previewDragState.dragOverIndex);
     previewDragState.handleDragEnd();
   };
 
