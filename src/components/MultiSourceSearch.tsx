@@ -342,15 +342,11 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
   const [isMobile, setIsMobile] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Sources hidden state (respects layout setting for "Always Show Sources")
+  // Sources hidden state (default to collapsed, will sync with layout setting via useEffect)
   const [sourcesHidden, setSourcesHidden] = useState(() => {
-    // If "Always Show Sources" is enabled, sources should not be hidden
-    if (layout.searchSourceMode === "alwaysShowing") {
-      return false;
-    }
-    // Otherwise check localStorage
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("sources-hidden");
+      // Default to collapsed (true) unless explicitly set to "false"
       return saved !== "false";
     }
     return true;
