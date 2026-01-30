@@ -29,21 +29,24 @@ import { RaindropPreview } from "@/components/RaindropPreview";
 import { TrendingPreview } from "@/components/TrendingPreview";
 import { InoreaderPreview } from "@/components/InoreaderPreview";
 import { RemindersBanner } from "@/components/RemindersBanner";
+import { LayoutEditor } from "@/components/LayoutEditor";
+import { DraggableWidget, useDragState } from "@/components/DraggableWidget";
+import { useLayout, WidgetConfig } from "@/contexts/LayoutContext";
 import { useSettings } from "@/contexts/SettingsContext";
 
-// Widget configuration - order matters for grid display
-const WIDGETS = [
-  { id: "news", title: "News", icon: Newspaper, href: "/tools/news" },
-  { id: "trending", title: "Trending", icon: TrendingUp, href: "/tools/trending" },
-  { id: "calendar", title: "Calendar", icon: Calendar, href: "/tools/calendar" },
-  { id: "emails", title: "Emails", icon: Mail, href: "/tools/emails" },
-  { id: "contacts", title: "Contacts", icon: Users, href: "/tools/contacts" },
-  { id: "files", title: "Files", icon: FolderOpen, href: "/tools/files" },
-  { id: "notes", title: "Notes", icon: StickyNote, href: "/tools/notes" },
-  { id: "stocks", title: "Market", icon: BarChart3, href: "/tools/market" },
-  { id: "raindrop", title: "Reading List", icon: BookOpen, href: "/tools/raindrop" },
-  { id: "inoreader", title: "RSS Reader", icon: Rss, href: "/tools/inoreader" },
-];
+// Widget metadata
+const WIDGET_META: Record<string, { title: string; icon: React.ComponentType<any>; href: string }> = {
+  news: { title: "News", icon: Newspaper, href: "/tools/news" },
+  trending: { title: "Trending", icon: TrendingUp, href: "/tools/trending" },
+  calendar: { title: "Calendar", icon: Calendar, href: "/tools/calendar" },
+  emails: { title: "Emails", icon: Mail, href: "/tools/emails" },
+  contacts: { title: "Contacts", icon: Users, href: "/tools/contacts" },
+  files: { title: "Files", icon: FolderOpen, href: "/tools/files" },
+  notes: { title: "Notes", icon: StickyNote, href: "/tools/notes" },
+  stocks: { title: "Market", icon: BarChart3, href: "/tools/market" },
+  raindrop: { title: "Reading List", icon: BookOpen, href: "/tools/raindrop" },
+  inoreader: { title: "RSS Reader", icon: Rss, href: "/tools/inoreader" },
+};
 
 // Mobile Date/Time Banner
 function MobileDateTimeBanner() {
@@ -88,9 +91,12 @@ function MobileDateTimeBanner() {
 }
 
 export default function Home() {
+  const { isEditMode, previewWidgets, updatePreviewWidgetsOrder } = useLayout();
   const [isMobile, setIsMobile] = useState(false);
   const [widgetsVisible, setWidgetsVisible] = useState(true);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+
+  const previewDragState = useDragState();
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640);
@@ -109,6 +115,20 @@ export default function Home() {
 
   const handleConnectGoogle = () => {
     window.location.href = "/api/auth/google";
+  };
+
+  const handlePreviewDrop = () => {
+    if (previewDragState.draggedIndex === null || previewDragState.dragOverIndex === null) {
+      previewDragState.handleDragEnd();
+      return;
+    }
+
+    const newOrder = [...previewWidgets];
+    const [removed] = newOrder.splice(previewDragState.draggedIndex, 1);
+    newOrder.splice(previewDragState.dragOverIndex, 0, removed);
+
+    updatePreviewWidgetsOrder(newOrder.map(w => w.id));
+    previewDragState.handleDragEnd();
   };
 
   const renderWidgetContent = (id: string) => {
@@ -138,6 +158,31 @@ export default function Home() {
     }
   };
 
+  const renderWidget = (widget: WidgetConfig, index: number) => {
+    const meta = WIDGET_META[widget.id];
+    if (!meta || !widget.visible) return null;
+
+    return (
+      <DraggableWidget
+        key={widget.id}
+        id={widget.id}
+        type="previewWidgets"
+        title={meta.title}
+        index={index}
+        onDragStart={previewDragState.handleDragStart}
+        onDragOver={previewDragState.handleDragOver}
+        onDragEnd={handlePreviewDrop}
+        isDragging={previewDragState.isDragging}
+        dragOverIndex={previewDragState.dragOverIndex}
+      >
+        {renderWidgetContent(widget.id)}
+      </DraggableWidget>
+    );
+  };
+
+  // Filter visible widgets
+  const visibleWidgets = previewWidgets.filter(w => w.visible);
+
   return (
     <div style={{ minHeight: "100vh", padding: isMobile ? "12px" : "24px" }}>
       <Header />
@@ -152,122 +197,137 @@ export default function Home() {
           <MultiSourceSearch />
         </div>
 
-      {/* Widget Navigation Bar - Permanent, Icons Link to Tool Pages */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          gap: isMobile ? "8px" : "12px",
-          flexWrap: "wrap",
-          marginBottom: "16px",
-        }}
-      >
-        {/* Show/Hide Toggle */}
-        <button
-          onClick={() => setWidgetsVisible(!widgetsVisible)}
-          title={widgetsVisible ? "Hide widgets" : "Show widgets"}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: isMobile ? "4px" : "6px",
-            padding: isMobile ? "12px" : "16px 20px",
-            minWidth: isMobile ? "70px" : "90px",
-            minHeight: isMobile ? "70px" : "80px",
-            backgroundColor: "rgba(255,255,255,0.05)",
-            border: "1px solid var(--glass-border)",
-            borderRadius: "12px",
-            cursor: "pointer",
-            transition: "all 0.2s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
-            e.currentTarget.style.transform = "translateY(-2px)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
-            e.currentTarget.style.transform = "translateY(0)";
-          }}
-        >
-          {widgetsVisible ? (
-            <EyeOff style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
-          ) : (
-            <Eye style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
-          )}
-          <span style={{ fontSize: isMobile ? "11px" : "12px", fontWeight: 500, color: "var(--foreground)" }}>
-            {widgetsVisible ? "Hide" : "Show"}
-          </span>
-        </button>
+        {/* Layout Editor */}
+        {isEditMode && <LayoutEditor />}
 
-        {/* Widget Icons - Navigate to Tool Pages */}
-        {WIDGETS.map((widget) => {
-          const Icon = widget.icon;
-          return (
-            <Link
-              key={widget.id}
-              href={widget.href}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: isMobile ? "4px" : "6px",
-                padding: isMobile ? "12px" : "16px 20px",
-                minWidth: isMobile ? "70px" : "90px",
-                minHeight: isMobile ? "70px" : "80px",
-                backgroundColor: "rgba(255,255,255,0.05)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: "12px",
-                cursor: "pointer",
-                textDecoration: "none",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              <Icon style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
-              <span style={{ fontSize: isMobile ? "11px" : "12px", fontWeight: 500, color: "var(--foreground)", textAlign: "center" }}>
-                {widget.title}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Widgets Grid - Always Visible (unless toggled off) */}
-      {widgetsVisible && (
+        {/* Widget Navigation Bar - Permanent, Icons Link to Tool Pages */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-            gap: "16px",
-            gridAutoRows: "364px",
-            width: "100%",
-            maxWidth: "100%",
-            overflow: "hidden",
+            display: "flex",
+            justifyContent: "center",
+            gap: isMobile ? "8px" : "12px",
+            flexWrap: "wrap",
+            marginBottom: "16px",
           }}
         >
-          {WIDGETS.map((widget) => (
-            <div
-              key={widget.id}
-              className="glass"
-              style={{
-                borderRadius: "12px",
-                overflow: "hidden",
-              }}
-            >
-              {renderWidgetContent(widget.id)}
-            </div>
-          ))}
+          {/* Show/Hide Toggle */}
+          <button
+            onClick={() => setWidgetsVisible(!widgetsVisible)}
+            title={widgetsVisible ? "Hide widgets" : "Show widgets"}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: isMobile ? "4px" : "6px",
+              padding: isMobile ? "12px" : "16px 20px",
+              minWidth: isMobile ? "70px" : "90px",
+              minHeight: isMobile ? "70px" : "80px",
+              backgroundColor: "rgba(255,255,255,0.05)",
+              border: "1px solid var(--glass-border)",
+              borderRadius: "12px",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
+              e.currentTarget.style.transform = "translateY(-2px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+          >
+            {widgetsVisible ? (
+              <EyeOff style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
+            ) : (
+              <Eye style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
+            )}
+            <span style={{ fontSize: isMobile ? "11px" : "12px", fontWeight: 500, color: "var(--foreground)" }}>
+              {widgetsVisible ? "Hide" : "Show"}
+            </span>
+          </button>
+
+          {/* Widget Icons - Only Visible Widgets */}
+          {visibleWidgets.map((widget) => {
+            const meta = WIDGET_META[widget.id];
+            if (!meta) return null;
+            const Icon = meta.icon;
+            return (
+              <Link
+                key={widget.id}
+                href={meta.href}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: isMobile ? "4px" : "6px",
+                  padding: isMobile ? "12px" : "16px 20px",
+                  minWidth: isMobile ? "70px" : "90px",
+                  minHeight: isMobile ? "70px" : "80px",
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                  border: "1px solid var(--glass-border)",
+                  borderRadius: "12px",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
+                <Icon style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
+                <span style={{ fontSize: isMobile ? "11px" : "12px", fontWeight: 500, color: "var(--foreground)", textAlign: "center" }}>
+                  {meta.title}
+                </span>
+              </Link>
+            );
+          })}
         </div>
-      )}
+
+        {/* Widgets Grid */}
+        {widgetsVisible && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+              gap: "16px",
+              gridAutoRows: "364px",
+              width: "100%",
+              maxWidth: "100%",
+              overflow: "hidden",
+            }}
+          >
+            {isEditMode ? (
+              // Edit mode: show all widgets with drag handles
+              previewWidgets.map((widget, index) => renderWidget(widget, index))
+            ) : (
+              // Normal mode: show only visible widgets without drag handles
+              visibleWidgets.map((widget) => {
+                const meta = WIDGET_META[widget.id];
+                if (!meta) return null;
+                return (
+                  <div
+                    key={widget.id}
+                    className="glass"
+                    style={{
+                      borderRadius: "12px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {renderWidgetContent(widget.id)}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
