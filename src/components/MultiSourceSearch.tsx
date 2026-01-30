@@ -334,6 +334,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
   const { settings, updateSettings } = useSettings();
   const { getRecentSearches, addRecentSearch } = useRecentSearches();
   const { user } = useAuth();
+  const { layout } = useLayout();
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [toolResult, setToolResult] = useState<ToolResult | null>(null);
