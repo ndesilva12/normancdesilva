@@ -290,7 +290,7 @@ export function EmailDetailModal({
                 {email && email.accountEmail && (
                   <button
                     onClick={() => {
-                      const url = getSuperhumanUrl(email.accountEmail, email.threadId);
+                      const url = getSuperhumanUrl(email.threadId);
                       window.open(url, "_blank", "noopener noreferrer");
                     }}
                     style={{
@@ -662,4 +662,3 @@ export function EmailDetailModal({
     </AnimatePresence>
   );
 }
-// Build trigger Sat Jan 31 14:58:23 UTC 2026
