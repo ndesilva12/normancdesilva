@@ -290,7 +290,7 @@ export function EmailDetailModal({
                 {email && email.accountEmail && (
                   <button
                     onClick={() => {
-                      const url = getSuperhumanUrl(email.accountEmail, email.threadId);
+                      const url = getSuperhumanUrl(email.threadId);
                       window.open(url, "_blank", "noopener noreferrer");
                     }}
                     style={{
