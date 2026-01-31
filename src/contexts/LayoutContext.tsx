@@ -81,9 +81,17 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [layout, setLayout] = useState<LayoutConfig>(DEFAULT_LAYOUT);
   const [isEditMode, setIsEditMode] = useState(false);
   const [pendingLayout, setPendingLayout] = useState<LayoutConfig | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Mark as mounted to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Load layout from localStorage
   useEffect(() => {
+    if (!mounted) return;
+    
     if (!user) {
       setLayout(DEFAULT_LAYOUT);
       return;
@@ -113,7 +121,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
         setLayout(DEFAULT_LAYOUT);
       }
     }
-  }, [user]);
+  }, [user, mounted]);
 
   // Save layout to localStorage
   const saveLayout = useCallback(
