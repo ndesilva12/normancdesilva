@@ -252,11 +252,13 @@ export function EmailDetailModal({
             exit={{ scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             style={{
-              position: "relative",
-              width: "90%",
-              maxWidth: "900px",
-              height: "85vh",
-              maxHeight: "800px",
+              position: "fixed",
+              top: "5vh",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "95%",
+              maxWidth: "1200px",
+              height: "90vh",
               backgroundColor: "rgba(26, 26, 26, 0.95)",
               backdropFilter: "blur(20px)",
               border: "1px solid var(--glass-border)",
