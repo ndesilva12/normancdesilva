@@ -105,7 +105,8 @@ export function EmailDetailModal({
       if (!response.ok) {
         throw new Error(data.error || "Failed to fetch email details");
       }
-      setEmail(data);
+      // API returns { email, account } - extract the email object
+      setEmail(data.email || data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load email");
     } finally {
@@ -251,13 +252,11 @@ export function EmailDetailModal({
             exit={{ scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             style={{
-              position: "fixed",
-              top: "15vh",
-              left: "50%",
-              transform: "translateX(-50%)",
+              position: "relative",
               width: "90%",
               maxWidth: "900px",
-              height: "80vh",
+              height: "85vh",
+              maxHeight: "800px",
               backgroundColor: "rgba(26, 26, 26, 0.95)",
               backdropFilter: "blur(20px)",
               border: "1px solid var(--glass-border)",
