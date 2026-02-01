@@ -129,8 +129,9 @@ export function EmailDetailModal({
       if (!response.ok) {
         throw new Error(data.error || "Failed to fetch email details");
       }
-      // API returns { email, account } - extract the email object
-      setEmail(data.email || data);
+      // API returns { email, account } - extract the email object and merge accountEmail
+      const emailData = data.email || data;
+      setEmail({ ...emailData, accountEmail: data.account || emailData.accountEmail || account });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load email");
     } finally {
