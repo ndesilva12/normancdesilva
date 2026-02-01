@@ -185,7 +185,7 @@ export async function getWorkspacePages(): Promise<WorkspaceItem[]> {
 // Get children from root page
 export async function getRootPageChildren(): Promise<WorkspaceItem[]> {
   const rootPageId = process.env.NOTION_ROOT_PAGE_ID || process.env.NOTION_DATABASE_ID;
-  
+
   if (!rootPageId) {
     throw new Error("NOTION_ROOT_PAGE_ID or NOTION_DATABASE_ID not configured");
   }
@@ -206,58 +206,66 @@ export async function getRootPageChildren(): Promise<WorkspaceItem[]> {
     }
 
     const data = await response.json() as any;
-    const items: WorkspaceItem[] = [];
 
-    for (const block of data.results || []) {
-      if (block.type === "child_database") {
-        // Fetch database details
-        const dbResponse = await fetch(
-          `https://api.notion.com/v1/databases/${block.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
-              "Notion-Version": "2022-06-28",
-            },
+    // Collect all fetch promises to run in parallel
+    const fetchPromises = (data.results || []).map(async (block: any): Promise<WorkspaceItem | null> => {
+      try {
+        if (block.type === "child_database") {
+          const dbResponse = await fetch(
+            `https://api.notion.com/v1/databases/${block.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+                "Notion-Version": "2022-06-28",
+              },
+            }
+          );
+          if (dbResponse.ok) {
+            const database = await dbResponse.json();
+            return {
+              id: database.id,
+              type: "database" as const,
+              title: getTitle(database),
+              icon: getIcon(database),
+              lastEditedTime: database.last_edited_time,
+              url: database.url,
+            };
           }
-        );
-        if (dbResponse.ok) {
-          const database = await dbResponse.json();
-          items.push({
-            id: database.id,
-            type: "database",
-            title: getTitle(database),
-            icon: getIcon(database),
-            lastEditedTime: database.last_edited_time,
-            url: database.url,
-          });
-        }
-      } else if (block.type === "child_page") {
-        // Fetch page details
-        const pageResponse = await fetch(
-          `https://api.notion.com/v1/pages/${block.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
-              "Notion-Version": "2022-06-28",
-            },
+        } else if (block.type === "child_page") {
+          const pageResponse = await fetch(
+            `https://api.notion.com/v1/pages/${block.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+                "Notion-Version": "2022-06-28",
+              },
+            }
+          );
+          if (pageResponse.ok) {
+            const page = await pageResponse.json();
+            return {
+              id: page.id,
+              type: "page" as const,
+              title: getTitle(page),
+              icon: getIcon(page),
+              lastEditedTime: page.last_edited_time,
+              url: page.url,
+            };
           }
-        );
-        if (pageResponse.ok) {
-          const page = await pageResponse.json();
-          items.push({
-            id: page.id,
-            type: "page",
-            title: getTitle(page),
-            icon: getIcon(page),
-            lastEditedTime: page.last_edited_time,
-            url: page.url,
-          });
         }
+        return null;
+      } catch (err) {
+        console.error("Error fetching block details:", block.id, err);
+        return null;
       }
-    }
+    });
 
-    // Sort by last edited time
-    items.sort((a, b) => 
+    // Execute all fetches in parallel
+    const results = await Promise.all(fetchPromises);
+
+    // Filter out null results and sort by last edited time
+    const items = results.filter((item): item is WorkspaceItem => item !== null);
+    items.sort((a, b) =>
       new Date(b.lastEditedTime).getTime() - new Date(a.lastEditedTime).getTime()
     );
 
