@@ -269,6 +269,10 @@ function EmailsPageContent() {
   const handleEmailClick = (email: EmailWithAccount) => {
     setSelectedEmailId(email.id);
     setSelectedEmailAccount(email.accountEmail || (selectedAccount !== "all" ? selectedAccount : undefined));
+    // Immediately mark as read in local state for instant visual feedback
+    if (email.isUnread) {
+      setEmails((prev) => prev.map((e) => (e.id === email.id ? { ...e, isUnread: false } : e)));
+    }
   };
 
   const handleReply = (email: any) => {
