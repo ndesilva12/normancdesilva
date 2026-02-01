@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Loader2, RefreshCw, Search, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Users, Loader2, RefreshCw, Search, Mail, Phone, ExternalLink } from "lucide-react";
 import { GoogleContact } from "@/lib/google-services";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
@@ -146,25 +146,56 @@ export default function ContactsPage() {
               </p>
             </div>
             {isConnected && (
-              <button
-                onClick={() => fetchContacts()}
-                disabled={loading}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "8px 14px",
-                  borderRadius: "8px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  color: "var(--foreground-muted)",
-                  border: "none",
-                  cursor: loading ? "not-allowed" : "pointer",
-                  fontSize: "13px",
-                }}
-              >
-                <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
-                Refresh
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <a
+                  href="https://contacts.google.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    color: "var(--foreground-muted)",
+                    border: "1px solid var(--glass-border)",
+                    textDecoration: "none",
+                    fontSize: "13px",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                    e.currentTarget.style.color = "var(--accent)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                    e.currentTarget.style.color = "var(--foreground-muted)";
+                  }}
+                >
+                  <ExternalLink style={{ width: "14px", height: "14px" }} />
+                  Open in Google Contacts
+                </a>
+                <button
+                  onClick={() => fetchContacts()}
+                  disabled={loading}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    color: "var(--foreground-muted)",
+                    border: "none",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    fontSize: "13px",
+                  }}
+                >
+                  <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
+                  Refresh
+                </button>
+              </div>
             )}
           </div>
 

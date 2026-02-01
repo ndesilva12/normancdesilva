@@ -473,9 +473,9 @@ function EmailsPageContent() {
             </div>
             {isConnected && (
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                {/* Open in Gmail Button */}
+                {/* Open in Superhuman Button */}
                 <a
-                  href="https://mail.google.com"
+                  href="https://mail.superhuman.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -501,7 +501,7 @@ function EmailsPageContent() {
                   }}
                 >
                   <ExternalLink style={{ width: "14px", height: "14px" }} />
-                  Open in Gmail
+                  Open in Superhuman
                 </a>
                 {/* Account Selector */}
                 {accounts.length > 0 && (

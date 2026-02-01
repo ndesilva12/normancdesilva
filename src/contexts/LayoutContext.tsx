@@ -37,6 +37,7 @@ const DEFAULT_PREVIEW_WIDGETS: WidgetConfig[] = [
   { id: "stocks", size: "default", visible: true, order: 7 },
   { id: "accounts", size: "default", visible: true, order: 8 },
   { id: "raindrop", size: "default", visible: true, order: 9 },
+  { id: "inoreader", size: "default", visible: true, order: 10 },
 ];
 
 // Tool Widgets (interactive tools and features)
@@ -56,7 +57,7 @@ const DEFAULT_TOOL_CARDS: WidgetConfig[] = [
 const DEFAULT_LAYOUT: LayoutConfig = {
   previewWidgets: DEFAULT_PREVIEW_WIDGETS,
   toolCards: DEFAULT_TOOL_CARDS,
-  version: 1,
+  version: 2,
   searchSourceMode: "onlySelection",
 };
 
