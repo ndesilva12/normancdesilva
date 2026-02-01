@@ -3,6 +3,7 @@
 export type UnifiedSourceId =
   // Web search sources
   | "google"
+  | "jimmy"
   | "images"
   | "news"
   | "trends"
@@ -81,6 +82,21 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     description: "Google search",
     type: "web",
     searchUrlTemplate: "https://www.google.com/search?q={query}",
+  },
+  {
+    id: "jimmy",
+    name: "Jimmy",
+    description: "Chat with Jimmy (your AI assistant)",
+    longDescription: "Ask Jimmy anything - he has access to your emails, calendar, contacts, can control your Sonos speakers, monitor your Ring cameras, and help with any task.",
+    type: "tool",
+    apiEndpoint: "/api/jimmy",
+    usesSearchInput: true,
+    exampleSearches: [
+      "What's on my calendar today?",
+      "jimmy sonos play music in the den",
+      "Check my recent emails",
+      "Summarize my day",
+    ],
   },
   {
     id: "images",
