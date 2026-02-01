@@ -19,6 +19,7 @@ import {
 import { useSettings } from "@/contexts/SettingsContext";
 import { useRecentSearches } from "@/contexts/RecentSearchesContext";
 import { useAuth } from "@/contexts/AuthContext";
+import JimmyChatInterface from "./JimmyChatInterface";
 
 interface TrendingSearch {
   title: string;
@@ -386,6 +387,9 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
 
   // AI follow-up conversation
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
+  
+  // Jimmy chat messages (separate from AI conversation)
+  const [jimmyMessages, setJimmyMessages] = useState<Array<{ role: "user" | "assistant"; content: string; timestamp: Date }>>([]);
   const [followUpInput, setFollowUpInput] = useState("");
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
 
@@ -680,6 +684,15 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                     (data as { summary?: string }).summary;
         }
 
+        // Special handling for Jimmy - populate chat messages
+        if (selectedSource === "jimmy" && content) {
+          setJimmyMessages(prev => [
+            ...prev,
+            { role: "user", content: query.trim(), timestamp: new Date() },
+            { role: "assistant", content, timestamp: new Date() },
+          ]);
+        }
+
         setToolResult({
           source: selectedSource,
           sourceName: sourceConfig.name,
@@ -707,6 +720,54 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
     setFollowUpInput("");
     setToolInputs({});
     setUploadedImage(null);
+    setJimmyMessages([]);
+  };
+
+  // Handle Jimmy chat message
+  const handleJimmyMessage = async (message: string) => {
+    if (!message.trim()) return;
+
+    // Add user message immediately
+    const userMessage = { role: "user" as const, content: message, timestamp: new Date() };
+    setJimmyMessages(prev => [...prev, userMessage]);
+
+    // Set loading state
+    setIsSearching(true);
+
+    try {
+      const response = await fetch("/api/jimmy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: message,
+          userId: user?.uid,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Request failed");
+      }
+
+      // Add assistant response
+      const assistantMessage = {
+        role: "assistant" as const,
+        content: data.content || "No response received",
+        timestamp: new Date(),
+      };
+      setJimmyMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      // Add error message
+      const errorMessage = {
+        role: "assistant" as const,
+        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        timestamp: new Date(),
+      };
+      setJimmyMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   // Handle AI follow-up
@@ -1196,6 +1257,19 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
 
     const sourceConfig = getSourceConfig(toolResult.source);
     const isAI = sourceConfig?.type === "ai";
+
+    // Special rendering for Jimmy chat
+    if (toolResult.source === "jimmy" && jimmyMessages.length > 0) {
+      return (
+        <div style={{ marginTop: "24px" }}>
+          <JimmyChatInterface
+            initialMessages={jimmyMessages}
+            onSendMessage={handleJimmyMessage}
+            isLoading={isSearching}
+          />
+        </div>
+      );
+    }
 
     return (
       <div
