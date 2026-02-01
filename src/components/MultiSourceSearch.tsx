@@ -1529,9 +1529,9 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
 
   // Build ordered source list for display
   const orderedSources = useMemo(() => {
-    // Order: Google, Images, News, Trends, Duck, Wikipedia, Grokipedia | tools | X, Youtube, Rumble, Amazon | individual AI
+    // Order: Google, Jimmy, Images, News, Trends, Duck, Wikipedia, Grokipedia | tools | X, Youtube, Rumble, Amazon | individual AI
     const order: UnifiedSourceId[] = [
-      "google", "images", "news", "trends", "duck", "wikipedia", "grokipedia",
+      "google", "jimmy", "images", "news", "trends", "duck", "wikipedia", "grokipedia",
       "deep-search", "dark-search", "corporate-info", "business-info", "contacts", "contact-finder",
       "image-lookup", "visuals", "rosters", "spotify",
       "x", "youtube", "rumble", "amazon",
