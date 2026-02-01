@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GATEWAY_URL = "ws://100.120.206.86:18789";
-const GATEWAY_PASSWORD = "HowardRoark12!";
-
-// Force Node.js runtime for WebSocket support
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-// Lazy load ws module
-let WebSocket: typeof import("ws").WebSocket;
+// Use the HTTP relay instead of WebSocket
+const RELAY_URL = "https://ip-172-31-15-64.tailf5ae1d.ts.net:8443";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,17 +14,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use a persistent session key per user to maintain conversation history
-    // All dashboard conversations use the same session key for continuity
-    const sessionKey = userId ? `dashboard-${userId}` : "dashboard-norman";
-
-    const responseText = await sendToJimmy(query, sessionKey);
-
-    return NextResponse.json({
-      success: true,
-      content: responseText, // Match the expected format
-      source: "jimmy",
+    // Forward to the relay
+    const response = await fetch(RELAY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, userId }),
     });
+
+    if (!response.ok) {
+      throw new Error(`Relay error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
     console.error("Jimmy API error:", error);
     return NextResponse.json(
@@ -39,84 +34,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-async function sendToJimmy(
-  message: string,
-  sessionKey: string
-): Promise<string> {
-  // Lazy load WebSocket
-  if (!WebSocket) {
-    const wsModule = await import("ws");
-    WebSocket = wsModule.default;
-  }
-
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket(GATEWAY_URL);
-    let response = "";
-    let authenticated = false;
-
-    const timeout = setTimeout(() => {
-      ws.close();
-      reject(new Error("Timeout waiting for response from Jimmy"));
-    }, 60000); // 60 second timeout
-
-    ws.on("open", () => {
-      // Authenticate
-      ws.send(
-        JSON.stringify({
-          type: "auth",
-          password: GATEWAY_PASSWORD,
-        })
-      );
-    });
-
-    ws.on("message", (data) => {
-      try {
-        const msg = JSON.parse(data.toString());
-
-        if (msg.type === "auth.success") {
-          authenticated = true;
-          // Send message
-          ws.send(
-            JSON.stringify({
-              type: "chat.send",
-              message: message,
-              sessionKey: sessionKey,
-            })
-          );
-        }
-
-        if (msg.type === "chat.message" && msg.role === "assistant") {
-          response += msg.content;
-        }
-
-        if (msg.type === "chat.done") {
-          clearTimeout(timeout);
-          ws.close();
-          resolve(response || "Jimmy didn't respond. Please try again.");
-        }
-
-        if (msg.type === "error") {
-          clearTimeout(timeout);
-          ws.close();
-          reject(new Error(msg.message || "Unknown error"));
-        }
-      } catch (e) {
-        console.error("Error parsing message:", e);
-      }
-    });
-
-    ws.on("error", (error) => {
-      clearTimeout(timeout);
-      reject(error);
-    });
-
-    ws.on("close", () => {
-      clearTimeout(timeout);
-      if (!response && authenticated) {
-        reject(new Error("Connection closed before receiving response"));
-      }
-    });
-  });
 }
