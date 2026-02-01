@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, ExternalLink, Tag, Clock, Loader2, Link as LinkIcon, ChevronUp } from "lucide-react";
+import { Bookmark, ExternalLink, Tag, Clock, Loader2, Link as LinkIcon } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 
 interface RaindropItem {
@@ -34,11 +34,8 @@ export function RaindropPreview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
-  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+  const { isEditMode } = useLayout();
   const router = useRouter();
-
-  const config = getWidgetConfig("previewWidgets", "raindrop");
-  const isCollapsed = config?.size === "collapsed";
 
   // Connect to Raindrop via OAuth
   const handleConnect = async () => {
@@ -140,30 +137,25 @@ export function RaindropPreview() {
 
   return (
     <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}>
-      {/* Header with Collection Pills */}
+      {/* Header with Tag Pills */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
+          borderBottom: "1px solid var(--glass-border)",
           flexShrink: 0,
-          cursor: isCollapsed ? "default" : "pointer",
+          cursor: "pointer",
         }}
         onClick={() => {
-          if (!isCollapsed) {
-            router.push("/tools/raindrop");
-          }
+          router.push("/tools/raindrop");
         }}
       >
         <Link
           href="/tools/raindrop"
           onClick={(e) => {
             e.stopPropagation();
-            if (isCollapsed) {
-              e.preventDefault();
-            }
           }}
           style={{
             display: "flex",
@@ -173,7 +165,6 @@ export function RaindropPreview() {
             textDecoration: "none",
             padding: "4px 8px 4px 0",
             margin: "-4px 0",
-            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <Bookmark style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
@@ -182,8 +173,8 @@ export function RaindropPreview() {
           </span>
         </Link>
 
-        {/* Tag Pills - hidden when collapsed */}
-        {!isCollapsed && allTags.length > 0 && (
+        {/* Tag Pills */}
+        {allTags.length > 0 && (
           <div
             style={{
               display: "flex",
@@ -241,53 +232,23 @@ export function RaindropPreview() {
           </div>
         )}
 
-        {/* Spacer when collapsed or no tags */}
-        {(isCollapsed || allTags.length === 0) && <div style={{ flex: 1 }} />}
+        {/* Spacer when no tags */}
+        {allTags.length === 0 && <div style={{ flex: 1 }} />}
 
-        {/* Collapse button (only shown when not collapsed and not in edit mode) */}
-        {!isCollapsed && !isEditMode && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleWidgetCollapse("previewWidgets", "raindrop");
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "24px",
-              height: "24px",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "transparent",
-              color: "var(--foreground-muted)",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              flexShrink: 0,
-            }}
-            title="Collapse"
-          >
-            <ChevronUp style={{ width: "16px", height: "16px" }} />
-          </button>
-        )}
-
-        {!isCollapsed && (
-          <a
-            href="https://app.raindrop.io"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-          </a>
-        )}
+        <a
+          href="https://app.raindrop.io"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+        </a>
       </div>
 
       {/* Content */}
