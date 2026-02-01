@@ -437,11 +437,6 @@ export default function NotionBrowser() {
   }, []);
 
   const searchItems = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      fetchWorkspaceItems();
-      return;
-    }
-
     setIsSearching(true);
     try {
       const response = await fetch(`/api/notion-workspace?action=search&query=${encodeURIComponent(query)}`);
@@ -456,7 +451,19 @@ export default function NotionBrowser() {
     } finally {
       setIsSearching(false);
     }
-  }, [fetchWorkspaceItems]);
+  }, []);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    // If search is cleared, reload current view
+    if (!value.trim()) {
+      if (currentView === "workspace") {
+        fetchWorkspaceItems();
+      } else if (currentDatabaseId) {
+        fetchDatabasePages(currentDatabaseId, currentDatabaseTitle);
+      }
+    }
+  }, [currentView, currentDatabaseId, currentDatabaseTitle, fetchWorkspaceItems, fetchDatabasePages]);
 
   const backToWorkspace = useCallback(() => {
     setCurrentView("workspace");
@@ -470,21 +477,16 @@ export default function NotionBrowser() {
     fetchWorkspaceItems();
   }, [fetchWorkspaceItems]);
 
+  // Debounced search - only triggers on search query changes
   useEffect(() => {
+    if (!searchQuery) return;
+
     const delayDebounceFn = setTimeout(() => {
-      if (searchQuery) {
-        searchItems(searchQuery);
-      } else {
-        if (currentView === "workspace") {
-          fetchWorkspaceItems();
-        } else if (currentDatabaseId) {
-          fetchDatabasePages(currentDatabaseId, currentDatabaseTitle);
-        }
-      }
+      searchItems(searchQuery);
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, currentView, currentDatabaseId, currentDatabaseTitle, fetchWorkspaceItems, fetchDatabasePages, searchItems]);
+  }, [searchQuery, searchItems]);
 
   // Keyboard handler for Escape to close page viewer
   useEffect(() => {
@@ -605,7 +607,7 @@ export default function NotionBrowser() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Search notes..."
                 style={{
                   flex: 1,
