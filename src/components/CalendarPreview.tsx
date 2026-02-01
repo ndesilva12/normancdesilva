@@ -43,6 +43,8 @@ function isEventToday(event: CalendarEvent): boolean {
   return date.toDateString() === today.toDateString();
 }
 
+const CALENDAR_SETTINGS_KEY = "calendar_selected_calendars";
+
 export function CalendarPreview() {
   const { isEditMode } = useLayout();
   const router = useRouter();
@@ -50,6 +52,21 @@ export function CalendarPreview() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const getSelectedCalendars = (): string[] => {
+    try {
+      const saved = localStorage.getItem(CALENDAR_SETTINGS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load calendar settings:", error);
+    }
+    return ["primary"];
+  };
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -60,8 +77,11 @@ export function CalendarPreview() {
       end.setDate(end.getDate() + 7);
       end.setHours(23, 59, 59, 999);
 
+      const selectedCalendars = getSelectedCalendars();
+      const calendarsParam = selectedCalendars.join(",");
+
       const response = await fetch(
-        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`,
+        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}&calendars=${encodeURIComponent(calendarsParam)}`,
         { cache: "no-store" }
       );
 
