@@ -1614,10 +1614,13 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
     return order.map(id => UNIFIED_SOURCES.find(s => s.id === id)).filter(Boolean) as typeof UNIFIED_SOURCES;
   }, []);
 
+  // Check if we're in Jimmy chat mode (active conversation)
+  const isJimmyChatActive = selectedSource === "jimmy" && jimmyMessages.length > 0;
+
   return (
     <div style={{ width: "100%", maxWidth: "900px", margin: "0 auto" }}>
-      {/* Trending Topics - always visible */}
-      {trends.length > 0 && (
+      {/* Trending Topics - hidden when Jimmy chat is active */}
+      {!isJimmyChatActive && trends.length > 0 && (
         <div
           style={{
             display: "flex",
@@ -1679,12 +1682,14 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
         </div>
       )}
 
-      <form onSubmit={handleSearch}>
-        {/* Search Bar */}
-        <div
-          className="glass"
-          style={{
-            display: "flex",
+      {/* Search form - hidden when Jimmy chat is active */}
+      {!isJimmyChatActive && (
+        <form onSubmit={handleSearch}>
+          {/* Search Bar */}
+          <div
+            className="glass"
+            style={{
+              display: "flex",
             alignItems: "flex-start",
             gap: isMobile ? "10px" : "8px",
             borderRadius: isMobile ? "14px" : "12px",
@@ -1901,12 +1906,13 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
           )}
         </div>
 
-      </form>
+        </form>
+      )}
 
-      {/* Tool panel */}
-      {renderToolPanel()}
+      {/* Tool panel - hidden when Jimmy chat is active */}
+      {!isJimmyChatActive && renderToolPanel()}
 
-      {/* Results display */}
+      {/* Results display - always show (contains Jimmy chat when active) */}
       {renderResult()}
 
       <style jsx global>{`
