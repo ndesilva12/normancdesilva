@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -250,19 +251,15 @@ export function EmailDetailModal({
             exit={{ scale: 0.95, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             style={{
-              position: "fixed",
-              top: "15vh",
-              left: "50%",
-              transform: "translateX(-50%)",
               width: "90%",
               maxWidth: "900px",
               height: "80vh",
+              margin: "auto",
               backgroundColor: "rgba(26, 26, 26, 0.95)",
               backdropFilter: "blur(20px)",
               border: "1px solid var(--glass-border)",
               borderRadius: "16px",
               boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
-              zIndex: 1000,
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
