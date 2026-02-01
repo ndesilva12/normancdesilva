@@ -266,8 +266,9 @@ export function EmailDetailModal({
             backdropFilter: "blur(5px)",
             zIndex: 999,
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "center",
+            paddingTop: "5vh",
           }}
           onClick={onClose}
         >
@@ -277,10 +278,9 @@ export function EmailDetailModal({
             exit={{ scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             style={{
-              width: "90%",
-              maxWidth: "900px",
-              height: "80vh",
-              margin: "auto",
+              width: "94%",
+              maxWidth: "1100px",
+              height: "85vh",
               backgroundColor: "rgba(26, 26, 26, 0.95)",
               backdropFilter: "blur(20px)",
               border: "1px solid var(--glass-border)",
