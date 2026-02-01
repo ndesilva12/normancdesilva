@@ -83,6 +83,12 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [layout, setLayout] = useState<LayoutConfig>(DEFAULT_LAYOUT);
   const [isEditMode, setIsEditMode] = useState(false);
   const [pendingLayout, setPendingLayout] = useState<LayoutConfig | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Mark as mounted to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Helper function to merge and sort layout with defaults
   const mergeLayoutWithDefaults = (parsed: LayoutConfig): LayoutConfig => {
@@ -108,6 +114,8 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
 
   // Load layout from Firestore with real-time sync (falls back to localStorage)
   useEffect(() => {
+    if (!mounted) return;
+    
     if (!user) {
       setLayout(DEFAULT_LAYOUT);
       return;
@@ -173,7 +181,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-  }, [user]);
+  }, [user, mounted]);
 
   // Save layout to Firestore and localStorage
   const saveLayout = useCallback(
