@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GATEWAY_URL = "wss://ip-172-31-15-64.tailf5ae1d.ts.net";
+const GATEWAY_URL = "ws://100.120.206.86:18789";
 const GATEWAY_PASSWORD = "HowardRoark12!";
 
 // Force Node.js runtime for WebSocket support
