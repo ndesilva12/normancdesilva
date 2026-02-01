@@ -17,6 +17,8 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  Code,
+  FileText,
 } from "lucide-react";
 import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
 
@@ -222,9 +224,12 @@ export function EmailDetailModal({
           style={{
             flex: 1,
             overflowY: "auto",
-            padding: "16px 0",
-            color: "var(--foreground)",
+            backgroundColor: "#ffffff",
+            borderRadius: "8px",
+            padding: "20px",
+            color: "#1a1a1a",
             lineHeight: 1.6,
+            fontSize: "14px",
           }}
           dangerouslySetInnerHTML={{ __html: email.bodyHtml }}
         />
@@ -236,11 +241,14 @@ export function EmailDetailModal({
         style={{
           flex: 1,
           overflowY: "auto",
-          padding: "16px 0",
-          color: "var(--foreground)",
+          backgroundColor: "#ffffff",
+          borderRadius: "8px",
+          padding: "20px",
+          color: "#1a1a1a",
           lineHeight: 1.6,
           fontFamily: "inherit",
           whiteSpace: "pre-wrap",
+          fontSize: "14px",
         }}
       >
         {email.body}
@@ -617,7 +625,40 @@ export function EmailDetailModal({
                 </div>
 
                 {/* Email Body */}
-                <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", padding: "0 20px 16px" }}>
+                  {/* HTML/Text Toggle */}
+                  {email.bodyHtml && (
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px", flexShrink: 0 }}>
+                      <button
+                        onClick={() => setShowHtml(!showHtml)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          backgroundColor: "rgba(255, 255, 255, 0.05)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          color: "var(--foreground-muted)",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        {showHtml ? (
+                          <>
+                            <FileText style={{ width: "14px", height: "14px" }} />
+                            Show Plain Text
+                          </>
+                        ) : (
+                          <>
+                            <Code style={{ width: "14px", height: "14px" }} />
+                            Show HTML
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                   {renderEmailBody()}
                 </div>
 
