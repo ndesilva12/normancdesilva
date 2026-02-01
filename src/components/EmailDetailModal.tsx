@@ -76,6 +76,30 @@ export function EmailDetailModal({
     }
   }, [emailId]);
 
+  // Automatically mark email as read when opened
+  useEffect(() => {
+    if (email && email.isUnread && email.accountEmail) {
+      // Mark as read silently (don't show loading state)
+      fetch(`/api/gmail/${email.id}/actions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "mark-read",
+          account: email.accountEmail,
+        }),
+      })
+        .then((response) => {
+          if (response.ok) {
+            setEmail((prev) => (prev ? { ...prev, isUnread: false } : prev));
+            onEmailUpdated(); // Update the email list to reflect read status
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to mark email as read:", err);
+        });
+    }
+  }, [email?.id, email?.isUnread, email?.accountEmail]);
+
   // Keyboard handler for Escape to close modal
   useEffect(() => {
     if (!emailId) return;
