@@ -28,7 +28,9 @@ interface Collection {
 export function RaindropPreview() {
   const [bookmarks, setBookmarks] = useState<RaindropItem[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<number>(-1); // -1 = All
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
@@ -82,7 +84,7 @@ export function RaindropPreview() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/raindrop?collection=${selectedCollection}&limit=12`);
+        const response = await fetch(`/api/raindrop?collection=${selectedCollection}&limit=50`);
         const data = await response.json();
 
         if (data.needsAuth) {
@@ -92,7 +94,15 @@ export function RaindropPreview() {
           setError(data.error);
           setBookmarks([]);
         } else {
-          setBookmarks(data.bookmarks || []);
+          const fetchedBookmarks = data.bookmarks || [];
+          setBookmarks(fetchedBookmarks);
+
+          // Extract all unique tags
+          const tags = new Set<string>();
+          fetchedBookmarks.forEach((b: RaindropItem) => {
+            b.tags?.forEach((tag: string) => tags.add(tag));
+          });
+          setAllTags(Array.from(tags).sort());
         }
       } catch (err) {
         setError("Failed to load bookmarks");
@@ -103,6 +113,14 @@ export function RaindropPreview() {
     }
     fetchBookmarks();
   }, [selectedCollection, needsAuth]);
+
+  // Filter bookmarks by selected tag
+  const filteredBookmarks = selectedTag
+    ? bookmarks.filter((b) => b.tags?.includes(selectedTag))
+    : bookmarks;
+
+  // Display only first 12 filtered bookmarks
+  const displayBookmarks = filteredBookmarks.slice(0, 12);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -164,8 +182,8 @@ export function RaindropPreview() {
           </span>
         </Link>
 
-        {/* Collection Pills - hidden when collapsed */}
-        {!isCollapsed && (
+        {/* Tag Pills - hidden when collapsed */}
+        {!isCollapsed && allTags.length > 0 && (
           <div
             style={{
               display: "flex",
@@ -175,19 +193,18 @@ export function RaindropPreview() {
               justifyContent: "flex-end",
             }}
           >
-            {visibleCollections.map((collection) => (
+            {selectedTag && (
               <button
-                key={collection.id}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedCollection(collection.id);
+                  setSelectedTag(null);
                 }}
                 style={{
                   padding: "3px 8px",
                   borderRadius: "10px",
-                  border: "none",
-                  backgroundColor: selectedCollection === collection.id ? "var(--accent)" : "rgba(255, 255, 255, 0.08)",
-                  color: selectedCollection === collection.id ? "var(--background)" : "var(--foreground-muted)",
+                  border: "1px solid var(--glass-border)",
+                  backgroundColor: "transparent",
+                  color: "var(--foreground-muted)",
                   fontSize: "10px",
                   fontWeight: 500,
                   cursor: "pointer",
@@ -195,14 +212,37 @@ export function RaindropPreview() {
                   whiteSpace: "nowrap",
                 }}
               >
-                {collection.title}
+                Clear
+              </button>
+            )}
+            {allTags.slice(0, 6).map((tag) => (
+              <button
+                key={tag}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedTag(tag === selectedTag ? null : tag);
+                }}
+                style={{
+                  padding: "3px 8px",
+                  borderRadius: "10px",
+                  border: "none",
+                  backgroundColor: selectedTag === tag ? "var(--accent)" : "rgba(255, 255, 255, 0.08)",
+                  color: selectedTag === tag ? "var(--background)" : "var(--foreground-muted)",
+                  fontSize: "10px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                #{tag}
               </button>
             ))}
           </div>
         )}
 
-        {/* Spacer when collapsed */}
-        {isCollapsed && <div style={{ flex: 1 }} />}
+        {/* Spacer when collapsed or no tags */}
+        {(isCollapsed || allTags.length === 0) && <div style={{ flex: 1 }} />}
 
         {/* Collapse button (only shown when not collapsed and not in edit mode) */}
         {!isCollapsed && !isEditMode && (
@@ -293,13 +333,13 @@ export function RaindropPreview() {
           <div style={{ padding: "20px", textAlign: "center", color: "var(--foreground-muted)", fontSize: "13px" }}>
             {error}
           </div>
-        ) : bookmarks.length === 0 ? (
+        ) : displayBookmarks.length === 0 ? (
           <div style={{ padding: "20px", textAlign: "center", color: "var(--foreground-muted)", fontSize: "13px" }}>
-            No bookmarks found
+            {selectedTag ? `No bookmarks with tag #${selectedTag}` : "No bookmarks found"}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {bookmarks.map((bookmark) => (
+            {displayBookmarks.map((bookmark) => (
               <a
                 key={bookmark.id}
                 href={bookmark.url}
@@ -381,22 +421,30 @@ export function RaindropPreview() {
                   {bookmark.tags.length > 0 && (
                     <div style={{ display: "flex", gap: "4px", marginTop: "6px", flexWrap: "wrap" }}>
                       {bookmark.tags.slice(0, 3).map((tag) => (
-                        <span
+                        <button
                           key={tag}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedTag(tag === selectedTag ? null : tag);
+                          }}
                           style={{
                             display: "flex",
                             alignItems: "center",
                             gap: "3px",
                             padding: "2px 6px",
                             borderRadius: "4px",
-                            backgroundColor: "rgba(var(--accent-rgb), 0.15)",
+                            border: "none",
+                            backgroundColor: selectedTag === tag ? "var(--accent)" : "rgba(var(--accent-rgb), 0.15)",
                             fontSize: "10px",
-                            color: "var(--accent)",
+                            color: selectedTag === tag ? "var(--background)" : "var(--accent)",
+                            cursor: "pointer",
+                            transition: "all 0.15s",
                           }}
                         >
                           <Tag style={{ width: "8px", height: "8px" }} />
                           {tag}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   )}
