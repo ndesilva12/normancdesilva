@@ -59,6 +59,16 @@ export interface CalendarEvent {
   };
 }
 
+export interface CalendarListEntry {
+  id: string;
+  summary: string;
+  description?: string;
+  backgroundColor?: string;
+  foregroundColor?: string;
+  primary?: boolean;
+  accessRole?: string;
+}
+
 // Get user info from access token
 export async function getGoogleUserInfo(accessToken: string): Promise<GoogleUserInfo> {
   const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -216,11 +226,42 @@ export async function deleteCalendarEvent(
   }
 }
 
-// Get calendar events for a date range
+// Get list of all calendars the user has access to
+export async function getCalendarList(
+  accessToken: string
+): Promise<CalendarListEntry[]> {
+  const response = await fetch(
+    "https://www.googleapis.com/calendar/v3/users/me/calendarList",
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get calendar list: ${error}`);
+  }
+
+  const data = await response.json();
+  return (data.items || []).map((item: Record<string, unknown>) => ({
+    id: item.id,
+    summary: item.summary,
+    description: item.description,
+    backgroundColor: item.backgroundColor,
+    foregroundColor: item.foregroundColor,
+    primary: item.primary,
+    accessRole: item.accessRole,
+  }));
+}
+
+// Get calendar events for a date range from a specific calendar
 export async function getCalendarEvents(
   accessToken: string,
   timeMin: string,
-  timeMax: string
+  timeMax: string,
+  calendarId: string = "primary"
 ): Promise<CalendarEvent[]> {
   const params = new URLSearchParams({
     timeMin,
@@ -230,7 +271,7 @@ export async function getCalendarEvents(
   });
 
   const response = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params.toString()}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
