@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import WebSocket from "ws";
 
 const GATEWAY_URL = "ws://100.120.206.86:18789";
 const GATEWAY_PASSWORD = "HowardRoark12!";
+
+// Force Node.js runtime for WebSocket support
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+// Lazy load ws module
+let WebSocket: typeof import("ws").WebSocket;
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +45,12 @@ async function sendToJimmy(
   message: string,
   sessionKey: string
 ): Promise<string> {
+  // Lazy load WebSocket
+  if (!WebSocket) {
+    const wsModule = await import("ws");
+    WebSocket = wsModule.default;
+  }
+
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(GATEWAY_URL);
     let response = "";
