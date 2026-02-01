@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { useAuth } from "./AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
 
 // Widget size options
 export type WidgetSize = "collapsed" | "default" | "expanded";
@@ -88,7 +90,29 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
-  // Load layout from localStorage
+  // Helper function to merge and sort layout with defaults
+  const mergeLayoutWithDefaults = (parsed: LayoutConfig): LayoutConfig => {
+    // Merge with defaults to handle new widgets
+    const mergedPreviewWidgets = DEFAULT_PREVIEW_WIDGETS.map((defaultWidget) => {
+      const savedWidget = parsed.previewWidgets?.find((w) => w.id === defaultWidget.id);
+      return savedWidget || defaultWidget;
+    });
+    const mergedToolCards = DEFAULT_TOOL_CARDS.map((defaultWidget) => {
+      const savedWidget = parsed.toolCards?.find((w) => w.id === defaultWidget.id);
+      return savedWidget || defaultWidget;
+    });
+    // Sort by saved order to preserve user's widget arrangement
+    mergedPreviewWidgets.sort((a, b) => a.order - b.order);
+    mergedToolCards.sort((a, b) => a.order - b.order);
+    return {
+      previewWidgets: mergedPreviewWidgets,
+      toolCards: mergedToolCards,
+      version: parsed.version || 1,
+      searchSourceMode: parsed.searchSourceMode || "onlySelection",
+    };
+  };
+
+  // Load layout from Firestore with real-time sync (falls back to localStorage)
   useEffect(() => {
     if (!mounted) return;
     
@@ -98,38 +122,85 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     }
 
     const storageKey = `dashboard-layout-${user.uid}`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as LayoutConfig;
-        // Merge with defaults to handle new widgets
-        const mergedPreviewWidgets = DEFAULT_PREVIEW_WIDGETS.map((defaultWidget) => {
-          const savedWidget = parsed.previewWidgets?.find((w) => w.id === defaultWidget.id);
-          return savedWidget || defaultWidget;
-        });
-        const mergedToolCards = DEFAULT_TOOL_CARDS.map((defaultWidget) => {
-          const savedWidget = parsed.toolCards?.find((w) => w.id === defaultWidget.id);
-          return savedWidget || defaultWidget;
-        });
-        setLayout({
-          previewWidgets: mergedPreviewWidgets,
-          toolCards: mergedToolCards,
-          version: parsed.version || 1,
-          searchSourceMode: parsed.searchSourceMode || "onlySelection",
-        });
-      } catch {
-        setLayout(DEFAULT_LAYOUT);
+
+    if (db) {
+      const userDocRef = doc(db, "users", user.uid);
+
+      const unsubscribe = onSnapshot(
+        userDocRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.layout) {
+              const mergedLayout = mergeLayoutWithDefaults(data.layout);
+              setLayout(mergedLayout);
+              // Also cache in localStorage
+              localStorage.setItem(storageKey, JSON.stringify(mergedLayout));
+            }
+          } else {
+            // Check localStorage for initial data and migrate to Firestore
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+              try {
+                const localLayout = JSON.parse(stored) as LayoutConfig;
+                const mergedLayout = mergeLayoutWithDefaults(localLayout);
+                setLayout(mergedLayout);
+                // Migrate localStorage data to Firestore
+                setDoc(userDocRef, { layout: mergedLayout }, { merge: true });
+              } catch {
+                setLayout(DEFAULT_LAYOUT);
+              }
+            }
+          }
+        },
+        (error) => {
+          console.error("Layout sync error:", error);
+          // Fallback to localStorage on error
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            try {
+              const localLayout = JSON.parse(stored) as LayoutConfig;
+              setLayout(mergeLayoutWithDefaults(localLayout));
+            } catch {
+              setLayout(DEFAULT_LAYOUT);
+            }
+          }
+        }
+      );
+
+      return () => unsubscribe();
+    } else {
+      // Fallback to localStorage if Firestore is not available
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        try {
+          const localLayout = JSON.parse(stored) as LayoutConfig;
+          setLayout(mergeLayoutWithDefaults(localLayout));
+        } catch {
+          setLayout(DEFAULT_LAYOUT);
+        }
       }
     }
   }, [user, mounted]);
 
-  // Save layout to localStorage
+  // Save layout to Firestore and localStorage
   const saveLayout = useCallback(
-    (newLayout: LayoutConfig) => {
+    async (newLayout: LayoutConfig) => {
       if (!user) return;
+
       const storageKey = `dashboard-layout-${user.uid}`;
       localStorage.setItem(storageKey, JSON.stringify(newLayout));
       setLayout(newLayout);
+
+      // Save to Firestore for cross-device sync
+      if (db) {
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          await setDoc(userDocRef, { layout: newLayout }, { merge: true });
+        } catch (error) {
+          console.error("Failed to save layout to Firestore:", error);
+        }
+      }
     },
     [user]
   );
