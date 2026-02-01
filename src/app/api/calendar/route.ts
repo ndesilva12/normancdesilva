@@ -142,10 +142,17 @@ export async function GET(request: Request) {
         index === self.findIndex((e) => e.id === event.id)
     );
 
-    return NextResponse.json({
-      events: uniqueEvents,
-      accountCount: accounts.length,
-    });
+    return NextResponse.json(
+      {
+        events: uniqueEvents,
+        accountCount: accounts.length,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching events:", error);
     return NextResponse.json(

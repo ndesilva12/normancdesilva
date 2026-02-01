@@ -54,7 +54,8 @@ export default function CalendarPage() {
       const { start, end } = getDateRange();
 
       const response = await fetch(
-        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`
+        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`,
+        { cache: "no-store" }
       );
 
       if (response.ok) {
@@ -470,9 +471,11 @@ export default function CalendarPage() {
                   backgroundColor: isToday(day) ? "rgba(var(--accent-rgb), 0.05)" : "transparent",
                   cursor: "pointer",
                   minHeight: "200px",
+                  overflow: "hidden",
+                  minWidth: 0,
                 }}
               >
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: 0 }}>
                   {dayEvents.slice(0, isMobile ? 2 : 4).map((event) => (
                     <div
                       key={event.id}
@@ -485,6 +488,7 @@ export default function CalendarPage() {
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
+                        maxWidth: "100%",
                       }}
                     >
                       {!isMobile && (
@@ -555,7 +559,7 @@ export default function CalendarPage() {
                 key={idx}
                 onClick={() => day && goToDate(day)}
                 style={{
-                  minHeight: isMobile ? "50px" : "100px",
+                  minHeight: isMobile ? "60px" : "130px",
                   padding: isMobile ? "4px" : "8px",
                   borderRight: (idx + 1) % 7 !== 0 ? "1px solid var(--glass-border)" : "none",
                   borderBottom: idx < monthDays.length - 7 ? "1px solid var(--glass-border)" : "none",
@@ -653,7 +657,7 @@ export default function CalendarPage() {
         <div
           style={{
             width: "100%",
-            maxWidth: "1100px",
+            maxWidth: "1400px",
             margin: "0 auto",
             padding: "32px 24px 100px 24px",
           }}
