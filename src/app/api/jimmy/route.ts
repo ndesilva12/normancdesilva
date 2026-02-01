@@ -6,7 +6,7 @@ const GATEWAY_PASSWORD = "HowardRoark12!";
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, sessionKey } = await request.json();
+    const { query, userId } = await request.json();
 
     if (!query) {
       return NextResponse.json(
@@ -15,11 +15,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await sendToJimmy(query, sessionKey || "dashboard");
+    // Use a persistent session key per user to maintain conversation history
+    // All dashboard conversations use the same session key for continuity
+    const sessionKey = userId ? `dashboard-${userId}` : "dashboard-norman";
+
+    const responseText = await sendToJimmy(query, sessionKey);
 
     return NextResponse.json({
       success: true,
-      response,
+      content: responseText, // Match the expected format
       source: "jimmy",
     });
   } catch (error) {
