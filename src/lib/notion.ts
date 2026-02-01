@@ -62,10 +62,23 @@ export interface NotionPage {
   properties?: Record<string, unknown>;
 }
 
+export interface RichTextSegment {
+  text: string;
+  href?: string;
+  annotations?: {
+    bold?: boolean;
+    italic?: boolean;
+    strikethrough?: boolean;
+    underline?: boolean;
+    code?: boolean;
+  };
+}
+
 export interface NotionBlock {
   id: string;
   type: string;
   content: string;
+  richText?: RichTextSegment[];
   hasChildren: boolean;
   children?: NotionBlock[];
 }
@@ -73,6 +86,21 @@ export interface NotionBlock {
 // Helper to extract plain text from rich text array
 function extractPlainText(richText: RichTextItemResponse[]): string {
   return richText.map((text) => text.plain_text).join("");
+}
+
+// Helper to extract rich text with links and annotations
+function extractRichText(richText: RichTextItemResponse[]): RichTextSegment[] {
+  return richText.map((item) => ({
+    text: item.plain_text,
+    href: item.href || (item.type === "text" && item.text.link?.url) || undefined,
+    annotations: {
+      bold: item.annotations.bold,
+      italic: item.annotations.italic,
+      strikethrough: item.annotations.strikethrough,
+      underline: item.annotations.underline,
+      code: item.annotations.code,
+    },
+  }));
 }
 
 // Helper to get page title from properties
@@ -106,37 +134,48 @@ function getPageCover(page: PageObjectResponse): string | undefined {
 // Convert block to our format
 function convertBlock(block: BlockObjectResponse): NotionBlock {
   let content = "";
+  let richText: RichTextSegment[] | undefined;
 
   switch (block.type) {
     case "paragraph":
       content = extractPlainText(block.paragraph.rich_text);
+      richText = extractRichText(block.paragraph.rich_text);
       break;
     case "heading_1":
       content = extractPlainText(block.heading_1.rich_text);
+      richText = extractRichText(block.heading_1.rich_text);
       break;
     case "heading_2":
       content = extractPlainText(block.heading_2.rich_text);
+      richText = extractRichText(block.heading_2.rich_text);
       break;
     case "heading_3":
       content = extractPlainText(block.heading_3.rich_text);
+      richText = extractRichText(block.heading_3.rich_text);
       break;
     case "bulleted_list_item":
       content = extractPlainText(block.bulleted_list_item.rich_text);
+      richText = extractRichText(block.bulleted_list_item.rich_text);
       break;
     case "numbered_list_item":
       content = extractPlainText(block.numbered_list_item.rich_text);
+      richText = extractRichText(block.numbered_list_item.rich_text);
       break;
     case "to_do":
       content = `${block.to_do.checked ? "[x]" : "[ ]"} ${extractPlainText(block.to_do.rich_text)}`;
+      richText = extractRichText(block.to_do.rich_text);
       break;
     case "toggle":
       content = extractPlainText(block.toggle.rich_text);
+      richText = extractRichText(block.toggle.rich_text);
       break;
     case "quote":
       content = extractPlainText(block.quote.rich_text);
+      richText = extractRichText(block.quote.rich_text);
       break;
     case "callout":
       content = extractPlainText(block.callout.rich_text);
+      richText = extractRichText(block.callout.rich_text);
       break;
     case "code":
       content = extractPlainText(block.code.rich_text);
@@ -165,6 +204,7 @@ function convertBlock(block: BlockObjectResponse): NotionBlock {
     id: block.id,
     type: block.type,
     content,
+    richText,
     hasChildren: block.has_children,
   };
 }

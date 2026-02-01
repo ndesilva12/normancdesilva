@@ -40,10 +40,23 @@ interface WorkspaceItem {
   };
 }
 
+interface RichTextSegment {
+  text: string;
+  href?: string;
+  annotations?: {
+    bold?: boolean;
+    italic?: boolean;
+    strikethrough?: boolean;
+    underline?: boolean;
+    code?: boolean;
+  };
+}
+
 interface NotionBlock {
   id: string;
   type: string;
   content: string;
+  richText?: RichTextSegment[];
   hasChildren: boolean;
   children?: NotionBlock[];
 }
@@ -58,32 +71,97 @@ interface NotionPage {
   url: string;
 }
 
-// Component to render a single Notion block
+// Helper component to render rich text with links and annotations
+function RichTextRenderer({ segments, style }: { segments?: RichTextSegment[]; style?: React.CSSProperties }) {
+  if (!segments || segments.length === 0) return null;
+
+  return (
+    <span style={style}>
+      {segments.map((segment, index) => {
+        let element: React.ReactNode = segment.text;
+
+        // Apply annotations
+        if (segment.annotations?.code) {
+          element = (
+            <code
+              key={`code-${index}`}
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                padding: "2px 6px",
+                borderRadius: "4px",
+                fontFamily: "monospace",
+                fontSize: "0.9em",
+              }}
+            >
+              {element}
+            </code>
+          );
+        }
+        if (segment.annotations?.bold) {
+          element = <strong key={`bold-${index}`}>{element}</strong>;
+        }
+        if (segment.annotations?.italic) {
+          element = <em key={`italic-${index}`}>{element}</em>;
+        }
+        if (segment.annotations?.strikethrough) {
+          element = <s key={`strike-${index}`}>{element}</s>;
+        }
+        if (segment.annotations?.underline) {
+          element = <u key={`underline-${index}`}>{element}</u>;
+        }
+
+        // Wrap in link if href exists
+        if (segment.href) {
+          return (
+            <a
+              key={index}
+              href={segment.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: "var(--accent)",
+                textDecoration: "underline",
+                textUnderlineOffset: "3px",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {element}
+            </a>
+          );
+        }
+
+        return <span key={index}>{element}</span>;
+      })}
+    </span>
+  );
+}
+
+// Component to render a single Notion block (theme-aware)
 function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: number }) {
   const renderContent = () => {
     switch (block.type) {
       case "heading_1":
         return (
-          <h1 style={{ fontSize: "28px", fontWeight: 700, marginBottom: "16px", marginTop: depth > 0 ? "8px" : "24px", color: "#1a1a1a" }}>
-            {block.content}
+          <h1 style={{ fontSize: "28px", fontWeight: 700, marginBottom: "16px", marginTop: depth > 0 ? "8px" : "24px", color: "var(--foreground)" }}>
+            {block.richText ? <RichTextRenderer segments={block.richText} /> : block.content}
           </h1>
         );
       case "heading_2":
         return (
-          <h2 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "12px", marginTop: depth > 0 ? "8px" : "20px", color: "#1a1a1a" }}>
-            {block.content}
+          <h2 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "12px", marginTop: depth > 0 ? "8px" : "20px", color: "var(--foreground)" }}>
+            {block.richText ? <RichTextRenderer segments={block.richText} /> : block.content}
           </h2>
         );
       case "heading_3":
         return (
-          <h3 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "10px", marginTop: depth > 0 ? "6px" : "16px", color: "#1a1a1a" }}>
-            {block.content}
+          <h3 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "10px", marginTop: depth > 0 ? "6px" : "16px", color: "var(--foreground)" }}>
+            {block.richText ? <RichTextRenderer segments={block.richText} /> : block.content}
           </h3>
         );
       case "paragraph":
-        return block.content ? (
-          <p style={{ marginBottom: "12px", lineHeight: 1.7, color: "#333" }}>
-            {block.content}
+        return block.content || block.richText ? (
+          <p style={{ marginBottom: "12px", lineHeight: 1.7, color: "var(--foreground)" }}>
+            {block.richText ? <RichTextRenderer segments={block.richText} /> : block.content}
           </p>
         ) : (
           <div style={{ height: "12px" }} />
@@ -91,20 +169,23 @@ function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: numbe
       case "bulleted_list_item":
         return (
           <div style={{ display: "flex", gap: "8px", marginBottom: "6px", marginLeft: depth * 20 }}>
-            <span style={{ color: "#666" }}>•</span>
-            <span style={{ color: "#333", lineHeight: 1.6 }}>{block.content}</span>
+            <span style={{ color: "var(--foreground-muted)" }}>•</span>
+            <span style={{ color: "var(--foreground)", lineHeight: 1.6 }}>
+              {block.richText ? <RichTextRenderer segments={block.richText} /> : block.content}
+            </span>
           </div>
         );
       case "numbered_list_item":
         return (
           <div style={{ display: "flex", gap: "8px", marginBottom: "6px", marginLeft: depth * 20 }}>
-            <span style={{ color: "#666", minWidth: "20px" }}>1.</span>
-            <span style={{ color: "#333", lineHeight: 1.6 }}>{block.content}</span>
+            <span style={{ color: "var(--foreground-muted)", minWidth: "20px" }}>1.</span>
+            <span style={{ color: "var(--foreground)", lineHeight: 1.6 }}>
+              {block.richText ? <RichTextRenderer segments={block.richText} /> : block.content}
+            </span>
           </div>
         );
       case "to_do":
         const isChecked = block.content.startsWith("[x]");
-        const todoText = block.content.replace(/^\[.\]\s*/, "");
         return (
           <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "6px", marginLeft: depth * 20 }}>
             <CheckSquare
@@ -112,23 +193,25 @@ function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: numbe
                 width: "18px",
                 height: "18px",
                 marginTop: "2px",
-                color: isChecked ? "#22c55e" : "#999",
+                color: isChecked ? "#22c55e" : "var(--foreground-muted)",
                 fill: isChecked ? "#22c55e" : "none"
               }}
             />
             <span style={{
-              color: isChecked ? "#666" : "#333",
+              color: isChecked ? "var(--foreground-muted)" : "var(--foreground)",
               textDecoration: isChecked ? "line-through" : "none",
               lineHeight: 1.6
             }}>
-              {todoText}
+              {block.richText ? <RichTextRenderer segments={block.richText} /> : block.content.replace(/^\[.\]\s*/, "")}
             </span>
           </div>
         );
       case "toggle":
         return (
           <details style={{ marginBottom: "8px", marginLeft: depth * 20 }}>
-            <summary style={{ cursor: "pointer", color: "#333", fontWeight: 500 }}>{block.content}</summary>
+            <summary style={{ cursor: "pointer", color: "var(--foreground)", fontWeight: 500 }}>
+              {block.richText ? <RichTextRenderer segments={block.richText} /> : block.content}
+            </summary>
             {block.children && (
               <div style={{ paddingLeft: "16px", paddingTop: "8px" }}>
                 {block.children.map((child) => (
@@ -141,20 +224,20 @@ function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: numbe
       case "quote":
         return (
           <blockquote style={{
-            borderLeft: "3px solid #e5e5e5",
+            borderLeft: "3px solid var(--glass-border)",
             paddingLeft: "16px",
             marginBottom: "12px",
             marginLeft: depth * 20,
             fontStyle: "italic",
-            color: "#555"
+            color: "var(--foreground-muted)"
           }}>
-            {block.content}
+            {block.richText ? <RichTextRenderer segments={block.richText} /> : block.content}
           </blockquote>
         );
       case "callout":
         return (
           <div style={{
-            backgroundColor: "#f7f7f7",
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
             borderRadius: "6px",
             padding: "12px 16px",
             marginBottom: "12px",
@@ -162,16 +245,17 @@ function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: numbe
             display: "flex",
             alignItems: "flex-start",
             gap: "10px",
-            color: "#333"
+            color: "var(--foreground)",
+            border: "1px solid var(--glass-border)"
           }}>
             <span>💡</span>
-            <span>{block.content}</span>
+            <span>{block.richText ? <RichTextRenderer segments={block.richText} /> : block.content}</span>
           </div>
         );
       case "code":
         return (
           <pre style={{
-            backgroundColor: "#1e1e1e",
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
             color: "#d4d4d4",
             borderRadius: "6px",
             padding: "16px",
@@ -179,13 +263,14 @@ function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: numbe
             marginLeft: depth * 20,
             overflow: "auto",
             fontSize: "13px",
-            fontFamily: "monospace"
+            fontFamily: "monospace",
+            border: "1px solid var(--glass-border)"
           }}>
             <code>{block.content}</code>
           </pre>
         );
       case "divider":
-        return <hr style={{ border: "none", borderTop: "1px solid #e5e5e5", margin: "20px 0" }} />;
+        return <hr style={{ border: "none", borderTop: "1px solid var(--glass-border)", margin: "20px 0" }} />;
       case "image":
         return block.content ? (
           <div style={{ marginBottom: "16px", marginLeft: depth * 20 }}>
@@ -211,13 +296,14 @@ function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: numbe
               alignItems: "center",
               gap: "8px",
               padding: "12px 16px",
-              backgroundColor: "#f7f7f7",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
               borderRadius: "6px",
               marginBottom: "12px",
               marginLeft: depth * 20,
-              color: "#0066cc",
+              color: "var(--accent)",
               textDecoration: "none",
-              fontSize: "14px"
+              fontSize: "14px",
+              border: "1px solid var(--glass-border)"
             }}
           >
             <LinkIcon style={{ width: "16px", height: "16px" }} />
@@ -231,20 +317,21 @@ function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: numbe
             alignItems: "center",
             gap: "8px",
             padding: "8px 12px",
-            backgroundColor: "#f7f7f7",
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
             borderRadius: "6px",
             marginBottom: "8px",
             marginLeft: depth * 20,
-            color: "#333"
+            color: "var(--foreground)",
+            border: "1px solid var(--glass-border)"
           }}>
-            <FileText style={{ width: "16px", height: "16px", color: "#666" }} />
+            <FileText style={{ width: "16px", height: "16px", color: "var(--foreground-muted)" }} />
             <span>{block.content || "Untitled"}</span>
           </div>
         );
       default:
-        return block.content ? (
-          <p style={{ marginBottom: "8px", color: "#333", marginLeft: depth * 20 }}>
-            {block.content}
+        return block.content || block.richText ? (
+          <p style={{ marginBottom: "8px", color: "var(--foreground)", marginLeft: depth * 20 }}>
+            {block.richText ? <RichTextRenderer segments={block.richText} /> : block.content}
           </p>
         ) : null;
     }
@@ -896,10 +983,11 @@ export default function NotionBrowser() {
                   >
                     <div
                       style={{
-                        backgroundColor: "#ffffff",
+                        backgroundColor: "rgba(255, 255, 255, 0.03)",
                         borderRadius: "8px",
                         padding: "32px",
                         minHeight: "100%",
+                        border: "1px solid var(--glass-border)",
                       }}
                     >
                       {pageBlocks.map((block) => (

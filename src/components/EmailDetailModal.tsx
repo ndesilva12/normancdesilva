@@ -218,6 +218,7 @@ export function EmailDetailModal({
   const renderEmailBody = () => {
     if (!email) return null;
 
+    // HTML emails keep white background to preserve original styling
     if (showHtml && email.bodyHtml) {
       return (
         <div
@@ -236,19 +237,21 @@ export function EmailDetailModal({
       );
     }
 
+    // Plain text emails follow app theme
     return (
       <pre
         style={{
           flex: 1,
           overflowY: "auto",
-          backgroundColor: "#ffffff",
+          backgroundColor: "rgba(255, 255, 255, 0.05)",
           borderRadius: "8px",
           padding: "20px",
-          color: "#1a1a1a",
+          color: "var(--foreground)",
           lineHeight: 1.6,
           fontFamily: "inherit",
           whiteSpace: "pre-wrap",
           fontSize: "14px",
+          border: "1px solid var(--glass-border)",
         }}
       >
         {email.body}
@@ -338,7 +341,7 @@ export function EmailDetailModal({
                     }}
                   >
                     <ExternalLink style={{ width: "14px", height: "14px" }} />
-                    <span className="hidden sm:inline">Open in Gmail</span>
+                    <span className="hidden sm:inline">Open in Superhuman</span>
                   </button>
                 )}
                 <button

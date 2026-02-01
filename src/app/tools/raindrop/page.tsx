@@ -244,7 +244,7 @@ export default function RaindropPage() {
                 <RefreshCw style={{ width: "18px", height: "18px" }} />
                 Refresh
               </button>
-              <OpenSourceButton />
+              <OpenSourceButton href="https://app.raindrop.io" label="Open in Raindrop" />
             </div>
           </div>
 
