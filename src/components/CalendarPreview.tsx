@@ -61,7 +61,8 @@ export function CalendarPreview() {
       end.setHours(23, 59, 59, 999);
 
       const response = await fetch(
-        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`
+        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`,
+        { cache: "no-store" }
       );
 
       if (response.ok) {

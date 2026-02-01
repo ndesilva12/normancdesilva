@@ -54,7 +54,8 @@ export default function CalendarPage() {
       const { start, end } = getDateRange();
 
       const response = await fetch(
-        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`
+        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`,
+        { cache: "no-store" }
       );
 
       if (response.ok) {
