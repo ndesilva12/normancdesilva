@@ -562,6 +562,8 @@ export default function CalendarPage() {
                   backgroundColor: todayClass ? "rgba(var(--accent-rgb), 0.1)" : "transparent",
                   cursor: day ? "pointer" : "default",
                   transition: "background-color 0.15s",
+                  overflow: "hidden",
+                  minWidth: 0,
                 }}
                 onMouseEnter={(e) => {
                   if (day && !todayClass) {
@@ -607,7 +609,7 @@ export default function CalendarPage() {
                         </div>
                       )
                     ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
                         {dayEvents.slice(0, 3).map((event) => (
                           <div
                             key={event.id}
@@ -620,6 +622,7 @@ export default function CalendarPage() {
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
+                              maxWidth: "100%",
                             }}
                           >
                             {event.summary}
