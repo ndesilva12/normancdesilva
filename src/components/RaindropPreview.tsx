@@ -94,12 +94,35 @@ export function RaindropPreview() {
           const fetchedBookmarks = data.bookmarks || [];
           setBookmarks(fetchedBookmarks);
 
-          // Extract all unique tags
-          const tags = new Set<string>();
+          // Extract all unique tags with frequency counts
+          const tagCounts = new Map<string, number>();
           fetchedBookmarks.forEach((b: RaindropItem) => {
-            b.tags?.forEach((tag: string) => tags.add(tag));
+            b.tags?.forEach((tag: string) => {
+              tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+            });
           });
-          setAllTags(Array.from(tags).sort());
+
+          // Priority tags that should appear first (in this order)
+          const priorityTags = ["links", "video", "reading"];
+
+          // Sort tags: priority tags first (in order), then remaining by frequency
+          const sortedTags = Array.from(tagCounts.keys()).sort((a, b) => {
+            const aIsPriority = priorityTags.indexOf(a.toLowerCase());
+            const bIsPriority = priorityTags.indexOf(b.toLowerCase());
+
+            // Both are priority tags - sort by priority order
+            if (aIsPriority !== -1 && bIsPriority !== -1) {
+              return aIsPriority - bIsPriority;
+            }
+            // Only a is priority
+            if (aIsPriority !== -1) return -1;
+            // Only b is priority
+            if (bIsPriority !== -1) return 1;
+            // Neither is priority - sort by frequency (descending)
+            return (tagCounts.get(b) || 0) - (tagCounts.get(a) || 0);
+          });
+
+          setAllTags(sortedTags);
         }
       } catch (err) {
         setError("Failed to load bookmarks");
