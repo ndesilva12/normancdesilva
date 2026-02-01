@@ -30,23 +30,45 @@ function extractPlainText(richText: any[]): string {
   }
 }
 
-// Helper to get title from page or database  
+// Helper to get title from page or database
 function getTitle(item: any): string {
   try {
+    // Check if this is a database (has title array at root level)
+    if (item?.title && Array.isArray(item.title) && item.title.length > 0) {
+      const extracted = extractPlainText(item.title);
+      if (extracted && extracted.trim()) {
+        return extracted;
+      }
+    }
+
+    // Check if this is a page (has properties with a title property)
     if (item?.properties) {
-      // This is a page
       const titleProperty = Object.values(item.properties).find(
         (prop: any) => prop?.type === "title"
       );
       if (titleProperty && (titleProperty as any).type === "title") {
-        return extractPlainText((titleProperty as any).title || []);
+        const titleArray = (titleProperty as any).title;
+        if (Array.isArray(titleArray) && titleArray.length > 0) {
+          const extracted = extractPlainText(titleArray);
+          if (extracted && extracted.trim()) {
+            return extracted;
+          }
+        }
       }
-    } else if (item?.title) {
-      // This is a database
-      return extractPlainText(item.title || []);
+
+      // Fallback: check for Name property (common in databases)
+      const nameProperty = item.properties.Name || item.properties.name;
+      if (nameProperty?.type === "title" && Array.isArray(nameProperty.title) && nameProperty.title.length > 0) {
+        const extracted = extractPlainText(nameProperty.title);
+        if (extracted && extracted.trim()) {
+          return extracted;
+        }
+      }
     }
+
     return "Untitled";
   } catch (error) {
+    console.error("Error extracting title:", error);
     return "Untitled";
   }
 }
@@ -295,22 +317,42 @@ export async function getDatabasePages(databaseId: string, limit = 50): Promise<
     });
 
     if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("Notion API error response:", response.status, errorBody);
       throw new Error(`Notion API error: ${response.statusText}`);
     }
 
     const data = await response.json() as any;
 
-    return data.results
-      .filter((item: any) => item?.properties)
-      .map((page: any) => ({
-        id: page.id,
-        type: "page" as const,
-        title: getTitle(page),
-        icon: getIcon(page),
-        lastEditedTime: page.last_edited_time,
-        url: page.url,
-        parent: page.parent,
-      }));
+    console.log(`Database ${databaseId} query returned ${data.results?.length || 0} results`);
+
+    const items: WorkspaceItem[] = [];
+
+    for (const page of data.results || []) {
+      try {
+        if (!page || page.object !== "page") {
+          continue;
+        }
+
+        const title = getTitle(page);
+        const icon = getIcon(page);
+
+        items.push({
+          id: page.id,
+          type: "page" as const,
+          title: title,
+          icon: icon,
+          lastEditedTime: page.last_edited_time,
+          url: page.url,
+          parent: page.parent,
+        });
+      } catch (pageError) {
+        console.error("Error processing page:", page.id, pageError);
+        // Continue with other pages even if one fails
+      }
+    }
+
+    return items;
   } catch (error) {
     console.error("Error fetching database pages:", error);
     throw error;
