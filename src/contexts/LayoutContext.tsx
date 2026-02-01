@@ -94,13 +94,18 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   // Helper function to merge and sort layout with defaults
   const mergeLayoutWithDefaults = (parsed: LayoutConfig): LayoutConfig => {
     // Merge with defaults to handle new widgets
+    // Force all widgets to "default" size (collapse feature removed)
     const mergedPreviewWidgets = DEFAULT_PREVIEW_WIDGETS.map((defaultWidget) => {
       const savedWidget = parsed.previewWidgets?.find((w) => w.id === defaultWidget.id);
-      return savedWidget || defaultWidget;
+      return savedWidget
+        ? { ...savedWidget, size: "default" as WidgetSize }
+        : defaultWidget;
     });
     const mergedToolCards = DEFAULT_TOOL_CARDS.map((defaultWidget) => {
       const savedWidget = parsed.toolCards?.find((w) => w.id === defaultWidget.id);
-      return savedWidget || defaultWidget;
+      return savedWidget
+        ? { ...savedWidget, size: "default" as WidgetSize }
+        : defaultWidget;
     });
     // Sort by saved order to preserve user's widget arrangement
     mergedPreviewWidgets.sort((a, b) => a.order - b.order);

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Calendar, ExternalLink, ChevronUp, Loader2, RefreshCw, Plus } from "lucide-react";
+import { Calendar, ExternalLink, Loader2, RefreshCw, Plus } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 
 interface CalendarEvent {
@@ -44,15 +44,12 @@ function isEventToday(event: CalendarEvent): boolean {
 }
 
 export function CalendarPreview() {
-  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+  const { isEditMode } = useLayout();
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const config = getWidgetConfig("previewWidgets", "calendar");
-  const isCollapsed = config?.size === "collapsed";
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -140,21 +137,18 @@ export function CalendarPreview() {
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
+          borderBottom: "1px solid var(--glass-border)",
           flexShrink: 0,
-          cursor: isCollapsed ? "default" : "pointer",
+          cursor: "pointer",
         }}
         onClick={() => {
-          if (!isCollapsed) {
-            router.push("/tools/calendar");
-          }
+          router.push("/tools/calendar");
         }}
       >
         <Link
           href="/tools/calendar"
           onClick={(e) => {
             e.stopPropagation();
-            if (isCollapsed) e.preventDefault();
           }}
           style={{
             display: "flex",
@@ -162,14 +156,13 @@ export function CalendarPreview() {
             gap: "10px",
             textDecoration: "none",
             flex: 1,
-            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <Calendar style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
           <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)" }}>Calendar</span>
         </Link>
 
-        {!isCollapsed && !isEditMode && isAuthenticated && (
+        {!isEditMode && isAuthenticated && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -199,43 +192,17 @@ export function CalendarPreview() {
             />
           </button>
         )}
-        {!isCollapsed && !isEditMode && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleWidgetCollapse("previewWidgets", "calendar");
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "24px",
-              height: "24px",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "transparent",
-              color: "var(--foreground-muted)",
-              cursor: "pointer",
-            }}
-            title="Collapse"
-          >
-            <ChevronUp style={{ width: "16px", height: "16px" }} />
-          </button>
-        )}
-        {!isCollapsed && (
-          <Link
-            href="/tools/calendar"
-            onClick={(e) => e.stopPropagation()}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", flexShrink: 0 }}
-          >
-            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-          </Link>
-        )}
+        <Link
+          href="/tools/calendar"
+          onClick={(e) => e.stopPropagation()}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", flexShrink: 0 }}
+        >
+          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+        </Link>
       </div>
 
       {/* Content */}
-      {!isCollapsed && (
-        <div style={{ flex: 1, overflow: "auto", padding: "12px 16px" }}>
+      <div style={{ flex: 1, overflow: "auto", padding: "12px 16px" }}>
           {loading ? (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
               <Loader2 style={{ width: "24px", height: "24px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
@@ -373,7 +340,6 @@ export function CalendarPreview() {
             </div>
           )}
         </div>
-      )}
     </div>
   );
 }

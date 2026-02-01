@@ -3,9 +3,7 @@
 import { useEffect, useRef, memo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { TrendingUp, ExternalLink, ChevronUp } from "lucide-react";
-import { useLayout } from "@/contexts/LayoutContext";
-
+import { TrendingUp, ExternalLink } from "lucide-react";
 // User's TradingView watchlist symbols
 // Note: Removed VIX, DXY, US10Y, US30Y as they don't display in Market Overview widget
 const WATCHLIST_SYMBOLS = [
@@ -106,11 +104,7 @@ function TradingViewPreviewWidget() {
 const MemoizedTradingViewWidget = memo(TradingViewPreviewWidget);
 
 export function StocksPreview() {
-  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
   const router = useRouter();
-
-  const config = getWidgetConfig("previewWidgets", "stocks");
-  const isCollapsed = config?.size === "collapsed";
 
   return (
     <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
@@ -121,24 +115,19 @@ export function StocksPreview() {
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
+          borderBottom: "1px solid var(--glass-border)",
           transition: "background 0.15s",
           flexShrink: 0,
-          cursor: isCollapsed ? "default" : "pointer",
+          cursor: "pointer",
         }}
         onClick={() => {
-          if (!isCollapsed) {
-            router.push("/tools/market");
-          }
+          router.push("/tools/market");
         }}
       >
         <Link
           href="/tools/market"
           onClick={(e) => {
             e.stopPropagation();
-            if (isCollapsed) {
-              e.preventDefault();
-            }
           }}
           style={{
             display: "flex",
@@ -146,7 +135,6 @@ export function StocksPreview() {
             gap: "10px",
             textDecoration: "none",
             flex: 1,
-            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <TrendingUp style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
@@ -154,56 +142,25 @@ export function StocksPreview() {
             Market
           </span>
         </Link>
-        {/* Collapse button (only shown when not collapsed and not in edit mode) */}
-        {!isCollapsed && !isEditMode && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleWidgetCollapse("previewWidgets", "stocks");
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "24px",
-              height: "24px",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "transparent",
-              color: "var(--foreground-muted)",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              flexShrink: 0,
-            }}
-            title="Collapse"
-          >
-            <ChevronUp style={{ width: "16px", height: "16px" }} />
-          </button>
-        )}
-        {!isCollapsed && (
-          <Link
-            href="/tools/market"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              textDecoration: "none",
-              flexShrink: 0,
-            }}
-          >
-            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-          </Link>
-        )}
+        <Link
+          href="/tools/market"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textDecoration: "none",
+            flexShrink: 0,
+          }}
+        >
+          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+        </Link>
       </div>
 
       {/* TradingView Widget Content */}
-      {!isCollapsed && (
-        <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-          <MemoizedTradingViewWidget />
-        </div>
-      )}
+      <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+        <MemoizedTradingViewWidget />
+      </div>
     </div>
   );
 }

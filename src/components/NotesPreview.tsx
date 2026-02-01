@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { StickyNote, Loader2, ExternalLink, RefreshCw, ChevronUp } from "lucide-react";
-import { useLayout } from "@/contexts/LayoutContext";
-
+import { StickyNote, Loader2, ExternalLink, RefreshCw } from "lucide-react";
 interface NotionPage {
   id: string;
   title: string;
@@ -18,11 +16,7 @@ export function NotesPreview() {
   const [pages, setPages] = useState<NotionPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
   const router = useRouter();
-
-  const config = getWidgetConfig("previewWidgets", "notes");
-  const isCollapsed = config?.size === "collapsed";
 
   const fetchNotes = useCallback(async () => {
     setLoading(true);
@@ -70,23 +64,18 @@ export function NotesPreview() {
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
+          borderBottom: "1px solid var(--glass-border)",
           flexShrink: 0,
-          cursor: isCollapsed ? "default" : "pointer",
+          cursor: "pointer",
         }}
         onClick={() => {
-          if (!isCollapsed) {
-            router.push("/tools/notes");
-          }
+          router.push("/tools/notes");
         }}
       >
         <Link
           href="/tools/notes"
           onClick={(e) => {
             e.stopPropagation();
-            if (isCollapsed) {
-              e.preventDefault();
-            }
           }}
           style={{
             display: "flex",
@@ -96,7 +85,6 @@ export function NotesPreview() {
             flex: 1,
             padding: "4px 0",
             margin: "-4px 0",
-            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <StickyNote style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
@@ -104,71 +92,40 @@ export function NotesPreview() {
             Notes
           </span>
         </Link>
-        {!isCollapsed && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              fetchNotes();
-            }}
-            disabled={loading}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "28px",
-              height: "28px",
-              borderRadius: "6px",
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-              border: "none",
-              cursor: loading ? "not-allowed" : "pointer",
-              color: "var(--foreground-muted)",
-            }}
-          >
-            <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
-          </button>
-        )}
-        {/* Collapse button (only shown when not collapsed and not in edit mode) */}
-        {!isCollapsed && !isEditMode && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleWidgetCollapse("previewWidgets", "notes");
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "24px",
-              height: "24px",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "transparent",
-              color: "var(--foreground-muted)",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              flexShrink: 0,
-            }}
-            title="Collapse"
-          >
-            <ChevronUp style={{ width: "16px", height: "16px" }} />
-          </button>
-        )}
-        {!isCollapsed && (
-          <Link
-            href="/tools/notes"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              textDecoration: "none",
-            }}
-          >
-            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-          </Link>
-        )}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            fetchNotes();
+          }}
+          disabled={loading}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "28px",
+            height: "28px",
+            borderRadius: "6px",
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
+            border: "none",
+            cursor: loading ? "not-allowed" : "pointer",
+            color: "var(--foreground-muted)",
+          }}
+        >
+          <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
+        </button>
+        <Link
+          href="/tools/notes"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textDecoration: "none",
+          }}
+        >
+          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+        </Link>
       </div>
 
       {/* Content */}
