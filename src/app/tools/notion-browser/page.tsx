@@ -794,13 +794,9 @@ function NotionBrowserContent() {
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <Header />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingTop: isMobile ? "56px" : "64px" }}>
-        {/* Top bar with back button and title */}
+        {/* Back Link */}
         <div style={{
-          padding: isMobile ? "12px 16px" : "16px 24px",
-          borderBottom: "1px solid var(--glass-border)",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
+          padding: isMobile ? "12px 16px 0" : "16px 24px 0",
           backgroundColor: "var(--background)",
         }}>
           <Link
@@ -814,13 +810,22 @@ function NotionBrowserContent() {
               color: "var(--foreground-muted)",
               textDecoration: "none",
               fontSize: "14px",
-              flexShrink: 0,
             }}
           >
             <ArrowLeft style={{ width: "16px", height: "16px" }} />
             {!isMobile && <span>Back to Dashboard</span>}
           </Link>
+        </div>
 
+        {/* Top bar with title */}
+        <div style={{
+          padding: isMobile ? "12px 16px" : "16px 24px",
+          borderBottom: "1px solid var(--glass-border)",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          backgroundColor: "var(--background)",
+        }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
             <Folder style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)", flexShrink: 0 }} />
             <h1 style={{

@@ -453,37 +453,39 @@ function EmailsPageContent() {
       <main style={{ flex: 1, width: "100%", paddingTop: isMobile ? "56px" : "64px" }}>
         <div style={{ maxWidth: isMobile ? "100%" : "1200px", width: isMobile ? "100%" : "80%", margin: "0 auto", padding: isMobile ? "12px 16px" : "20px" }}>
           <RemindersBanner />
+
+          {/* Back Link */}
+          <div style={{ marginBottom: "24px" }}>
+            <Link
+              href="/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: isMobile ? "10px 14px" : "8px 12px",
+                borderRadius: "6px",
+                color: "var(--foreground-muted)",
+                textDecoration: "none",
+                fontSize: "14px",
+              }}
+            >
+              <ArrowLeft style={{ width: "16px", height: "16px" }} />
+              {!isMobile && <span>Back to Dashboard</span>}
+            </Link>
+          </div>
+
           {/* Page Header */}
           <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? "12px" : "16px", marginBottom: isMobile ? "16px" : "24px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", width: isMobile ? "100%" : "auto" }}>
-              <Link
-                href="/"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: isMobile ? "10px 14px" : "8px 12px",
-                  borderRadius: "6px",
-                  color: "var(--foreground-muted)",
-                  textDecoration: "none",
-                  fontSize: "14px",
-                  flexShrink: 0,
-                }}
-              >
-                <ArrowLeft style={{ width: "16px", height: "16px" }} />
-                {!isMobile && <span>Back to Dashboard</span>}
-              </Link>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <Mail style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
-                  <h1 style={{ fontSize: isMobile ? "20px" : "24px", fontWeight: 600, color: "var(--foreground)" }}>Emails</h1>
-                </div>
-                {!isMobile && (
-                  <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginTop: "4px" }}>
-                    Read, compose, and manage your emails
-                  </p>
-                )}
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Mail style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
+                <h1 style={{ fontSize: isMobile ? "20px" : "24px", fontWeight: 600, color: "var(--foreground)" }}>Emails</h1>
               </div>
+              {!isMobile && (
+                <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginTop: "4px" }}>
+                  Read, compose, and manage your emails
+                </p>
+              )}
             </div>
             {isConnected && (
               <div style={{ display: "flex", alignItems: "center", gap: "8px", width: isMobile ? "100%" : "auto", flexWrap: isMobile ? "wrap" : "nowrap" }}>
