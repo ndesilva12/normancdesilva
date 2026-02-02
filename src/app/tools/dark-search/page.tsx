@@ -211,8 +211,8 @@ export default function DarkSearchPage() {
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div
           style={{
-            width: "100%",
-            maxWidth: report ? "1000px" : "800px",
+            width: "80%",
+            maxWidth: report ? "1200px" : "1000px",
             margin: "0 auto",
             padding: "32px 24px 100px 24px",
             transition: "max-width 0.3s ease",

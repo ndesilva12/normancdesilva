@@ -140,7 +140,7 @@ function RichTextRenderer({ segments, style }: { segments?: RichTextSegment[]; s
 }
 
 // Component to render a single Notion block (theme-aware)
-function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: number }) {
+function BlockRenderer({ block, depth = 0, onDatabaseClick, onPageClick }: { block: NotionBlock; depth?: number; onDatabaseClick?: (id: string, title: string) => void; onPageClick?: (id: string, title: string) => void }) {
   const renderContent = () => {
     switch (block.type) {
       case "heading_1":
@@ -218,7 +218,7 @@ function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: numbe
             {block.children && (
               <div style={{ paddingLeft: "16px", paddingTop: "8px" }}>
                 {block.children.map((child) => (
-                  <BlockRenderer key={child.id} block={child} depth={depth + 1} />
+                  <BlockRenderer key={child.id} block={child} depth={depth + 1} onDatabaseClick={onDatabaseClick} onPageClick={onPageClick} />
                 ))}
               </div>
             )}
@@ -315,20 +315,62 @@ function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: numbe
         ) : null;
       case "child_page":
         return (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "8px 12px",
-            backgroundColor: "rgba(255, 255, 255, 0.05)",
-            borderRadius: "6px",
-            marginBottom: "8px",
-            marginLeft: depth * 20,
-            color: "var(--foreground)",
-            border: "1px solid var(--glass-border)"
-          }}>
+          <div
+            onClick={() => onPageClick?.(block.id, block.content || "Untitled")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "10px 14px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              borderRadius: "6px",
+              marginBottom: "8px",
+              marginLeft: depth * 20,
+              color: "var(--foreground)",
+              border: "1px solid var(--glass-border)",
+              cursor: onPageClick ? "pointer" : "default",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              if (onPageClick) e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+            }}
+          >
             <FileText style={{ width: "16px", height: "16px", color: "var(--foreground-muted)" }} />
-            <span>{block.content || "Untitled"}</span>
+            <span style={{ flex: 1 }}>{block.content || "Untitled"}</span>
+            {onPageClick && <ChevronRight style={{ width: "16px", height: "16px", color: "var(--foreground-muted)" }} />}
+          </div>
+        );
+      case "child_database":
+        return (
+          <div
+            onClick={() => onDatabaseClick?.(block.id, block.content || "Untitled Database")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "10px 14px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              borderRadius: "6px",
+              marginBottom: "8px",
+              marginLeft: depth * 20,
+              color: "var(--foreground)",
+              border: "1px solid var(--glass-border)",
+              cursor: onDatabaseClick ? "pointer" : "default",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              if (onDatabaseClick) e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+            }}
+          >
+            <Database style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
+            <span style={{ flex: 1 }}>{block.content || "Untitled Database"}</span>
+            {onDatabaseClick && <ChevronRight style={{ width: "16px", height: "16px", color: "var(--foreground-muted)" }} />}
           </div>
         );
       default:
@@ -346,7 +388,7 @@ function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: numbe
       {block.children && block.type !== "toggle" && (
         <div style={{ paddingLeft: "16px" }}>
           {block.children.map((child) => (
-            <BlockRenderer key={child.id} block={child} depth={depth + 1} />
+            <BlockRenderer key={child.id} block={child} depth={depth + 1} onDatabaseClick={onDatabaseClick} onPageClick={onPageClick} />
           ))}
         </div>
       )}
@@ -764,22 +806,19 @@ function NotionBrowserContent() {
           <Link
             href="/"
             style={{
-              display: "flex",
+              display: "inline-flex",
               alignItems: "center",
-              justifyContent: "center",
               gap: "6px",
               padding: isMobile ? "10px 14px" : "8px 12px",
-              borderRadius: "8px",
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid var(--glass-border)",
-              color: "var(--foreground)",
+              borderRadius: "6px",
+              color: "var(--foreground-muted)",
               textDecoration: "none",
-              fontSize: isMobile ? "14px" : "inherit",
+              fontSize: "14px",
               flexShrink: 0,
             }}
           >
-            <ArrowLeft style={{ width: "18px", height: "18px" }} />
-            {!isMobile && "Dashboard"}
+            <ArrowLeft style={{ width: "16px", height: "16px" }} />
+            {!isMobile && <span>Back to Dashboard</span>}
           </Link>
 
           <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
@@ -1149,7 +1188,8 @@ function NotionBrowserContent() {
               ) : pageBlocks.length > 0 ? (
                 // Page view - show content
                 <div style={{
-                  maxWidth: "800px",
+                  maxWidth: "900px",
+                  width: "100%",
                   margin: "0 auto",
                 }}>
                   {selectedPage?.icon && (
@@ -1166,7 +1206,32 @@ function NotionBrowserContent() {
                   </h1>
                   <div>
                     {pageBlocks.map((block) => (
-                      <BlockRenderer key={block.id} block={block} />
+                      <BlockRenderer
+                        key={block.id}
+                        block={block}
+                        onDatabaseClick={(id, title) => {
+                          const node: TreeNode = {
+                            id,
+                            type: "database",
+                            title,
+                            lastEditedTime: "",
+                            url: "",
+                            hasChildren: true,
+                          };
+                          handleSelectNode(node);
+                        }}
+                        onPageClick={(id, title) => {
+                          const node: TreeNode = {
+                            id,
+                            type: "page",
+                            title,
+                            lastEditedTime: "",
+                            url: "",
+                          };
+                          setSelectedNode(node);
+                          fetchPageContent(id, title);
+                        }}
+                      />
                     ))}
                   </div>
                 </div>

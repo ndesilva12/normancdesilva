@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Mail, Loader2, ExternalLink, RefreshCw, Archive, Trash2 } from "lucide-react";
 import { formatEmailSender } from "@/lib/google-services";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -40,6 +40,8 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const { isEditMode } = useLayout();
   const router = useRouter();
+  const pathname = usePathname();
+  const prevPathname = useRef(pathname);
 
   // Set up portal container for delete confirmation modal
   useEffect(() => {
@@ -51,6 +53,30 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
       fetchEmails();
     }
   }, [isGoogleConnected]);
+
+  // Refresh emails when window regains focus (user returns from viewing email on detail page)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (isGoogleConnected && !loading) {
+        fetchEmails();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isGoogleConnected, loading]);
+
+  // Refresh emails when navigating back to dashboard from email detail page
+  useEffect(() => {
+    const wasOnEmailPage = prevPathname.current?.startsWith('/tools/emails');
+    const isNowOnDashboard = pathname === '/' || pathname === '/dashboard';
+
+    if (wasOnEmailPage && isNowOnDashboard && isGoogleConnected) {
+      fetchEmails();
+    }
+
+    prevPathname.current = pathname;
+  }, [pathname, isGoogleConnected]);
 
   // Keyboard handler for delete confirmation modal
   useEffect(() => {

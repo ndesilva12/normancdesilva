@@ -85,28 +85,37 @@ export default function InoreaderPage() {
         <div style={{ maxWidth: "1400px", margin: "0 auto", padding: isMobile ? "16px" : "20px" }}>
           <RemindersBanner />
 
+          {/* Back Link */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{ marginBottom: "24px" }}
+          >
+            <Link
+              href="/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 12px",
+                borderRadius: "6px",
+                color: "var(--foreground-muted)",
+                textDecoration: "none",
+                fontSize: "14px",
+              }}
+            >
+              <ArrowLeft style={{ width: "16px", height: "16px" }} />
+              <span>Back to Dashboard</span>
+            </Link>
+          </motion.div>
+
           {/* Page Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}
           >
-            <Link
-              href="/"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                color: "var(--foreground-muted)",
-                textDecoration: "none",
-              }}
-            >
-              <ArrowLeft style={{ width: "20px", height: "20px" }} />
-            </Link>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                 <Rss style={{ width: "24px", height: "24px", color: "var(--accent)" }} />

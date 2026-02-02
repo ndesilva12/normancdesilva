@@ -451,7 +451,7 @@ function EmailsPageContent() {
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
       <main style={{ flex: 1, width: "100%", paddingTop: isMobile ? "56px" : "64px" }}>
-        <div style={{ maxWidth: isMobile ? "100%" : "900px", margin: "0 auto", padding: isMobile ? "12px 16px" : "20px" }}>
+        <div style={{ maxWidth: isMobile ? "100%" : "1200px", width: isMobile ? "100%" : "80%", margin: "0 auto", padding: isMobile ? "12px 16px" : "20px" }}>
           <RemindersBanner />
           {/* Page Header */}
           <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? "12px" : "16px", marginBottom: isMobile ? "16px" : "24px" }}>
@@ -459,19 +459,19 @@ function EmailsPageContent() {
               <Link
                 href="/"
                 style={{
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  width: isMobile ? "44px" : "40px",
-                  height: isMobile ? "44px" : "40px",
-                  borderRadius: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                  gap: "6px",
+                  padding: isMobile ? "10px 14px" : "8px 12px",
+                  borderRadius: "6px",
                   color: "var(--foreground-muted)",
                   textDecoration: "none",
+                  fontSize: "14px",
                   flexShrink: 0,
                 }}
               >
-                <ArrowLeft style={{ width: "20px", height: "20px" }} />
+                <ArrowLeft style={{ width: "16px", height: "16px" }} />
+                {!isMobile && <span>Back to Dashboard</span>}
               </Link>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
