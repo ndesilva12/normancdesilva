@@ -277,7 +277,7 @@ export default function SpotifyPage() {
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
         <Header />
         <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
-          <div style={{ width: "100%", maxWidth: "600px", margin: "0 auto", padding: "32px 24px" }}>
+          <div style={{ width: "80%", maxWidth: "1000px", margin: "0 auto", padding: "32px 24px" }}>
             <RemindersBanner />
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -363,7 +363,7 @@ export default function SpotifyPage() {
       <Header />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
-        <div style={{ width: "100%", maxWidth: "800px", margin: "0 auto", padding: "32px 24px 100px 24px" }}>
+        <div style={{ width: "80%", maxWidth: "1200px", margin: "0 auto", padding: "32px 24px 100px 24px" }}>
           <RemindersBanner />
           {/* Back Link */}
           <motion.div

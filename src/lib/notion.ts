@@ -196,6 +196,14 @@ function convertBlock(block: BlockObjectResponse): NotionBlock {
     case "link_preview":
       content = block.link_preview.url;
       break;
+    case "child_page":
+      // Extract the child page title
+      content = (block as unknown as { child_page: { title: string } }).child_page?.title || "Untitled";
+      break;
+    case "child_database":
+      // Extract the child database title
+      content = (block as unknown as { child_database: { title: string } }).child_database?.title || "Untitled Database";
+      break;
     default:
       content = "";
   }

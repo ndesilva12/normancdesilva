@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Mail, Loader2, ExternalLink, RefreshCw, Archive, Trash2 } from "lucide-react";
 import { formatEmailSender } from "@/lib/google-services";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -36,14 +37,46 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ emailId: string; accountEmail?: string; subject: string } | null>(null);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const { isEditMode } = useLayout();
   const router = useRouter();
+  const pathname = usePathname();
+  const prevPathname = useRef(pathname);
+
+  // Set up portal container for delete confirmation modal
+  useEffect(() => {
+    setPortalContainer(document.body);
+  }, []);
 
   useEffect(() => {
     if (isGoogleConnected) {
       fetchEmails();
     }
   }, [isGoogleConnected]);
+
+  // Refresh emails when window regains focus (user returns from viewing email on detail page)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (isGoogleConnected && !loading) {
+        fetchEmails();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isGoogleConnected, loading]);
+
+  // Refresh emails when navigating back to dashboard from email detail page
+  useEffect(() => {
+    const wasOnEmailPage = prevPathname.current?.startsWith('/tools/emails');
+    const isNowOnDashboard = pathname === '/' || pathname === '/dashboard';
+
+    if (wasOnEmailPage && isNowOnDashboard && isGoogleConnected) {
+      fetchEmails();
+    }
+
+    prevPathname.current = pathname;
+  }, [pathname, isGoogleConnected]);
 
   // Keyboard handler for delete confirmation modal
   useEffect(() => {
@@ -148,85 +181,89 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  return (
-    <>
-    {/* Delete Confirmation Modal */}
-    {deleteConfirm && (
+  // Delete confirmation modal rendered via portal at document body level
+  const deleteConfirmModal = deleteConfirm && portalContainer ? createPortal(
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 9999,
+        backdropFilter: "blur(4px)",
+      }}
+      onClick={() => setDeleteConfirm(null)}
+    >
       <div
+        className="glass"
         style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.6)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-          backdropFilter: "blur(4px)",
+          padding: "24px",
+          borderRadius: "12px",
+          maxWidth: "400px",
+          width: "90%",
+          textAlign: "center",
         }}
-        onClick={() => setDeleteConfirm(null)}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="glass"
-          style={{
-            padding: "24px",
-            borderRadius: "12px",
-            maxWidth: "400px",
-            width: "90%",
-            textAlign: "center",
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Trash2 style={{ width: "32px", height: "32px", color: "#ef4444", marginBottom: "16px" }} />
-          <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
-            Delete Email?
-          </h3>
-          <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginBottom: "20px", lineHeight: 1.5 }}>
-            Are you sure you want to delete &quot;{deleteConfirm.subject.length > 50 ? deleteConfirm.subject.substring(0, 50) + "..." : deleteConfirm.subject}&quot;?
-          </p>
-          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-            <button
-              onClick={() => setDeleteConfirm(null)}
-              style={{
-                padding: "10px 20px",
-                borderRadius: "8px",
-                border: "1px solid var(--glass-border)",
-                backgroundColor: "transparent",
-                color: "var(--foreground)",
-                fontSize: "14px",
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmDelete}
-              style={{
-                padding: "10px 20px",
-                borderRadius: "8px",
-                border: "none",
-                backgroundColor: "#ef4444",
-                color: "white",
-                fontSize: "14px",
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#dc2626")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#ef4444")}
-            >
-              Delete
-            </button>
-          </div>
+        <Trash2 style={{ width: "32px", height: "32px", color: "#ef4444", marginBottom: "16px" }} />
+        <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+          Delete Email?
+        </h3>
+        <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginBottom: "20px", lineHeight: 1.5 }}>
+          Are you sure you want to delete &quot;{deleteConfirm.subject.length > 50 ? deleteConfirm.subject.substring(0, 50) + "..." : deleteConfirm.subject}&quot;?
+        </p>
+        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+          <button
+            onClick={() => setDeleteConfirm(null)}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "8px",
+              border: "1px solid var(--glass-border)",
+              backgroundColor: "transparent",
+              color: "var(--foreground)",
+              fontSize: "14px",
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={confirmDelete}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "8px",
+              border: "none",
+              backgroundColor: "#ef4444",
+              color: "white",
+              fontSize: "14px",
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#dc2626")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#ef4444")}
+          >
+            Delete
+          </button>
         </div>
       </div>
-    )}
+    </div>,
+    portalContainer
+  ) : null;
+
+  return (
+    <>
+    {/* Delete Confirmation Modal - rendered via portal at document root */}
+    {deleteConfirmModal}
 
     <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header - clickable to navigate to full page */}
