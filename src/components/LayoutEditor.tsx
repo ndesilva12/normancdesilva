@@ -1,14 +1,17 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, RotateCcw, Move, GripVertical, Eye, EyeOff, Search } from "lucide-react";
+import { Check, X, RotateCcw, Move, GripVertical, Eye, EyeOff } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function LayoutEditor() {
-  const { isEditMode, exitEditMode, resetLayout, layout, reorderWidgets, updateWidgetVisibility, setSearchSourceMode } = useLayout();
+  const { isEditMode, exitEditMode, resetLayout, layout, reorderWidgets, updateWidgetVisibility, isMobile } = useLayout();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // For touch drag on mobile
+  const [touchDragIndex, setTouchDragIndex] = useState<number | null>(null);
 
   if (!isEditMode) return null;
 
@@ -37,6 +40,14 @@ export function LayoutEditor() {
     setDragOverIndex(null);
   };
 
+  // Mobile-friendly move up/down buttons
+  const moveWidget = (index: number, direction: "up" | "down") => {
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex >= 0 && newIndex < layout.previewWidgets.length) {
+      reorderWidgets("previewWidgets", index, newIndex);
+    }
+  };
+
   return (
     <AnimatePresence>
       {isEditMode && (
@@ -62,47 +73,51 @@ export function LayoutEditor() {
               style={{
                 maxWidth: "1200px",
                 margin: "0 auto",
-                padding: "12px 24px",
+                padding: isMobile ? "10px 12px" : "12px 24px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: "16px",
+                gap: isMobile ? "8px" : "16px",
               }}
             >
               {/* Left: Title and instructions */}
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "12px", minWidth: 0 }}>
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    width: "36px",
-                    height: "36px",
+                    width: isMobile ? "32px" : "36px",
+                    height: isMobile ? "32px" : "36px",
                     borderRadius: "8px",
                     backgroundColor: "var(--accent)",
+                    flexShrink: 0,
                   }}
                 >
-                  <Move style={{ width: "18px", height: "18px", color: "var(--background)" }} />
+                  <Move style={{ width: isMobile ? "16px" : "18px", height: isMobile ? "16px" : "18px", color: "var(--background)" }} />
                 </div>
-                <div>
-                  <h2 style={{ fontSize: "15px", fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
-                    Layout Editor
+                <div style={{ minWidth: 0 }}>
+                  <h2 style={{ fontSize: isMobile ? "14px" : "15px", fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
+                    {isMobile ? "Edit Layout" : "Layout Editor"}
                   </h2>
-                  <p style={{ fontSize: "12px", color: "var(--foreground-muted)", margin: 0 }}>
-                    Drag to reorder • Toggle visibility
-                  </p>
+                  {!isMobile && (
+                    <p style={{ fontSize: "12px", color: "var(--foreground-muted)", margin: 0 }}>
+                      Drag to reorder • Toggle visibility
+                    </p>
+                  )}
                 </div>
               </div>
 
               {/* Right: Action buttons */}
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "6px" : "8px", flexShrink: 0 }}>
                 <button
                   onClick={resetLayout}
                   style={{
                     display: "flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     gap: "6px",
-                    padding: "8px 12px",
+                    padding: isMobile ? "8px" : "8px 12px",
                     borderRadius: "8px",
                     backgroundColor: "rgba(255, 255, 255, 0.05)",
                     border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -113,7 +128,7 @@ export function LayoutEditor() {
                   }}
                 >
                   <RotateCcw style={{ width: "14px", height: "14px" }} />
-                  <span className="hidden sm:inline">Reset</span>
+                  {!isMobile && <span>Reset</span>}
                 </button>
 
                 <button
@@ -121,8 +136,9 @@ export function LayoutEditor() {
                   style={{
                     display: "flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     gap: "6px",
-                    padding: "8px 12px",
+                    padding: isMobile ? "8px" : "8px 12px",
                     borderRadius: "8px",
                     backgroundColor: "rgba(255, 100, 100, 0.1)",
                     border: "1px solid rgba(255, 100, 100, 0.2)",
@@ -133,7 +149,7 @@ export function LayoutEditor() {
                   }}
                 >
                   <X style={{ width: "14px", height: "14px" }} />
-                  <span className="hidden sm:inline">Cancel</span>
+                  {!isMobile && <span>Cancel</span>}
                 </button>
 
                 <button
@@ -141,8 +157,9 @@ export function LayoutEditor() {
                   style={{
                     display: "flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     gap: "6px",
-                    padding: "8px 12px",
+                    padding: isMobile ? "8px" : "8px 12px",
                     borderRadius: "8px",
                     backgroundColor: "rgba(100, 255, 100, 0.1)",
                     border: "1px solid rgba(100, 255, 100, 0.2)",
@@ -153,13 +170,13 @@ export function LayoutEditor() {
                   }}
                 >
                   <Check style={{ width: "14px", height: "14px" }} />
-                  <span className="hidden sm:inline">Save</span>
+                  {!isMobile && <span>Save</span>}
                 </button>
               </div>
             </div>
           </motion.div>
 
-          {/* Mini Ordering View */}
+          {/* Mini Ordering View - fixed positioning for mobile */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -167,55 +184,113 @@ export function LayoutEditor() {
             transition={{ duration: 0.3 }}
             style={{
               position: "fixed",
-              top: "60px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: "90%",
+              top: isMobile ? "56px" : "60px",
+              left: isMobile ? "8px" : "50%",
+              right: isMobile ? "8px" : "auto",
+              transform: isMobile ? "none" : "translateX(-50%)",
+              width: isMobile ? "auto" : "90%",
               maxWidth: "500px",
-              backgroundColor: "rgba(26, 26, 26, 0.95)",
+              backgroundColor: "rgba(26, 26, 26, 0.98)",
               backdropFilter: "blur(10px)",
               border: "1px solid var(--glass-border)",
               borderRadius: "12px",
-              padding: "16px",
+              padding: isMobile ? "12px" : "16px",
               zIndex: 999,
               boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
-              maxHeight: "70vh",
+              maxHeight: isMobile ? "calc(100vh - 72px)" : "70vh",
               overflowY: "auto",
             }}
           >
-            <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "12px", textAlign: "center" }}>
+            <h3 style={{ fontSize: isMobile ? "14px" : "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "12px", textAlign: "center" }}>
               Reorder Widgets
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {isMobile && (
+              <p style={{ fontSize: "11px", color: "var(--foreground-muted)", textAlign: "center", marginBottom: "12px" }}>
+                Use arrows to reorder
+              </p>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? "6px" : "8px" }}>
               {layout.previewWidgets.map((widget, index) => (
                 <motion.div
                   key={widget.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDrop={(e) => handleDrop(e, index)}
+                  draggable={!isMobile}
+                  onDragStart={(e) => !isMobile && handleDragStart(e as unknown as React.DragEvent, index)}
+                  onDragOver={(e) => !isMobile && handleDragOver(e as unknown as React.DragEvent, index)}
+                  onDrop={(e) => !isMobile && handleDrop(e as unknown as React.DragEvent, index)}
                   onDragEnd={handleDragEnd}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    padding: "12px 16px",
+                    padding: isMobile ? "10px 12px" : "12px 16px",
                     borderRadius: "8px",
-                    backgroundColor: draggedIndex === index 
-                      ? "rgba(255, 255, 255, 0.15)" 
-                      : dragOverIndex === index 
-                        ? "rgba(255, 255, 255, 0.08)" 
+                    backgroundColor: draggedIndex === index
+                      ? "rgba(255, 255, 255, 0.15)"
+                      : dragOverIndex === index
+                        ? "rgba(255, 255, 255, 0.08)"
                         : "rgba(255, 255, 255, 0.05)",
                     border: "1px solid var(--glass-border)",
-                    cursor: "grab",
+                    cursor: isMobile ? "default" : "grab",
                     userSelect: "none",
                   }}
-                  whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.08)" }}
-                  whileDrag={{ cursor: "grabbing" }}
+                  whileHover={!isMobile ? { backgroundColor: "rgba(255, 255, 255, 0.08)" } : {}}
+                  whileDrag={!isMobile ? { cursor: "grabbing" } : {}}
                 >
-                  <GripVertical style={{ width: "18px", height: "18px", color: "var(--foreground-muted)", marginRight: "8px" }} />
-                  <span style={{ flex: 1, fontSize: "14px", color: "var(--foreground)" }}>
+                  {/* Drag handle or position number */}
+                  {isMobile ? (
+                    <span style={{
+                      width: "24px",
+                      fontSize: "12px",
+                      color: "var(--foreground-muted)",
+                      textAlign: "center",
+                      flexShrink: 0,
+                    }}>
+                      {index + 1}
+                    </span>
+                  ) : (
+                    <GripVertical style={{ width: "18px", height: "18px", color: "var(--foreground-muted)", marginRight: "8px", flexShrink: 0 }} />
+                  )}
+
+                  <span style={{ flex: 1, fontSize: isMobile ? "13px" : "14px", color: "var(--foreground)", marginLeft: isMobile ? "8px" : "0" }}>
                     {widget.id.charAt(0).toUpperCase() + widget.id.slice(1)}
                   </span>
+
+                  {/* Mobile: Up/Down arrows */}
+                  {isMobile && (
+                    <div style={{ display: "flex", gap: "4px", marginRight: "8px" }}>
+                      <button
+                        onClick={() => moveWidget(index, "up")}
+                        disabled={index === 0}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: index === 0 ? "not-allowed" : "pointer",
+                          color: index === 0 ? "var(--glass-border)" : "var(--foreground-muted)",
+                          padding: "4px",
+                          fontSize: "16px",
+                          lineHeight: 1,
+                        }}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => moveWidget(index, "down")}
+                        disabled={index === layout.previewWidgets.length - 1}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: index === layout.previewWidgets.length - 1 ? "not-allowed" : "pointer",
+                          color: index === layout.previewWidgets.length - 1 ? "var(--glass-border)" : "var(--foreground-muted)",
+                          padding: "4px",
+                          fontSize: "16px",
+                          lineHeight: 1,
+                        }}
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Visibility toggle */}
                   <button
                     onClick={() => updateWidgetVisibility("previewWidgets", widget.id, !widget.visible)}
                     style={{
@@ -224,6 +299,7 @@ export function LayoutEditor() {
                       cursor: "pointer",
                       color: widget.visible ? "var(--accent)" : "var(--foreground-muted)",
                       padding: "4px",
+                      flexShrink: 0,
                     }}
                   >
                     {widget.visible ? (
@@ -235,38 +311,9 @@ export function LayoutEditor() {
                 </motion.div>
               ))}
             </div>
-            <p style={{ fontSize: "12px", color: "var(--foreground-muted)", textAlign: "center", marginTop: "12px" }}>
-              Drag to reorder widgets on your dashboard
+            <p style={{ fontSize: "11px", color: "var(--foreground-muted)", textAlign: "center", marginTop: "12px" }}>
+              {isMobile ? "Tap arrows to move, eye to show/hide" : "Drag to reorder widgets on your dashboard"}
             </p>
-
-            {/* Search Source Display Mode Setting */}
-            <div style={{ marginTop: "20px", borderTop: "1px solid var(--glass-border)", paddingTop: "16px" }}>
-              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "12px", textAlign: "center" }}>
-                Search Source Display
-              </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 14px", borderRadius: "8px", backgroundColor: layout.searchSourceMode === "alwaysShowing" ? "rgba(100, 255, 100, 0.1)" : "rgba(255, 255, 255, 0.05)", border: "1px solid var(--glass-border)", cursor: "pointer" }}
-                  onClick={() => setSearchSourceMode("alwaysShowing")}
-                >
-                  <Search style={{ width: "18px", height: "18px", color: layout.searchSourceMode === "alwaysShowing" ? "var(--accent)" : "var(--foreground-muted)" }} />
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>Always Show All Sources</span>
-                    <p style={{ fontSize: "12px", color: "var(--foreground-muted)", margin: 0 }}>All search sources visible, selection highlighted</p>
-                  </div>
-                  {layout.searchSourceMode === "alwaysShowing" && <Check style={{ width: "16px", height: "16px", color: "var(--accent)" }} />}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 14px", borderRadius: "8px", backgroundColor: layout.searchSourceMode === "onlySelection" ? "rgba(100, 255, 100, 0.1)" : "rgba(255, 255, 255, 0.05)", border: "1px solid var(--glass-border)", cursor: "pointer" }}
-                  onClick={() => setSearchSourceMode("onlySelection")}
-                >
-                  <Search style={{ width: "18px", height: "18px", color: layout.searchSourceMode === "onlySelection" ? "var(--accent)" : "var(--foreground-muted)" }} />
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--foreground)" }}>Show Only Selected Source</span>
-                    <p style={{ fontSize: "12px", color: "var(--foreground-muted)", margin: 0 }}>Only the selected source is visible</p>
-                  </div>
-                  {layout.searchSourceMode === "onlySelection" && <Check style={{ width: "16px", height: "16px", color: "var(--accent)" }} />}
-                </div>
-              </div>
-            </div>
           </motion.div>
         </>
       )}
