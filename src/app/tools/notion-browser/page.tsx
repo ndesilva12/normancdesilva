@@ -600,6 +600,7 @@ export default function NotionBrowser() {
                 ))}
               </div>
             )}
+          </div>
 
           {/* Search Bar */}
           <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "stretch", gap: isMobile ? "10px" : "12px" }}>
