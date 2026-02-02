@@ -452,8 +452,10 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                       setEmails((prev) => prev.map((e) => (e.id === email.id ? { ...e, isUnread: false } : e)));
                     }
                     // Open the email detail modal
+                    // Use email's account or fall back to first account in list
+                    const accountToUse = email.accountEmail || (accounts.length > 0 ? accounts[0].email : undefined);
                     setSelectedEmailId(email.id);
-                    setSelectedEmailAccount(email.accountEmail);
+                    setSelectedEmailAccount(accountToUse);
                   }}
                   style={{
                     flex: 1,
@@ -523,7 +525,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                   onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
                 >
                   <button
-                    onClick={(e) => handleEmailAction(e, email.id, "archive", email.accountEmail)}
+                    onClick={(e) => handleEmailAction(e, email.id, "archive", email.accountEmail || (accounts.length > 0 ? accounts[0].email : undefined))}
                     title="Archive"
                     style={{
                       padding: "6px",
@@ -542,7 +544,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                     <Archive style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
                   </button>
                   <button
-                    onClick={(e) => handleEmailAction(e, email.id, "trash", email.accountEmail, email.subject)}
+                    onClick={(e) => handleEmailAction(e, email.id, "trash", email.accountEmail || (accounts.length > 0 ? accounts[0].email : undefined), email.subject)}
                     title="Delete"
                     style={{
                       padding: "6px",
