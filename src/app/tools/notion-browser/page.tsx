@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -487,7 +487,7 @@ function SidebarTreeItem({
   );
 }
 
-export default function NotionBrowser() {
+function NotionBrowserContent() {
   const searchParams = useSearchParams();
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [treeLoading, setTreeLoading] = useState(true);
@@ -1188,5 +1188,29 @@ export default function NotionBrowser() {
         }
       `}</style>
     </div>
+  );
+}
+
+// Loading fallback for Suspense
+function NotionBrowserLoading() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+      <style jsx global>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// Wrap in Suspense for useSearchParams
+export default function NotionBrowser() {
+  return (
+    <Suspense fallback={<NotionBrowserLoading />}>
+      <NotionBrowserContent />
+    </Suspense>
   );
 }
