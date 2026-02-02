@@ -385,7 +385,7 @@ function BlockRenderer({ block, depth = 0, onDatabaseClick, onPageClick }: { blo
   return (
     <div>
       {renderContent()}
-      {block.children && block.type !== "toggle" && (
+      {block.children && block.type !== "toggle" && block.type !== "child_page" && block.type !== "child_database" && (
         <div style={{ paddingLeft: "16px" }}>
           {block.children.map((child) => (
             <BlockRenderer key={child.id} block={child} depth={depth + 1} onDatabaseClick={onDatabaseClick} onPageClick={onPageClick} />
@@ -542,6 +542,9 @@ function NotionBrowserContent() {
 
   // Selected item state
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+
+  // Navigation path for breadcrumbs
+  const [navigationPath, setNavigationPath] = useState<TreeNode[]>([]);
 
   // Page viewer state
   const [selectedPage, setSelectedPage] = useState<NotionPage | null>(null);
@@ -724,9 +727,10 @@ function NotionBrowserContent() {
     }
   }, []);
 
-  // Handle selecting a node from the sidebar
+  // Handle selecting a node from the sidebar (resets navigation path)
   const handleSelectNode = useCallback((node: TreeNode) => {
     setSelectedNode(node);
+    setNavigationPath([node]); // Start fresh navigation path
 
     if (isMobile) {
       setSidebarCollapsed(true);
@@ -738,6 +742,33 @@ function NotionBrowserContent() {
       fetchPageContent(node.id, node.title);
     }
   }, [isMobile, fetchDatabaseContents, fetchPageContent]);
+
+  // Handle navigating into a child page/database (adds to navigation path)
+  const handleNavigateInto = useCallback((node: TreeNode) => {
+    setSelectedNode(node);
+    setNavigationPath(prev => [...prev, node]);
+
+    if (node.type === "database") {
+      fetchDatabaseContents(node.id, node.title);
+    } else {
+      fetchPageContent(node.id, node.title);
+    }
+  }, [fetchDatabaseContents, fetchPageContent]);
+
+  // Handle breadcrumb navigation (go back to a specific point in the path)
+  const handleBreadcrumbClick = useCallback((index: number) => {
+    const node = navigationPath[index];
+    if (!node) return;
+
+    setSelectedNode(node);
+    setNavigationPath(prev => prev.slice(0, index + 1));
+
+    if (node.type === "database") {
+      fetchDatabaseContents(node.id, node.title);
+    } else {
+      fetchPageContent(node.id, node.title);
+    }
+  }, [navigationPath, fetchDatabaseContents, fetchPageContent]);
 
   // Search functionality
   const handleSearch = useCallback(async (query: string) => {
@@ -780,8 +811,10 @@ function NotionBrowserContent() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && selectedPage) {
         setSelectedPage(null);
+        setSelectedNode(null);
         setPageBlocks([]);
         setDatabaseItems([]);
+        setNavigationPath([]);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -794,13 +827,9 @@ function NotionBrowserContent() {
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <Header />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingTop: isMobile ? "56px" : "64px" }}>
-        {/* Top bar with back button and title */}
+        {/* Back Link */}
         <div style={{
-          padding: isMobile ? "12px 16px" : "16px 24px",
-          borderBottom: "1px solid var(--glass-border)",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
+          padding: isMobile ? "12px 16px 0" : "16px 24px 0",
           backgroundColor: "var(--background)",
         }}>
           <Link
@@ -814,47 +843,121 @@ function NotionBrowserContent() {
               color: "var(--foreground-muted)",
               textDecoration: "none",
               fontSize: "14px",
-              flexShrink: 0,
             }}
           >
             <ArrowLeft style={{ width: "16px", height: "16px" }} />
             {!isMobile && <span>Back to Dashboard</span>}
           </Link>
+        </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
-            <Folder style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)", flexShrink: 0 }} />
-            <h1 style={{
-              fontSize: isMobile ? "18px" : "22px",
-              fontWeight: 600,
-              color: "var(--foreground)",
-              margin: 0,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}>
-              Notes
-            </h1>
+        {/* Top bar with title and breadcrumbs */}
+        <div style={{
+          padding: isMobile ? "12px 16px" : "16px 24px",
+          borderBottom: "1px solid var(--glass-border)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+          backgroundColor: "var(--background)",
+        }}>
+          {/* Title row */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
+              <Folder style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)", flexShrink: 0 }} />
+              <h1 style={{
+                fontSize: isMobile ? "18px" : "22px",
+                fontWeight: 600,
+                color: "var(--foreground)",
+                margin: 0,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}>
+                Notes
+              </h1>
+            </div>
+
+            <button
+              onClick={fetchTree}
+              disabled={treeLoading}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: isMobile ? "40px" : "36px",
+                height: isMobile ? "40px" : "36px",
+                borderRadius: "8px",
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid var(--glass-border)",
+                color: "var(--foreground-muted)",
+                cursor: treeLoading ? "not-allowed" : "pointer",
+                flexShrink: 0,
+              }}
+            >
+              <RefreshCw style={{ width: "16px", height: "16px", animation: treeLoading ? "spin 1s linear infinite" : "none" }} />
+            </button>
           </div>
 
-          <button
-            onClick={fetchTree}
-            disabled={treeLoading}
-            style={{
+          {/* Breadcrumb navigation */}
+          {navigationPath.length > 0 && (
+            <div style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              width: isMobile ? "40px" : "36px",
-              height: isMobile ? "40px" : "36px",
-              borderRadius: "8px",
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid var(--glass-border)",
-              color: "var(--foreground-muted)",
-              cursor: treeLoading ? "not-allowed" : "pointer",
-              flexShrink: 0,
-            }}
-          >
-            <RefreshCw style={{ width: "16px", height: "16px", animation: treeLoading ? "spin 1s linear infinite" : "none" }} />
-          </button>
+              gap: "6px",
+              flexWrap: "wrap",
+              fontSize: "14px",
+            }}>
+              {navigationPath.map((node, index) => (
+                <div key={node.id} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  {index > 0 && (
+                    <ChevronRight style={{ width: "14px", height: "14px", color: "var(--foreground-muted)", flexShrink: 0 }} />
+                  )}
+                  <button
+                    onClick={() => handleBreadcrumbClick(index)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      border: "none",
+                      backgroundColor: index === navigationPath.length - 1 ? "rgba(255, 255, 255, 0.1)" : "transparent",
+                      color: index === navigationPath.length - 1 ? "var(--foreground)" : "var(--foreground-muted)",
+                      cursor: index === navigationPath.length - 1 ? "default" : "pointer",
+                      fontSize: "13px",
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (index !== navigationPath.length - 1) {
+                        e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                        e.currentTarget.style.color = "var(--foreground)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (index !== navigationPath.length - 1) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = "var(--foreground-muted)";
+                      }
+                    }}
+                  >
+                    {node.icon && <span style={{ fontSize: "14px" }}>{node.icon}</span>}
+                    {node.type === "database" ? (
+                      <Database style={{ width: "12px", height: "12px", color: "var(--accent)" }} />
+                    ) : !node.icon ? (
+                      <FileText style={{ width: "12px", height: "12px" }} />
+                    ) : null}
+                    <span style={{
+                      maxWidth: isMobile ? "100px" : "150px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}>
+                      {node.title || (node.type === "database" ? "Untitled Database" : "Untitled")}
+                    </span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <RemindersBanner />
@@ -1143,10 +1246,7 @@ function NotionBrowserContent() {
                     {databaseItems.map((item) => (
                       <div
                         key={item.id}
-                        onClick={() => {
-                          setSelectedNode(item);
-                          fetchPageContent(item.id, item.title);
-                        }}
+                        onClick={() => handleNavigateInto(item)}
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -1218,7 +1318,7 @@ function NotionBrowserContent() {
                             url: "",
                             hasChildren: true,
                           };
-                          handleSelectNode(node);
+                          handleNavigateInto(node);
                         }}
                         onPageClick={(id, title) => {
                           const node: TreeNode = {
@@ -1228,8 +1328,7 @@ function NotionBrowserContent() {
                             lastEditedTime: "",
                             url: "",
                           };
-                          setSelectedNode(node);
-                          fetchPageContent(id, title);
+                          handleNavigateInto(node);
                         }}
                       />
                     ))}
