@@ -727,10 +727,33 @@ function NotionBrowserContent() {
     }
   }, []);
 
-  // Handle selecting a node from the sidebar (resets navigation path)
+  // Helper to check if a node is a direct child of another node
+  const isChildOfNode = useCallback((childId: string, parentNode: TreeNode | null): boolean => {
+    if (!parentNode || !parentNode.children) return false;
+    return parentNode.children.some(child => child.id === childId);
+  }, []);
+
+  // Helper to find a node in the navigation path
+  const findNodeInPath = useCallback((nodeId: string, path: TreeNode[]): number => {
+    return path.findIndex(n => n.id === nodeId);
+  }, []);
+
+  // Handle selecting a node from the sidebar
   const handleSelectNode = useCallback((node: TreeNode) => {
+    // Check if this node is already in the navigation path
+    const existingIndex = findNodeInPath(node.id, navigationPath);
+    if (existingIndex >= 0) {
+      // Node is already in path, truncate to that point
+      setNavigationPath(navigationPath.slice(0, existingIndex + 1));
+    } else if (selectedNode && isChildOfNode(node.id, selectedNode)) {
+      // Node is a child of the currently selected node, add to path
+      setNavigationPath([...navigationPath, node]);
+    } else {
+      // New top-level selection, start fresh navigation path
+      setNavigationPath([node]);
+    }
+
     setSelectedNode(node);
-    setNavigationPath([node]); // Start fresh navigation path
 
     if (isMobile) {
       setSidebarCollapsed(true);
@@ -741,12 +764,14 @@ function NotionBrowserContent() {
     } else {
       fetchPageContent(node.id, node.title);
     }
-  }, [isMobile, fetchDatabaseContents, fetchPageContent]);
+  }, [isMobile, fetchDatabaseContents, fetchPageContent, navigationPath, selectedNode, isChildOfNode, findNodeInPath]);
 
   // Handle navigating into a child page/database (adds to navigation path)
-  const handleNavigateInto = useCallback((node: TreeNode) => {
+  const handleNavigateInto = useCallback((node: TreeNode, currentPath: TreeNode[]) => {
     setSelectedNode(node);
-    setNavigationPath(prev => [...prev, node]);
+    // Explicitly set the new path by appending to the current path
+    const newPath = [...currentPath, node];
+    setNavigationPath(newPath);
 
     if (node.type === "database") {
       fetchDatabaseContents(node.id, node.title);
@@ -1246,7 +1271,7 @@ function NotionBrowserContent() {
                     {databaseItems.map((item) => (
                       <div
                         key={item.id}
-                        onClick={() => handleNavigateInto(item)}
+                        onClick={() => handleNavigateInto(item, navigationPath)}
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -1318,7 +1343,7 @@ function NotionBrowserContent() {
                             url: "",
                             hasChildren: true,
                           };
-                          handleNavigateInto(node);
+                          handleNavigateInto(node, navigationPath);
                         }}
                         onPageClick={(id, title) => {
                           const node: TreeNode = {
@@ -1328,7 +1353,7 @@ function NotionBrowserContent() {
                             lastEditedTime: "",
                             url: "",
                           };
-                          handleNavigateInto(node);
+                          handleNavigateInto(node, navigationPath);
                         }}
                       />
                     ))}

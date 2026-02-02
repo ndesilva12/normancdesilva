@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Mail, Loader2, ExternalLink, RefreshCw, Archive, Trash2 } from "lucide-react";
 import { formatEmailSender } from "@/lib/google-services";
 import { useLayout } from "@/contexts/LayoutContext";
+import { EmailDetailModal } from "./EmailDetailModal";
 
 interface EmailWithAccount {
   id: string;
@@ -42,6 +43,10 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
   const router = useRouter();
   const pathname = usePathname();
   const prevPathname = useRef(pathname);
+
+  // Email detail modal state - open emails directly on dashboard
+  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
+  const [selectedEmailAccount, setSelectedEmailAccount] = useState<string | undefined>(undefined);
 
   // Set up portal container for delete confirmation modal
   useEffect(() => {
@@ -260,10 +265,37 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
     portalContainer
   ) : null;
 
+  // Handle email modal updates (archive, delete, etc.)
+  const handleEmailUpdated = () => {
+    fetchEmails();
+  };
+
+  // Handle reply - navigate to email tool page with compose
+  const handleReply = (email: { id: string; accountEmail?: string }) => {
+    setSelectedEmailId(null);
+    router.push(`/tools/emails?emailId=${email.id}${email.accountEmail ? `&account=${encodeURIComponent(email.accountEmail)}` : ''}&action=reply`);
+  };
+
+  // Handle forward - navigate to email tool page with compose
+  const handleForward = (email: { id: string; accountEmail?: string }) => {
+    setSelectedEmailId(null);
+    router.push(`/tools/emails?emailId=${email.id}${email.accountEmail ? `&account=${encodeURIComponent(email.accountEmail)}` : ''}&action=forward`);
+  };
+
   return (
     <>
     {/* Delete Confirmation Modal - rendered via portal at document root */}
     {deleteConfirmModal}
+
+    {/* Email Detail Modal - opens on dashboard without navigation */}
+    <EmailDetailModal
+      emailId={selectedEmailId}
+      account={selectedEmailAccount}
+      onClose={() => setSelectedEmailId(null)}
+      onReply={handleReply}
+      onForward={handleForward}
+      onEmailUpdated={handleEmailUpdated}
+    />
 
     <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header - clickable to navigate to full page */}
@@ -412,9 +444,17 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                 onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                {/* Email Content - Navigate to internal email tool page */}
-                <Link
-                  href={`/tools/emails?emailId=${email.id}${email.accountEmail ? `&account=${encodeURIComponent(email.accountEmail)}` : ''}`}
+                {/* Email Content - Open modal on dashboard (don't navigate away) */}
+                <button
+                  onClick={() => {
+                    // Mark as read immediately in local state
+                    if (email.isUnread) {
+                      setEmails((prev) => prev.map((e) => (e.id === email.id ? { ...e, isUnread: false } : e)));
+                    }
+                    // Open the email detail modal
+                    setSelectedEmailId(email.id);
+                    setSelectedEmailAccount(email.accountEmail);
+                  }}
                   style={{
                     flex: 1,
                     display: "flex",
@@ -423,6 +463,10 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                     padding: "8px",
                     textDecoration: "none",
                     minWidth: 0,
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    textAlign: "left",
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -463,7 +507,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                       {email.accountName || email.accountEmail}
                     </div>
                   )}
-                </Link>
+                </button>
 
                 {/* Action Buttons */}
                 <div
