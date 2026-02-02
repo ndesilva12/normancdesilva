@@ -89,14 +89,15 @@ export function EmailDetailModal({
 
   // Automatically mark email as read when opened
   useEffect(() => {
-    if (email && email.isUnread && email.accountEmail) {
+    if (email && email.isUnread) {
       // Mark as read silently (don't show loading state)
+      // If no accountEmail, API will use primary/first account
       fetch(`/api/gmail/${email.id}/actions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "mark-read",
-          account: email.accountEmail,
+          ...(email.accountEmail && { account: email.accountEmail }),
         }),
       })
         .then((response) => {
@@ -141,8 +142,12 @@ export function EmailDetailModal({
         throw new Error(data.error || "Failed to fetch email details");
       }
       // API returns { email, account } - extract the email object and merge accountEmail
+      // Note: "unknown" is returned for legacy single-account tokens, treat as undefined
       const emailData = data.email || data;
-      setEmail({ ...emailData, accountEmail: data.account || emailData.accountEmail || account });
+      const resolvedAccount = (data.account && data.account !== "unknown") ? data.account :
+                              (emailData.accountEmail && emailData.accountEmail !== "unknown") ? emailData.accountEmail :
+                              account;
+      setEmail({ ...emailData, accountEmail: resolvedAccount });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load email");
     } finally {
@@ -151,7 +156,7 @@ export function EmailDetailModal({
   };
 
   const handleEmailAction = async (action: "archive" | "trash" | "star" | "unstar" | "mark-read" | "mark-unread") => {
-    if (!email || !email.accountEmail) return;
+    if (!email) return;
 
     setActionLoading(action);
     try {
@@ -162,7 +167,7 @@ export function EmailDetailModal({
         },
         body: JSON.stringify({
           action,
-          account: email.accountEmail,
+          ...(email.accountEmail && { account: email.accountEmail }),
         }),
       });
 
@@ -219,8 +224,9 @@ export function EmailDetailModal({
   };
 
   const getAttachmentUrl = (attachmentId: string) => {
-    if (!email || !email.accountEmail) return "#";
-    return `/api/gmail/${email.id}/attachment/${attachmentId}?account=${encodeURIComponent(email.accountEmail)}`;
+    if (!email) return "#";
+    const url = `/api/gmail/${email.id}/attachment/${attachmentId}`;
+    return email.accountEmail ? `${url}?account=${encodeURIComponent(email.accountEmail)}` : url;
   };
 
   // Render email body - either HTML or plain text
