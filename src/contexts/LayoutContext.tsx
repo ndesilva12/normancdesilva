@@ -17,12 +17,19 @@ export interface WidgetConfig {
   customName?: string;
 }
 
-// Layout configuration
+// Layout configuration for a single viewport
 export interface LayoutConfig {
   previewWidgets: WidgetConfig[];
   toolCards: WidgetConfig[];
   version: number;
   searchSourceMode: "alwaysShowing" | "onlySelection";
+}
+
+// Combined layout configuration for both viewports
+export interface DualLayoutConfig {
+  desktop: LayoutConfig;
+  mobile: LayoutConfig;
+  version: number;
 }
 
 // Default widget configurations - Data Widgets (connected services)
@@ -61,10 +68,17 @@ const DEFAULT_LAYOUT: LayoutConfig = {
   searchSourceMode: "onlySelection",
 };
 
+const DEFAULT_DUAL_LAYOUT: DualLayoutConfig = {
+  desktop: DEFAULT_LAYOUT,
+  mobile: DEFAULT_LAYOUT,
+  version: 3,
+};
+
 interface LayoutContextType {
   layout: LayoutConfig;
   isEditMode: boolean;
   pendingLayout: LayoutConfig | null;
+  isMobile: boolean;
   enterEditMode: () => void;
   exitEditMode: (save: boolean) => void;
   updateWidgetSize: (type: "previewWidgets" | "toolCards", id: string, size: WidgetSize) => void;
@@ -81,17 +95,34 @@ const LayoutContext = createContext<LayoutContextType | null>(null);
 
 export function LayoutProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [layout, setLayout] = useState<LayoutConfig>(DEFAULT_LAYOUT);
+  const [dualLayout, setDualLayout] = useState<DualLayoutConfig>(DEFAULT_DUAL_LAYOUT);
   const [isEditMode, setIsEditMode] = useState(false);
   const [pendingLayout, setPendingLayout] = useState<LayoutConfig | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Mark as mounted to prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Helper function to merge and sort layout with defaults
+  // Detect mobile viewport
+  useEffect(() => {
+    if (!mounted) return;
+
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, [mounted]);
+
+  // Get the current layout based on viewport
+  const layout = isMobile ? dualLayout.mobile : dualLayout.desktop;
+
+  // Helper function to merge a single layout with defaults
   const mergeLayoutWithDefaults = (parsed: LayoutConfig): LayoutConfig => {
     // Merge with defaults to handle new widgets
     // Force all widgets to "default" size (collapse feature removed)
@@ -118,12 +149,34 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     };
   };
 
+  // Helper function to merge dual layout with defaults
+  const mergeDualLayoutWithDefaults = (parsed: any): DualLayoutConfig => {
+    // Check if it's a new dual layout format or old single layout format
+    if (parsed.desktop && parsed.mobile) {
+      // New dual layout format
+      return {
+        desktop: mergeLayoutWithDefaults(parsed.desktop),
+        mobile: mergeLayoutWithDefaults(parsed.mobile),
+        version: 3,
+      };
+    } else if (parsed.previewWidgets) {
+      // Old single layout format - use same layout for both
+      const singleLayout = mergeLayoutWithDefaults(parsed);
+      return {
+        desktop: singleLayout,
+        mobile: singleLayout,
+        version: 3,
+      };
+    }
+    return DEFAULT_DUAL_LAYOUT;
+  };
+
   // Load layout from Firestore with real-time sync (falls back to localStorage)
   useEffect(() => {
     if (!mounted) return;
-    
+
     if (!user) {
-      setLayout(DEFAULT_LAYOUT);
+      setDualLayout(DEFAULT_DUAL_LAYOUT);
       return;
     }
 
@@ -137,24 +190,31 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
-            if (data.layout) {
-              const mergedLayout = mergeLayoutWithDefaults(data.layout);
-              setLayout(mergedLayout);
-              // Also cache in localStorage
-              localStorage.setItem(storageKey, JSON.stringify(mergedLayout));
+            if (data.dualLayout) {
+              // New dual layout format
+              const mergedDualLayout = mergeDualLayoutWithDefaults(data.dualLayout);
+              setDualLayout(mergedDualLayout);
+              localStorage.setItem(storageKey, JSON.stringify(mergedDualLayout));
+            } else if (data.layout) {
+              // Old single layout format - migrate to dual
+              const mergedDualLayout = mergeDualLayoutWithDefaults(data.layout);
+              setDualLayout(mergedDualLayout);
+              localStorage.setItem(storageKey, JSON.stringify(mergedDualLayout));
+              // Save migrated dual layout to Firestore
+              setDoc(userDocRef, { dualLayout: mergedDualLayout }, { merge: true });
             }
           } else {
             // Check localStorage for initial data and migrate to Firestore
             const stored = localStorage.getItem(storageKey);
             if (stored) {
               try {
-                const localLayout = JSON.parse(stored) as LayoutConfig;
-                const mergedLayout = mergeLayoutWithDefaults(localLayout);
-                setLayout(mergedLayout);
+                const localLayout = JSON.parse(stored);
+                const mergedDualLayout = mergeDualLayoutWithDefaults(localLayout);
+                setDualLayout(mergedDualLayout);
                 // Migrate localStorage data to Firestore
-                setDoc(userDocRef, { layout: mergedLayout }, { merge: true });
+                setDoc(userDocRef, { dualLayout: mergedDualLayout }, { merge: true });
               } catch {
-                setLayout(DEFAULT_LAYOUT);
+                setDualLayout(DEFAULT_DUAL_LAYOUT);
               }
             }
           }
@@ -165,10 +225,10 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
           const stored = localStorage.getItem(storageKey);
           if (stored) {
             try {
-              const localLayout = JSON.parse(stored) as LayoutConfig;
-              setLayout(mergeLayoutWithDefaults(localLayout));
+              const localLayout = JSON.parse(stored);
+              setDualLayout(mergeDualLayoutWithDefaults(localLayout));
             } catch {
-              setLayout(DEFAULT_LAYOUT);
+              setDualLayout(DEFAULT_DUAL_LAYOUT);
             }
           }
         }
@@ -180,35 +240,43 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         try {
-          const localLayout = JSON.parse(stored) as LayoutConfig;
-          setLayout(mergeLayoutWithDefaults(localLayout));
+          const localLayout = JSON.parse(stored);
+          setDualLayout(mergeDualLayoutWithDefaults(localLayout));
         } catch {
-          setLayout(DEFAULT_LAYOUT);
+          setDualLayout(DEFAULT_DUAL_LAYOUT);
         }
       }
     }
   }, [user, mounted]);
 
-  // Save layout to Firestore and localStorage
+  // Save layout to Firestore and localStorage (saves to current viewport's layout)
   const saveLayout = useCallback(
     async (newLayout: LayoutConfig) => {
       if (!user) return;
 
       const storageKey = `dashboard-layout-${user.uid}`;
-      localStorage.setItem(storageKey, JSON.stringify(newLayout));
-      setLayout(newLayout);
+
+      // Update the appropriate layout based on current viewport
+      const newDualLayout: DualLayoutConfig = {
+        ...dualLayout,
+        [isMobile ? "mobile" : "desktop"]: newLayout,
+        version: 3,
+      };
+
+      localStorage.setItem(storageKey, JSON.stringify(newDualLayout));
+      setDualLayout(newDualLayout);
 
       // Save to Firestore for cross-device sync
       if (db) {
         try {
           const userDocRef = doc(db, "users", user.uid);
-          await setDoc(userDocRef, { layout: newLayout }, { merge: true });
+          await setDoc(userDocRef, { dualLayout: newDualLayout }, { merge: true });
         } catch (error) {
           console.error("Failed to save layout to Firestore:", error);
         }
       }
     },
-    [user]
+    [user, dualLayout, isMobile]
   );
 
   const enterEditMode = useCallback(() => {
@@ -278,6 +346,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   );
 
   const resetLayout = useCallback(() => {
+    // Reset only the current viewport's layout
     if (isEditMode) {
       setPendingLayout(DEFAULT_LAYOUT);
     } else {
@@ -338,6 +407,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
         layout: activeLayout,
         isEditMode,
         pendingLayout,
+        isMobile,
         enterEditMode,
         exitEditMode,
         updateWidgetSize,
