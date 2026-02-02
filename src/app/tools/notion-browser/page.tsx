@@ -361,12 +361,21 @@ export default function NotionBrowser() {
   const [currentDatabaseId, setCurrentDatabaseId] = useState<string | null>(null);
   const [currentDatabaseTitle, setCurrentDatabaseTitle] = useState<string>("");
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ title: string; action: () => void }>>([]);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Page viewer state
   const [selectedPage, setSelectedPage] = useState<NotionPage | null>(null);
   const [pageBlocks, setPageBlocks] = useState<NotionBlock[]>([]);
   const [pageLoading, setPageLoading] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
+
+  // Check for mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const fetchWorkspaceItems = useCallback(async () => {
     setLoading(true);
@@ -520,73 +529,81 @@ export default function NotionBrowser() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", padding: "24px" }}>
+    <div style={{ minHeight: "100vh", padding: isMobile ? "12px" : "24px" }}>
       <Header />
-      <div style={{ maxWidth: "1200px", margin: "0 auto", paddingTop: "64px" }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", paddingTop: isMobile ? "56px" : "64px" }}>
         <RemindersBanner />
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingTop: "24px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? "16px" : "24px", paddingTop: isMobile ? "16px" : "24px" }}>
           {/* Breadcrumb and Title */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? "12px" : "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <Link
                 href="/"
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "8px",
-                  padding: "8px 12px",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: isMobile ? "10px 14px" : "8px 12px",
                   borderRadius: "8px",
                   backgroundColor: "rgba(255, 255, 255, 0.05)",
                   border: "1px solid var(--glass-border)",
                   color: "var(--foreground)",
                   textDecoration: "none",
                   transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                  fontSize: isMobile ? "14px" : "inherit",
                 }}
               >
                 <ArrowLeft style={{ width: "18px", height: "18px" }} />
-                Back to Dashboard
+                {isMobile ? "Back" : "Back to Dashboard"}
               </Link>
-              {currentView === "workspace" ? (
-                <Folder style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
-              ) : (
-                <FolderOpen style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
-              )}
-              <h1 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)" }}>
-                {currentView === "workspace" ? "Notes" : currentDatabaseTitle}
-              </h1>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
+                {currentView === "workspace" ? (
+                  <Folder style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)", flexShrink: 0 }} />
+                ) : (
+                  <FolderOpen style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)", flexShrink: 0 }} />
+                )}
+                <h1 style={{
+                  fontSize: isMobile ? "18px" : "24px",
+                  fontWeight: 600,
+                  color: "var(--foreground)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}>
+                  {currentView === "workspace" ? "Notes" : currentDatabaseTitle}
+                </h1>
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-              {breadcrumbs.map((crumb, index) => (
-                <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <button
-                    onClick={crumb.action}
-                    style={{
-                      fontSize: "14px",
-                      color: index === breadcrumbs.length - 1 ? "var(--foreground-muted)" : "var(--accent)",
-                      background: "none",
-                      border: "none",
-                      cursor: index === breadcrumbs.length - 1 ? "default" : "pointer",
-                      textDecoration: index === breadcrumbs.length - 1 ? "none" : "underline",
-                    }}
-                  >
-                    {crumb.title}
-                  </button>
-                  {index < breadcrumbs.length - 1 && (
-                    <ChevronRight style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-                  )}
-                </div>
-              ))}
-            </div>
+            {breadcrumbs.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                {breadcrumbs.map((crumb, index) => (
+                  <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button
+                      onClick={crumb.action}
+                      style={{
+                        fontSize: isMobile ? "13px" : "14px",
+                        color: index === breadcrumbs.length - 1 ? "var(--foreground-muted)" : "var(--accent)",
+                        background: "none",
+                        border: "none",
+                        padding: isMobile ? "4px 0" : "0",
+                        cursor: index === breadcrumbs.length - 1 ? "default" : "pointer",
+                        textDecoration: index === breadcrumbs.length - 1 ? "none" : "underline",
+                      }}
+                    >
+                      {crumb.title}
+                    </button>
+                    {index < breadcrumbs.length - 1 && (
+                      <ChevronRight style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Search Bar */}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "stretch", gap: isMobile ? "10px" : "12px" }}>
             <div
               style={{
                 display: "flex",
@@ -595,14 +612,14 @@ export default function NotionBrowser() {
                 backgroundColor: "rgba(255, 255, 255, 0.05)",
                 border: "1px solid var(--glass-border)",
                 borderRadius: "12px",
-                padding: "0 16px",
-                height: "48px",
+                padding: isMobile ? "0 12px" : "0 16px",
+                height: isMobile ? "44px" : "48px",
               }}
             >
               {isSearching ? (
-                <Loader2 style={{ width: "20px", height: "20px", color: "var(--foreground-muted)", animation: "spin 1s linear infinite" }} />
+                <Loader2 style={{ width: "20px", height: "20px", color: "var(--foreground-muted)", animation: "spin 1s linear infinite", flexShrink: 0 }} />
               ) : (
-                <Search style={{ width: "20px", height: "20px", color: "var(--foreground-muted)" }} />
+                <Search style={{ width: "20px", height: "20px", color: "var(--foreground-muted)", flexShrink: 0 }} />
               )}
               <input
                 type="text"
@@ -614,7 +631,7 @@ export default function NotionBrowser() {
                   border: "none",
                   background: "transparent",
                   color: "var(--foreground)",
-                  fontSize: "15px",
+                  fontSize: isMobile ? "16px" : "15px",
                   padding: "0 12px",
                   height: "100%",
                   outline: "none",
@@ -627,22 +644,17 @@ export default function NotionBrowser() {
                 style={{
                   display: "flex",
                   alignItems: "center",
+                  justifyContent: "center",
                   gap: "8px",
-                  padding: "0 16px",
-                  height: "48px",
+                  padding: isMobile ? "12px 16px" : "0 16px",
+                  height: isMobile ? "44px" : "48px",
                   borderRadius: "12px",
                   backgroundColor: "rgba(255, 255, 255, 0.05)",
                   border: "1px solid var(--glass-border)",
                   color: "var(--foreground)",
-                  fontSize: "15px",
+                  fontSize: isMobile ? "14px" : "15px",
                   cursor: "pointer",
                   transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
                 }}
               >
                 <ArrowLeft style={{ width: "18px", height: "18px" }} />
@@ -716,23 +728,25 @@ export default function NotionBrowser() {
               </div>
             ) : (
               <div>
-                {/* Header Row */}
-                <div style={{
-                  padding: "16px 20px",
-                  borderBottom: "1px solid var(--glass-border)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  color: "var(--foreground-muted)",
-                  fontSize: "13px",
-                  fontWeight: 500
-                }}>
-                  <span style={{ flex: 1 }}>Name</span>
-                  <span style={{ width: "120px", textAlign: "right" }}>Last Edited</span>
-                  <span style={{ width: "80px", textAlign: "right" }}>Open</span>
-                </div>
+                {/* Header Row - hide on mobile */}
+                {!isMobile && (
+                  <div style={{
+                    padding: "16px 20px",
+                    borderBottom: "1px solid var(--glass-border)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    color: "var(--foreground-muted)",
+                    fontSize: "13px",
+                    fontWeight: 500
+                  }}>
+                    <span style={{ flex: 1 }}>Name</span>
+                    <span style={{ width: "120px", textAlign: "right" }}>Last Edited</span>
+                    <span style={{ width: "80px", textAlign: "right" }}>Open</span>
+                  </div>
+                )}
                 {/* Items List */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "8px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? "8px" : "4px", padding: isMobile ? "12px" : "8px" }}>
                   {items.map((item) => (
                     <motion.div
                       key={item.id}
@@ -748,78 +762,94 @@ export default function NotionBrowser() {
                       }}
                       style={{
                         display: "flex",
-                        alignItems: "center",
-                        padding: "14px 16px",
-                        borderRadius: "8px",
-                        backgroundColor: "rgba(255, 255, 255, 0.02)",
-                        border: "1px solid transparent",
-                        justifyContent: "space-between",
+                        alignItems: isMobile ? "flex-start" : "center",
+                        flexDirection: isMobile ? "column" : "row",
+                        padding: isMobile ? "14px" : "14px 16px",
+                        borderRadius: isMobile ? "12px" : "8px",
+                        backgroundColor: isMobile ? "rgba(255, 255, 255, 0.04)" : "rgba(255, 255, 255, 0.02)",
+                        border: "1px solid var(--glass-border)",
+                        gap: isMobile ? "10px" : "0",
                         cursor: "pointer",
                         transition: "all 0.15s",
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.06)";
-                        e.currentTarget.style.borderColor = "var(--glass-border)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.02)";
-                        e.currentTarget.style.borderColor = "transparent";
-                      }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, overflow: "hidden" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, overflow: "hidden", width: "100%" }}>
                         {item.icon ? (
-                          <span style={{ fontSize: "18px" }}>{item.icon}</span>
+                          <span style={{ fontSize: isMobile ? "22px" : "18px", flexShrink: 0 }}>{item.icon}</span>
                         ) : item.type === "database" ? (
-                          <Database style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
+                          <Database style={{ width: isMobile ? "22px" : "18px", height: isMobile ? "22px" : "18px", color: "var(--accent)", flexShrink: 0 }} />
                         ) : (
-                          <FileText style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
+                          <FileText style={{ width: isMobile ? "22px" : "18px", height: isMobile ? "22px" : "18px", color: "var(--accent)", flexShrink: 0 }} />
                         )}
                         <span
                           style={{
-                            fontSize: "15px",
+                            fontSize: isMobile ? "16px" : "15px",
                             fontWeight: 500,
-                            whiteSpace: "nowrap",
+                            whiteSpace: isMobile ? "normal" : "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             color: "var(--foreground)",
+                            lineHeight: isMobile ? "1.4" : "inherit",
                           }}
                         >
                           {item.title || (item.type === "database" ? "Untitled Database" : "Untitled")}
                         </span>
                       </div>
-                      <span style={{ fontSize: "13px", color: "var(--foreground-muted)", width: "120px", textAlign: "right" }}>
-                        {formatDate(item.lastEditedTime)}
-                      </span>
-                      <div style={{ width: "80px", display: "flex", justifyContent: "flex-end" }}>
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: "32px",
-                            height: "32px",
-                            borderRadius: "6px",
-                            backgroundColor: "rgba(255, 255, 255, 0.05)",
-                            color: "var(--foreground-muted)",
-                            transition: "all 0.15s",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-                            e.currentTarget.style.color = "var(--accent)";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
-                            e.currentTarget.style.color = "var(--foreground-muted)";
-                          }}
-                          title="Open in Notion"
-                        >
-                          <ExternalLink style={{ width: "14px", height: "14px" }} />
-                        </a>
-                      </div>
+                      {isMobile ? (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", paddingLeft: "34px" }}>
+                          <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                            {formatDate(item.lastEditedTime)}
+                          </span>
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              padding: "8px 12px",
+                              borderRadius: "8px",
+                              backgroundColor: "rgba(255, 255, 255, 0.08)",
+                              color: "var(--accent)",
+                              textDecoration: "none",
+                              fontSize: "12px",
+                            }}
+                          >
+                            <ExternalLink style={{ width: "14px", height: "14px" }} />
+                            Notion
+                          </a>
+                        </div>
+                      ) : (
+                        <>
+                          <span style={{ fontSize: "13px", color: "var(--foreground-muted)", width: "120px", textAlign: "right" }}>
+                            {formatDate(item.lastEditedTime)}
+                          </span>
+                          <div style={{ width: "80px", display: "flex", justifyContent: "flex-end" }}>
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "6px",
+                                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                                color: "var(--foreground-muted)",
+                                transition: "all 0.15s",
+                              }}
+                              title="Open in Notion"
+                            >
+                              <ExternalLink style={{ width: "14px", height: "14px" }} />
+                            </a>
+                          </div>
+                        </>
+                      )}
                     </motion.div>
                   ))}
                 </div>
@@ -843,30 +873,30 @@ export default function NotionBrowser() {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.7)",
-              backdropFilter: "blur(5px)",
+              backgroundColor: isMobile ? "var(--background)" : "rgba(0, 0, 0, 0.7)",
+              backdropFilter: isMobile ? "none" : "blur(5px)",
               zIndex: 999,
               display: "flex",
               alignItems: "flex-start",
               justifyContent: "center",
-              paddingTop: "5vh",
+              paddingTop: isMobile ? "0" : "5vh",
             }}
-            onClick={closePageViewer}
+            onClick={isMobile ? undefined : closePageViewer}
           >
             <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
+              initial={{ scale: isMobile ? 1 : 0.95, y: isMobile ? 20 : 0 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: isMobile ? 1 : 0.95, y: isMobile ? 20 : 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               style={{
-                width: "94%",
-                maxWidth: "900px",
-                height: "85vh",
-                backgroundColor: "rgba(26, 26, 26, 0.95)",
-                backdropFilter: "blur(20px)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: "16px",
-                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+                width: isMobile ? "100%" : "94%",
+                maxWidth: isMobile ? "none" : "900px",
+                height: isMobile ? "100%" : "85vh",
+                backgroundColor: isMobile ? "var(--background)" : "rgba(26, 26, 26, 0.95)",
+                backdropFilter: isMobile ? "none" : "blur(20px)",
+                border: isMobile ? "none" : "1px solid var(--glass-border)",
+                borderRadius: isMobile ? "0" : "16px",
+                boxShadow: isMobile ? "none" : "0 8px 32px rgba(0, 0, 0, 0.3)",
                 overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
@@ -876,22 +906,46 @@ export default function NotionBrowser() {
               {/* Modal Header */}
               <div
                 style={{
-                  padding: "16px 20px",
+                  padding: isMobile ? "12px 16px" : "16px 20px",
                   borderBottom: "1px solid var(--glass-border)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                   flexShrink: 0,
+                  gap: "12px",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, overflow: "hidden" }}>
+                {/* Close button on left for mobile */}
+                {isMobile && (
+                  <button
+                    onClick={closePageViewer}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid var(--glass-border)",
+                      color: "var(--foreground)",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      gap: "6px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ArrowLeft style={{ width: "18px", height: "18px" }} />
+                    Back
+                  </button>
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "12px", flex: 1, overflow: "hidden", minWidth: 0 }}>
                   {selectedPage.icon ? (
-                    <span style={{ fontSize: "20px" }}>{selectedPage.icon}</span>
+                    <span style={{ fontSize: isMobile ? "18px" : "20px", flexShrink: 0 }}>{selectedPage.icon}</span>
                   ) : (
-                    <FileText style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+                    <FileText style={{ width: isMobile ? "18px" : "20px", height: isMobile ? "18px" : "20px", color: "var(--accent)", flexShrink: 0 }} />
                   )}
                   <h2 style={{
-                    fontSize: "18px",
+                    fontSize: isMobile ? "15px" : "18px",
                     fontWeight: 600,
                     color: "var(--foreground)",
                     margin: 0,
@@ -902,7 +956,7 @@ export default function NotionBrowser() {
                     {selectedPage.title || "Untitled"}
                   </h2>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "12px", flexShrink: 0 }}>
                   {selectedPage.url && (
                     <a
                       href={selectedPage.url}
@@ -912,38 +966,40 @@ export default function NotionBrowser() {
                         display: "flex",
                         alignItems: "center",
                         gap: "6px",
-                        padding: "6px 10px",
+                        padding: isMobile ? "10px 12px" : "6px 10px",
                         borderRadius: "8px",
                         backgroundColor: "rgba(255, 255, 255, 0.05)",
                         border: "1px solid rgba(255, 255, 255, 0.1)",
-                        color: "var(--foreground-muted)",
-                        fontSize: "13px",
+                        color: "var(--accent)",
+                        fontSize: isMobile ? "13px" : "13px",
                         textDecoration: "none",
                         transition: "all 0.15s",
                       }}
                     >
                       <ExternalLink style={{ width: "14px", height: "14px" }} />
-                      <span>Open in Notion</span>
+                      {!isMobile && <span>Open in Notion</span>}
                     </a>
                   )}
-                  <button
-                    onClick={closePageViewer}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "8px",
-                      backgroundColor: "rgba(255, 100, 100, 0.1)",
-                      border: "1px solid rgba(255, 100, 100, 0.2)",
-                      color: "var(--foreground-muted)",
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    <X style={{ width: "16px", height: "16px" }} />
-                  </button>
+                  {!isMobile && (
+                    <button
+                      onClick={closePageViewer}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "8px",
+                        backgroundColor: "rgba(255, 100, 100, 0.1)",
+                        border: "1px solid rgba(255, 100, 100, 0.2)",
+                        color: "var(--foreground-muted)",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <X style={{ width: "16px", height: "16px" }} />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -954,12 +1010,12 @@ export default function NotionBrowser() {
                     <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
                   </div>
                 ) : pageError ? (
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: "16px" }}>
-                    <p style={{ color: "#f87171", fontSize: "16px" }}>{pageError}</p>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: "16px", padding: "20px" }}>
+                    <p style={{ color: "#f87171", fontSize: "16px", textAlign: "center" }}>{pageError}</p>
                     <button
                       onClick={() => fetchPageContent(selectedPage.id, selectedPage.title)}
                       style={{
-                        padding: "8px 16px",
+                        padding: isMobile ? "12px 20px" : "8px 16px",
                         borderRadius: "8px",
                         backgroundColor: "var(--accent)",
                         color: "var(--background)",
@@ -972,7 +1028,7 @@ export default function NotionBrowser() {
                     </button>
                   </div>
                 ) : pageBlocks.length === 0 ? (
-                  <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", padding: "20px" }}>
                     <p style={{ color: "var(--foreground-muted)", fontSize: "16px" }}>This page is empty</p>
                   </div>
                 ) : (
@@ -980,16 +1036,17 @@ export default function NotionBrowser() {
                     style={{
                       flex: 1,
                       overflowY: "auto",
-                      padding: "24px",
+                      padding: isMobile ? "16px" : "24px",
+                      WebkitOverflowScrolling: "touch",
                     }}
                   >
                     <div
                       style={{
-                        backgroundColor: "rgba(255, 255, 255, 0.03)",
-                        borderRadius: "8px",
-                        padding: "32px",
+                        backgroundColor: isMobile ? "transparent" : "rgba(255, 255, 255, 0.03)",
+                        borderRadius: isMobile ? "0" : "8px",
+                        padding: isMobile ? "0" : "32px",
                         minHeight: "100%",
-                        border: "1px solid var(--glass-border)",
+                        border: isMobile ? "none" : "1px solid var(--glass-border)",
                       }}
                     >
                       {pageBlocks.map((block) => (
