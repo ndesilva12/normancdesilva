@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -11,6 +12,7 @@ import {
   Search,
   ExternalLink,
   ChevronRight,
+  ChevronDown,
   Folder,
   FolderOpen,
   X,
@@ -21,23 +23,24 @@ import {
   Image as ImageIcon,
   Link as LinkIcon,
   Type,
+  RefreshCw,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
-interface WorkspaceItem {
+interface TreeNode {
   id: string;
   type: "page" | "database";
   title: string;
   icon?: string;
   lastEditedTime: string;
   url: string;
-  parent?: {
-    type: string;
-    page_id?: string;
-    database_id?: string;
-    workspace?: boolean;
-  };
+  hasChildren?: boolean;
+  children?: TreeNode[];
+  expanded?: boolean;
+  loading?: boolean;
 }
 
 interface RichTextSegment {
@@ -351,17 +354,152 @@ function BlockRenderer({ block, depth = 0 }: { block: NotionBlock; depth?: numbe
   );
 }
 
+// Tree item component for sidebar navigation
+function SidebarTreeItem({
+  node,
+  depth = 0,
+  onToggle,
+  onSelect,
+  selectedId,
+  isMobile,
+}: {
+  node: TreeNode;
+  depth?: number;
+  onToggle: (id: string) => void;
+  onSelect: (node: TreeNode) => void;
+  selectedId?: string;
+  isMobile?: boolean;
+}) {
+  const hasChildren = node.hasChildren || (node.children && node.children.length > 0);
+  const isExpanded = node.expanded;
+  const isDatabase = node.type === "database";
+  const isSelected = node.id === selectedId;
+
+  return (
+    <div>
+      <div
+        onClick={() => onSelect(node)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          padding: isMobile ? "10px 8px" : "6px 8px",
+          paddingLeft: `${depth * 16 + 8}px`,
+          borderRadius: "6px",
+          cursor: "pointer",
+          transition: "background 0.15s",
+          backgroundColor: isSelected ? "rgba(255, 255, 255, 0.1)" : "transparent",
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected) e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected) e.currentTarget.style.background = "transparent";
+        }}
+      >
+        {/* Expand/collapse button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hasChildren) {
+              onToggle(node.id);
+            }
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "20px",
+            height: "20px",
+            background: "none",
+            border: "none",
+            cursor: hasChildren ? "pointer" : "default",
+            color: "var(--foreground-muted)",
+            opacity: hasChildren ? 1 : 0.3,
+            padding: 0,
+            flexShrink: 0,
+          }}
+        >
+          {node.loading ? (
+            <Loader2 style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite" }} />
+          ) : hasChildren ? (
+            isExpanded ? (
+              <ChevronDown style={{ width: "16px", height: "16px" }} />
+            ) : (
+              <ChevronRight style={{ width: "16px", height: "16px" }} />
+            )
+          ) : (
+            <span style={{ width: "16px" }} />
+          )}
+        </button>
+
+        {/* Icon */}
+        <span style={{ fontSize: isMobile ? "18px" : "16px", flexShrink: 0, width: "20px", textAlign: "center" }}>
+          {node.icon ? (
+            node.icon
+          ) : isDatabase ? (
+            <Database style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
+          ) : hasChildren ? (
+            isExpanded ? (
+              <FolderOpen style={{ width: "16px", height: "16px", color: "#fbbf24" }} />
+            ) : (
+              <Folder style={{ width: "16px", height: "16px", color: "#fbbf24" }} />
+            )
+          ) : (
+            <FileText style={{ width: "16px", height: "16px", color: "var(--foreground-muted)" }} />
+          )}
+        </span>
+
+        {/* Title */}
+        <span
+          style={{
+            flex: 1,
+            fontSize: isMobile ? "15px" : "14px",
+            color: isSelected ? "var(--foreground)" : "var(--foreground)",
+            fontWeight: isSelected ? 500 : 400,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            minWidth: 0,
+          }}
+        >
+          {node.title || (isDatabase ? "Untitled Database" : "Untitled")}
+        </span>
+      </div>
+
+      {/* Children */}
+      {isExpanded && node.children && node.children.length > 0 && (
+        <div>
+          {node.children.map((child) => (
+            <SidebarTreeItem
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              onToggle={onToggle}
+              onSelect={onSelect}
+              selectedId={selectedId}
+              isMobile={isMobile}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function NotionBrowser() {
-  const [items, setItems] = useState<WorkspaceItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [tree, setTree] = useState<TreeNode[]>([]);
+  const [treeLoading, setTreeLoading] = useState(true);
+  const [treeError, setTreeError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [currentView, setCurrentView] = useState<"workspace" | "database-pages">("workspace");
-  const [currentDatabaseId, setCurrentDatabaseId] = useState<string | null>(null);
-  const [currentDatabaseTitle, setCurrentDatabaseTitle] = useState<string>("");
-  const [breadcrumbs, setBreadcrumbs] = useState<Array<{ title: string; action: () => void }>>([]);
-  const [isMobile, setIsMobile] = useState(false);
+  const [searchResults, setSearchResults] = useState<TreeNode[]>([]);
+
+  // Selected item state
+  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
 
   // Page viewer state
   const [selectedPage, setSelectedPage] = useState<NotionPage | null>(null);
@@ -369,60 +507,140 @@ export default function NotionBrowser() {
   const [pageLoading, setPageLoading] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
+  // Database items state (when viewing a database)
+  const [databaseItems, setDatabaseItems] = useState<TreeNode[]>([]);
+  const [databaseLoading, setDatabaseLoading] = useState(false);
+
   // Check for mobile viewport
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setSidebarCollapsed(true);
+      }
+    };
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const fetchWorkspaceItems = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Fetch the tree structure
+  const fetchTree = useCallback(async () => {
+    setTreeLoading(true);
+    setTreeError(null);
     try {
-      const response = await fetch("/api/notion-workspace?action=workspace");
+      const response = await fetch("/api/notion-workspace?action=tree");
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch workspace items");
+        throw new Error(data.error || "Failed to fetch notes");
       }
-      setItems(data.items || []);
+      const items = (data.items || []).map((item: TreeNode) => ({
+        ...item,
+        expanded: false,
+        children: [],
+      }));
+      setTree(items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load workspace");
+      setTreeError(err instanceof Error ? err.message : "Failed to load notes");
     } finally {
-      setLoading(false);
+      setTreeLoading(false);
     }
   }, []);
 
-  const fetchDatabasePages = useCallback(async (databaseId: string, databaseTitle: string) => {
-    setLoading(true);
-    setError(null);
+  useEffect(() => {
+    fetchTree();
+  }, [fetchTree]);
+
+  // Handle URL params for deep linking
+  useEffect(() => {
+    const pageId = searchParams.get("pageId");
+    const databaseId = searchParams.get("databaseId");
+    const title = searchParams.get("title");
+
+    if (pageId) {
+      fetchPageContent(pageId, title || "Page");
+    } else if (databaseId) {
+      const node: TreeNode = {
+        id: databaseId,
+        type: "database",
+        title: title || "Database",
+        lastEditedTime: "",
+        url: "",
+        hasChildren: true,
+      };
+      handleSelectNode(node);
+    }
+  }, [searchParams]);
+
+  // Fetch children for a node
+  const fetchChildren = useCallback(async (nodeId: string, isDatabase: boolean): Promise<TreeNode[]> => {
     try {
-      const response = await fetch(`/api/notion-workspace?action=database-pages&databaseId=${databaseId}`);
+      const action = isDatabase ? "database-pages" : "children";
+      const param = isDatabase ? "databaseId" : "pageId";
+      const response = await fetch(`/api/notion-workspace?action=${action}&${param}=${nodeId}`);
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch database pages");
+        throw new Error(data.error || "Failed to fetch children");
       }
-      setItems(data.items || []);
-      setCurrentView("database-pages");
-      setCurrentDatabaseId(databaseId);
-      setCurrentDatabaseTitle(databaseTitle);
-      setBreadcrumbs([
-        { title: "Workspace", action: () => backToWorkspace() },
-        { title: databaseTitle, action: () => {} },
-      ]);
+      return (data.items || []).map((item: TreeNode) => ({
+        ...item,
+        expanded: false,
+        children: [],
+      }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load database pages");
-    } finally {
-      setLoading(false);
+      console.error("Error fetching children:", err);
+      return [];
     }
   }, []);
 
+  // Update a node in the tree
+  const updateNodeInTree = (nodes: TreeNode[], nodeId: string, updates: Partial<TreeNode>): TreeNode[] => {
+    return nodes.map(node => {
+      if (node.id === nodeId) {
+        return { ...node, ...updates };
+      }
+      if (node.children && node.children.length > 0) {
+        return { ...node, children: updateNodeInTree(node.children, nodeId, updates) };
+      }
+      return node;
+    });
+  };
+
+  // Toggle expand/collapse for a node
+  const handleToggle = useCallback(async (nodeId: string) => {
+    const findAndToggle = async (nodes: TreeNode[]): Promise<TreeNode[]> => {
+      return Promise.all(nodes.map(async (node) => {
+        if (node.id === nodeId) {
+          if (node.expanded) {
+            return { ...node, expanded: false };
+          }
+          if (!node.children || node.children.length === 0) {
+            setTree(prev => updateNodeInTree(prev, nodeId, { loading: true }));
+            const children = await fetchChildren(nodeId, node.type === "database");
+            return { ...node, expanded: true, children, loading: false };
+          }
+          return { ...node, expanded: true };
+        }
+        if (node.children && node.children.length > 0) {
+          const newChildren = await findAndToggle(node.children);
+          return { ...node, children: newChildren };
+        }
+        return node;
+      }));
+    };
+
+    const newTree = await findAndToggle(tree);
+    setTree(newTree);
+  }, [tree, fetchChildren]);
+
+  // Fetch page content
   const fetchPageContent = useCallback(async (pageId: string, pageTitle: string) => {
     setPageLoading(true);
     setPageError(null);
     setSelectedPage({ id: pageId, title: pageTitle, createdTime: "", lastEditedTime: "", url: "" });
     setPageBlocks([]);
+    setDatabaseItems([]);
 
     try {
       const response = await fetch(`/api/notion-workspace?action=page-content&pageId=${pageId}`);
@@ -439,524 +657,370 @@ export default function NotionBrowser() {
     }
   }, []);
 
-  const closePageViewer = useCallback(() => {
-    setSelectedPage(null);
-    setPageBlocks([]);
+  // Fetch database contents
+  const fetchDatabaseContents = useCallback(async (databaseId: string, databaseTitle: string) => {
+    setDatabaseLoading(true);
     setPageError(null);
+    setSelectedPage({ id: databaseId, title: databaseTitle, createdTime: "", lastEditedTime: "", url: "" });
+    setPageBlocks([]);
+
+    try {
+      const response = await fetch(`/api/notion-workspace?action=database-pages&databaseId=${databaseId}`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch database contents");
+      }
+      setDatabaseItems((data.items || []).map((item: TreeNode) => ({
+        ...item,
+        expanded: false,
+        children: [],
+      })));
+    } catch (err) {
+      setPageError(err instanceof Error ? err.message : "Failed to load database contents");
+    } finally {
+      setDatabaseLoading(false);
+    }
   }, []);
 
-  const searchItems = useCallback(async (query: string) => {
+  // Handle selecting a node from the sidebar
+  const handleSelectNode = useCallback((node: TreeNode) => {
+    setSelectedNode(node);
+
+    if (isMobile) {
+      setSidebarCollapsed(true);
+    }
+
+    if (node.type === "database") {
+      fetchDatabaseContents(node.id, node.title);
+    } else {
+      fetchPageContent(node.id, node.title);
+    }
+  }, [isMobile, fetchDatabaseContents, fetchPageContent]);
+
+  // Search functionality
+  const handleSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
     setIsSearching(true);
     try {
       const response = await fetch(`/api/notion-workspace?action=search&query=${encodeURIComponent(query)}`);
       const data = await response.json();
       if (response.ok) {
-        setItems(data.items || []);
-      } else {
-        throw new Error(data.error || "Failed to search items");
+        setSearchResults((data.items || []).map((item: TreeNode) => ({
+          ...item,
+          expanded: false,
+          children: [],
+        })));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to search");
+      console.error("Search error:", err);
     } finally {
       setIsSearching(false);
     }
   }, []);
 
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchQuery(value);
-    // If search is cleared, reload current view
-    if (!value.trim()) {
-      if (currentView === "workspace") {
-        fetchWorkspaceItems();
-      } else if (currentDatabaseId) {
-        fetchDatabasePages(currentDatabaseId, currentDatabaseTitle);
-      }
+  // Debounced search
+  useEffect(() => {
+    if (!searchQuery) {
+      setSearchResults([]);
+      return;
     }
-  }, [currentView, currentDatabaseId, currentDatabaseTitle, fetchWorkspaceItems, fetchDatabasePages]);
+    const timer = setTimeout(() => {
+      handleSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, handleSearch]);
 
-  const backToWorkspace = useCallback(() => {
-    setCurrentView("workspace");
-    setCurrentDatabaseId(null);
-    setCurrentDatabaseTitle("");
-    setBreadcrumbs([]);
-    fetchWorkspaceItems();
-  }, [fetchWorkspaceItems]);
-
+  // Keyboard handler for Escape
   useEffect(() => {
-    fetchWorkspaceItems();
-  }, [fetchWorkspaceItems]);
-
-  // Debounced search - only triggers on search query changes
-  useEffect(() => {
-    if (!searchQuery) return;
-
-    const delayDebounceFn = setTimeout(() => {
-      searchItems(searchQuery);
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, searchItems]);
-
-  // Keyboard handler for Escape to close page viewer
-  useEffect(() => {
-    if (!selectedPage) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        closePageViewer();
+      if (e.key === "Escape" && selectedPage) {
+        setSelectedPage(null);
+        setPageBlocks([]);
+        setDatabaseItems([]);
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedPage, closePageViewer]);
+  }, [selectedPage]);
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
-    if (diffHours < 1) {
-      const diffMinutes = Math.floor(diffMs / (1000 * 60));
-      return `${diffMinutes}m ago`;
-    } else if (diffHours < 24) {
-      return `${diffHours}h ago`;
-    } else {
-      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    }
-  };
+  const displayTree = searchQuery ? searchResults : tree;
 
   return (
-    <div style={{ minHeight: "100vh", padding: isMobile ? "12px" : "24px" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <Header />
-      <div style={{ maxWidth: "1200px", margin: "0 auto", paddingTop: isMobile ? "56px" : "64px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingTop: isMobile ? "56px" : "64px" }}>
+        {/* Top bar with back button and title */}
+        <div style={{
+          padding: isMobile ? "12px 16px" : "16px 24px",
+          borderBottom: "1px solid var(--glass-border)",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          backgroundColor: "var(--background)",
+        }}>
+          <Link
+            href="/"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+              padding: isMobile ? "10px 14px" : "8px 12px",
+              borderRadius: "8px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid var(--glass-border)",
+              color: "var(--foreground)",
+              textDecoration: "none",
+              fontSize: isMobile ? "14px" : "inherit",
+              flexShrink: 0,
+            }}
+          >
+            <ArrowLeft style={{ width: "18px", height: "18px" }} />
+            {!isMobile && "Dashboard"}
+          </Link>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
+            <Folder style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)", flexShrink: 0 }} />
+            <h1 style={{
+              fontSize: isMobile ? "18px" : "22px",
+              fontWeight: 600,
+              color: "var(--foreground)",
+              margin: 0,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}>
+              Notes
+            </h1>
+          </div>
+
+          <button
+            onClick={fetchTree}
+            disabled={treeLoading}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: isMobile ? "40px" : "36px",
+              height: isMobile ? "40px" : "36px",
+              borderRadius: "8px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid var(--glass-border)",
+              color: "var(--foreground-muted)",
+              cursor: treeLoading ? "not-allowed" : "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <RefreshCw style={{ width: "16px", height: "16px", animation: treeLoading ? "spin 1s linear infinite" : "none" }} />
+          </button>
+        </div>
+
         <RemindersBanner />
-        <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? "16px" : "24px", paddingTop: isMobile ? "16px" : "24px" }}>
-          {/* Breadcrumb and Title */}
-          <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? "12px" : "16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <Link
-                href="/"
+
+        {/* Main content area */}
+        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          {/* Sidebar */}
+          <AnimatePresence initial={false}>
+            {!sidebarCollapsed && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: isMobile ? "100%" : 300, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  borderRight: isMobile ? "none" : "1px solid var(--glass-border)",
+                  backgroundColor: isMobile ? "var(--background)" : "rgba(255, 255, 255, 0.02)",
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                  position: isMobile ? "absolute" : "relative",
+                  top: isMobile ? "0" : "auto",
+                  left: 0,
+                  bottom: 0,
+                  zIndex: isMobile ? 100 : 1,
+                  height: isMobile ? "100%" : "auto",
+                }}
+              >
+                {/* Sidebar header */}
+                <div style={{
+                  padding: "12px",
+                  borderBottom: "1px solid var(--glass-border)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {/* Search input */}
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      flex: 1,
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid var(--glass-border)",
+                      borderRadius: "8px",
+                      padding: "0 10px",
+                      height: isMobile ? "44px" : "36px",
+                    }}>
+                      {isSearching ? (
+                        <Loader2 style={{ width: "16px", height: "16px", color: "var(--foreground-muted)", animation: "spin 1s linear infinite", flexShrink: 0 }} />
+                      ) : (
+                        <Search style={{ width: "16px", height: "16px", color: "var(--foreground-muted)", flexShrink: 0 }} />
+                      )}
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search..."
+                        style={{
+                          flex: 1,
+                          border: "none",
+                          background: "transparent",
+                          color: "var(--foreground)",
+                          fontSize: isMobile ? "16px" : "14px",
+                          padding: "0 8px",
+                          height: "100%",
+                          outline: "none",
+                        }}
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery("")}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "var(--foreground-muted)",
+                            cursor: "pointer",
+                            padding: "4px",
+                            display: "flex",
+                          }}
+                        >
+                          <X style={{ width: "14px", height: "14px" }} />
+                        </button>
+                      )}
+                    </div>
+                    {/* Close sidebar button on mobile */}
+                    {isMobile && (
+                      <button
+                        onClick={() => setSidebarCollapsed(true)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "44px",
+                          height: "44px",
+                          borderRadius: "8px",
+                          backgroundColor: "rgba(255, 255, 255, 0.05)",
+                          border: "1px solid var(--glass-border)",
+                          color: "var(--foreground-muted)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <X style={{ width: "20px", height: "20px" }} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tree content */}
+                <div style={{ flex: 1, overflow: "auto", padding: "8px" }}>
+                  {treeLoading && displayTree.length === 0 ? (
+                    <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+                      <Loader2 style={{ width: "24px", height: "24px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+                    </div>
+                  ) : treeError ? (
+                    <div style={{ padding: "20px", textAlign: "center" }}>
+                      <p style={{ color: "#f87171", fontSize: "14px", marginBottom: "12px" }}>{treeError}</p>
+                      <button
+                        onClick={fetchTree}
+                        style={{
+                          padding: "8px 16px",
+                          borderRadius: "8px",
+                          backgroundColor: "var(--accent)",
+                          color: "var(--background)",
+                          border: "none",
+                          fontSize: "14px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : displayTree.length === 0 ? (
+                    <div style={{ padding: "20px", textAlign: "center", color: "var(--foreground-muted)" }}>
+                      {searchQuery ? "No results found" : "No notes found"}
+                    </div>
+                  ) : (
+                    <div>
+                      {displayTree.map((node) => (
+                        <SidebarTreeItem
+                          key={node.id}
+                          node={node}
+                          depth={0}
+                          onToggle={handleToggle}
+                          onSelect={handleSelectNode}
+                          selectedId={selectedNode?.id}
+                          isMobile={isMobile}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Main content */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            {/* Toggle sidebar button */}
+            <div style={{
+              padding: "8px 12px",
+              borderBottom: "1px solid var(--glass-border)",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+            }}>
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "6px",
-                  padding: isMobile ? "10px 14px" : "8px 12px",
-                  borderRadius: "8px",
+                  padding: isMobile ? "10px 14px" : "6px 10px",
+                  borderRadius: "6px",
                   backgroundColor: "rgba(255, 255, 255, 0.05)",
                   border: "1px solid var(--glass-border)",
-                  color: "var(--foreground)",
-                  textDecoration: "none",
-                  transition: "all 0.2s",
-                  fontSize: isMobile ? "14px" : "inherit",
-                }}
-              >
-                <ArrowLeft style={{ width: "18px", height: "18px" }} />
-                {isMobile ? "Back" : "Back to Dashboard"}
-              </Link>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
-                {currentView === "workspace" ? (
-                  <Folder style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)", flexShrink: 0 }} />
-                ) : (
-                  <FolderOpen style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)", flexShrink: 0 }} />
-                )}
-                <h1 style={{
-                  fontSize: isMobile ? "18px" : "24px",
-                  fontWeight: 600,
-                  color: "var(--foreground)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}>
-                  {currentView === "workspace" ? "Notes" : currentDatabaseTitle}
-                </h1>
-              </div>
-            </div>
-            {breadcrumbs.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                {breadcrumbs.map((crumb, index) => (
-                  <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <button
-                      onClick={crumb.action}
-                      style={{
-                        fontSize: isMobile ? "13px" : "14px",
-                        color: index === breadcrumbs.length - 1 ? "var(--foreground-muted)" : "var(--accent)",
-                        background: "none",
-                        border: "none",
-                        padding: isMobile ? "4px 0" : "0",
-                        cursor: index === breadcrumbs.length - 1 ? "default" : "pointer",
-                        textDecoration: index === breadcrumbs.length - 1 ? "none" : "underline",
-                      }}
-                    >
-                      {crumb.title}
-                    </button>
-                    {index < breadcrumbs.length - 1 && (
-                      <ChevronRight style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Search Bar */}
-          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "stretch", gap: isMobile ? "10px" : "12px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                flex: 1,
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: "12px",
-                padding: isMobile ? "0 12px" : "0 16px",
-                height: isMobile ? "44px" : "48px",
-              }}
-            >
-              {isSearching ? (
-                <Loader2 style={{ width: "20px", height: "20px", color: "var(--foreground-muted)", animation: "spin 1s linear infinite", flexShrink: 0 }} />
-              ) : (
-                <Search style={{ width: "20px", height: "20px", color: "var(--foreground-muted)", flexShrink: 0 }} />
-              )}
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Search notes..."
-                style={{
-                  flex: 1,
-                  border: "none",
-                  background: "transparent",
-                  color: "var(--foreground)",
-                  fontSize: isMobile ? "16px" : "15px",
-                  padding: "0 12px",
-                  height: "100%",
-                  outline: "none",
-                }}
-              />
-            </div>
-            {currentView !== "workspace" && (
-              <button
-                onClick={backToWorkspace}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  padding: isMobile ? "12px 16px" : "0 16px",
-                  height: isMobile ? "44px" : "48px",
-                  borderRadius: "12px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid var(--glass-border)",
-                  color: "var(--foreground)",
-                  fontSize: isMobile ? "14px" : "15px",
+                  color: "var(--foreground-muted)",
                   cursor: "pointer",
-                  transition: "all 0.2s",
+                  fontSize: "13px",
                 }}
               >
-                <ArrowLeft style={{ width: "18px", height: "18px" }} />
-                Back to Workspace
-              </button>
-            )}
-          </div>
-
-          <motion.div
-            className="glass"
-            style={{
-              borderRadius: "12px",
-              minHeight: "600px",
-              overflow: "hidden",
-            }}
-          >
-            {loading ? (
-              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "400px" }}>
-                <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
-              </div>
-            ) : error ? (
-              <div style={{ padding: "40px", textAlign: "center" }}>
-                <p style={{ color: "#f87171", fontSize: "16px", marginBottom: "16px" }}>{error}</p>
-                <button
-                  onClick={() => {
-                    if (currentView === "workspace") {
-                      fetchWorkspaceItems();
-                    } else if (currentDatabaseId) {
-                      fetchDatabasePages(currentDatabaseId, currentDatabaseTitle);
-                    }
-                  }}
-                  style={{
-                    padding: "10px 20px",
-                    borderRadius: "8px",
-                    backgroundColor: "var(--accent)",
-                    color: "var(--background)",
-                    border: "none",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "var(--accent-hover)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "var(--accent)";
-                  }}
-                >
-                  Retry
-                </button>
-              </div>
-            ) : items.length === 0 ? (
-              <div style={{ padding: "60px 20px", textAlign: "center", color: "var(--foreground-muted)" }}>
-                {currentView === "workspace" ? (
+                {sidebarCollapsed ? (
                   <>
-                    <Folder style={{ width: "48px", height: "48px", margin: "0 auto 16px", opacity: 0.5 }} />
-                    <p style={{ fontSize: "18px", fontWeight: 500, marginBottom: "8px" }}>
-                      {searchQuery ? "No results found" : "No notes yet"}
-                    </p>
-                    <p style={{ fontSize: "14px" }}>
-                      {searchQuery ? "Try a different search term" : "Create some pages or databases in Notion"}
-                    </p>
+                    <PanelLeft style={{ width: "16px", height: "16px" }} />
+                    {!isMobile && "Show sidebar"}
                   </>
                 ) : (
                   <>
-                    <Database style={{ width: "48px", height: "48px", margin: "0 auto 16px", opacity: 0.5 }} />
-                    <p style={{ fontSize: "18px", fontWeight: 500, marginBottom: "8px" }}>Database is empty</p>
-                    <p style={{ fontSize: "14px" }}>No pages found in this database</p>
+                    <PanelLeftClose style={{ width: "16px", height: "16px" }} />
+                    {!isMobile && "Hide sidebar"}
                   </>
                 )}
-              </div>
-            ) : (
-              <div>
-                {/* Header Row - hide on mobile */}
-                {!isMobile && (
-                  <div style={{
-                    padding: "16px 20px",
-                    borderBottom: "1px solid var(--glass-border)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    color: "var(--foreground-muted)",
-                    fontSize: "13px",
-                    fontWeight: 500
-                  }}>
-                    <span style={{ flex: 1 }}>Name</span>
-                    <span style={{ width: "120px", textAlign: "right" }}>Last Edited</span>
-                    <span style={{ width: "80px", textAlign: "right" }}>Open</span>
-                  </div>
-                )}
-                {/* Items List */}
-                <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? "8px" : "4px", padding: isMobile ? "12px" : "8px" }}>
-                  {items.map((item) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2 }}
-                      onClick={() => {
-                        if (item.type === "database") {
-                          fetchDatabasePages(item.id, item.title);
-                        } else {
-                          fetchPageContent(item.id, item.title);
-                        }
-                      }}
-                      style={{
-                        display: "flex",
-                        alignItems: isMobile ? "flex-start" : "center",
-                        flexDirection: isMobile ? "column" : "row",
-                        padding: isMobile ? "14px" : "14px 16px",
-                        borderRadius: isMobile ? "12px" : "8px",
-                        backgroundColor: isMobile ? "rgba(255, 255, 255, 0.04)" : "rgba(255, 255, 255, 0.02)",
-                        border: "1px solid var(--glass-border)",
-                        gap: isMobile ? "10px" : "0",
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, overflow: "hidden", width: "100%" }}>
-                        {item.icon ? (
-                          <span style={{ fontSize: isMobile ? "22px" : "18px", flexShrink: 0 }}>{item.icon}</span>
-                        ) : item.type === "database" ? (
-                          <Database style={{ width: isMobile ? "22px" : "18px", height: isMobile ? "22px" : "18px", color: "var(--accent)", flexShrink: 0 }} />
-                        ) : (
-                          <FileText style={{ width: isMobile ? "22px" : "18px", height: isMobile ? "22px" : "18px", color: "var(--accent)", flexShrink: 0 }} />
-                        )}
-                        <span
-                          style={{
-                            fontSize: isMobile ? "16px" : "15px",
-                            fontWeight: 500,
-                            whiteSpace: isMobile ? "normal" : "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            color: "var(--foreground)",
-                            lineHeight: isMobile ? "1.4" : "inherit",
-                          }}
-                        >
-                          {item.title || (item.type === "database" ? "Untitled Database" : "Untitled")}
-                        </span>
-                      </div>
-                      {isMobile ? (
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", paddingLeft: "34px" }}>
-                          <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
-                            {formatDate(item.lastEditedTime)}
-                          </span>
-                          <a
-                            href={item.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "6px",
-                              padding: "8px 12px",
-                              borderRadius: "8px",
-                              backgroundColor: "rgba(255, 255, 255, 0.08)",
-                              color: "var(--accent)",
-                              textDecoration: "none",
-                              fontSize: "12px",
-                            }}
-                          >
-                            <ExternalLink style={{ width: "14px", height: "14px" }} />
-                            Notion
-                          </a>
-                        </div>
-                      ) : (
-                        <>
-                          <span style={{ fontSize: "13px", color: "var(--foreground-muted)", width: "120px", textAlign: "right" }}>
-                            {formatDate(item.lastEditedTime)}
-                          </span>
-                          <div style={{ width: "80px", display: "flex", justifyContent: "flex-end" }}>
-                            <a
-                              href={item.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "6px",
-                                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                                color: "var(--foreground-muted)",
-                                transition: "all 0.15s",
-                              }}
-                              title="Open in Notion"
-                            >
-                              <ExternalLink style={{ width: "14px", height: "14px" }} />
-                            </a>
-                          </div>
-                        </>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </motion.div>
-        </div>
-      </div>
+              </button>
 
-      {/* Page Content Viewer Modal */}
-      <AnimatePresence>
-        {selectedPage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: isMobile ? "var(--background)" : "rgba(0, 0, 0, 0.7)",
-              backdropFilter: isMobile ? "none" : "blur(5px)",
-              zIndex: 999,
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "center",
-              paddingTop: isMobile ? "0" : "5vh",
-            }}
-            onClick={isMobile ? undefined : closePageViewer}
-          >
-            <motion.div
-              initial={{ scale: isMobile ? 1 : 0.95, y: isMobile ? 20 : 0 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: isMobile ? 1 : 0.95, y: isMobile ? 20 : 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              style={{
-                width: isMobile ? "100%" : "94%",
-                maxWidth: isMobile ? "none" : "900px",
-                height: isMobile ? "100%" : "85vh",
-                backgroundColor: isMobile ? "var(--background)" : "rgba(26, 26, 26, 0.95)",
-                backdropFilter: isMobile ? "none" : "blur(20px)",
-                border: isMobile ? "none" : "1px solid var(--glass-border)",
-                borderRadius: isMobile ? "0" : "16px",
-                boxShadow: isMobile ? "none" : "0 8px 32px rgba(0, 0, 0, 0.3)",
-                overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div
-                style={{
-                  padding: isMobile ? "12px 16px" : "16px 20px",
-                  borderBottom: "1px solid var(--glass-border)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  flexShrink: 0,
-                  gap: "12px",
-                }}
-              >
-                {/* Close button on left for mobile */}
-                {isMobile && (
-                  <button
-                    onClick={closePageViewer}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      backgroundColor: "rgba(255, 255, 255, 0.05)",
-                      border: "1px solid var(--glass-border)",
-                      color: "var(--foreground)",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      gap: "6px",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <ArrowLeft style={{ width: "18px", height: "18px" }} />
-                    Back
-                  </button>
-                )}
-                <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "12px", flex: 1, overflow: "hidden", minWidth: 0 }}>
-                  {selectedPage.icon ? (
-                    <span style={{ fontSize: isMobile ? "18px" : "20px", flexShrink: 0 }}>{selectedPage.icon}</span>
-                  ) : (
-                    <FileText style={{ width: isMobile ? "18px" : "20px", height: isMobile ? "18px" : "20px", color: "var(--accent)", flexShrink: 0 }} />
-                  )}
-                  <h2 style={{
-                    fontSize: isMobile ? "15px" : "18px",
-                    fontWeight: 600,
-                    color: "var(--foreground)",
-                    margin: 0,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}>
-                    {selectedPage.title || "Untitled"}
-                  </h2>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "12px", flexShrink: 0 }}>
+              {/* Breadcrumb showing current selection */}
+              {selectedPage && (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
+                  <ChevronRight style={{ width: "16px", height: "16px", color: "var(--foreground-muted)", flexShrink: 0 }} />
+                  <span style={{ fontSize: "14px", color: "var(--foreground-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    {selectedPage.icon && <span>{selectedPage.icon}</span>}
+                    <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {selectedPage.title}
+                    </span>
+                  </span>
                   {selectedPage.url && (
                     <a
                       href={selectedPage.url}
@@ -965,101 +1029,157 @@ export default function NotionBrowser() {
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "6px",
-                        padding: isMobile ? "10px 12px" : "6px 10px",
-                        borderRadius: "8px",
-                        backgroundColor: "rgba(255, 255, 255, 0.05)",
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
                         color: "var(--accent)",
-                        fontSize: isMobile ? "13px" : "13px",
-                        textDecoration: "none",
-                        transition: "all 0.15s",
+                        marginLeft: "auto",
+                        flexShrink: 0,
                       }}
                     >
                       <ExternalLink style={{ width: "14px", height: "14px" }} />
-                      {!isMobile && <span>Open in Notion</span>}
                     </a>
                   )}
-                  {!isMobile && (
-                    <button
-                      onClick={closePageViewer}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "8px",
-                        backgroundColor: "rgba(255, 100, 100, 0.1)",
-                        border: "1px solid rgba(255, 100, 100, 0.2)",
-                        color: "var(--foreground-muted)",
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                      }}
-                    >
-                      <X style={{ width: "16px", height: "16px" }} />
-                    </button>
-                  )}
                 </div>
-              </div>
+              )}
+            </div>
 
-              {/* Modal Content */}
-              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                {pageLoading ? (
-                  <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
-                  </div>
-                ) : pageError ? (
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: "16px", padding: "20px" }}>
-                    <p style={{ color: "#f87171", fontSize: "16px", textAlign: "center" }}>{pageError}</p>
-                    <button
-                      onClick={() => fetchPageContent(selectedPage.id, selectedPage.title)}
-                      style={{
-                        padding: isMobile ? "12px 20px" : "8px 16px",
-                        borderRadius: "8px",
-                        backgroundColor: "var(--accent)",
-                        color: "var(--background)",
-                        border: "none",
-                        fontSize: "14px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Retry
-                    </button>
-                  </div>
-                ) : pageBlocks.length === 0 ? (
-                  <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", padding: "20px" }}>
-                    <p style={{ color: "var(--foreground-muted)", fontSize: "16px" }}>This page is empty</p>
-                  </div>
-                ) : (
-                  <div
+            {/* Content area */}
+            <div style={{ flex: 1, overflow: "auto", padding: isMobile ? "16px" : "24px" }}>
+              {!selectedPage ? (
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "100%",
+                  color: "var(--foreground-muted)",
+                  textAlign: "center",
+                  padding: "40px",
+                }}>
+                  <Folder style={{ width: "64px", height: "64px", marginBottom: "20px", opacity: 0.5 }} />
+                  <h2 style={{ fontSize: "20px", fontWeight: 500, marginBottom: "8px", color: "var(--foreground)" }}>
+                    Select a note or database
+                  </h2>
+                  <p style={{ fontSize: "14px", maxWidth: "400px" }}>
+                    {isMobile ? "Tap the sidebar button to browse your notes" : "Browse your notes in the sidebar and click to view content"}
+                  </p>
+                </div>
+              ) : pageLoading || databaseLoading ? (
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "300px" }}>
+                  <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
+                </div>
+              ) : pageError ? (
+                <div style={{ textAlign: "center", padding: "40px" }}>
+                  <p style={{ color: "#f87171", fontSize: "16px", marginBottom: "16px" }}>{pageError}</p>
+                  <button
+                    onClick={() => {
+                      if (selectedNode) {
+                        handleSelectNode(selectedNode);
+                      }
+                    }}
                     style={{
-                      flex: 1,
-                      overflowY: "auto",
-                      padding: isMobile ? "16px" : "24px",
-                      WebkitOverflowScrolling: "touch",
+                      padding: "10px 20px",
+                      borderRadius: "8px",
+                      backgroundColor: "var(--accent)",
+                      color: "var(--background)",
+                      border: "none",
+                      fontSize: "14px",
+                      cursor: "pointer",
                     }}
                   >
-                    <div
-                      style={{
-                        backgroundColor: isMobile ? "transparent" : "rgba(255, 255, 255, 0.03)",
-                        borderRadius: isMobile ? "0" : "8px",
-                        padding: isMobile ? "0" : "32px",
-                        minHeight: "100%",
-                        border: isMobile ? "none" : "1px solid var(--glass-border)",
-                      }}
-                    >
-                      {pageBlocks.map((block) => (
-                        <BlockRenderer key={block.id} block={block} />
-                      ))}
-                    </div>
+                    Retry
+                  </button>
+                </div>
+              ) : databaseItems.length > 0 ? (
+                // Database view - show items as a list
+                <div>
+                  <div style={{ marginBottom: "20px" }}>
+                    <h2 style={{ fontSize: "24px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px", display: "flex", alignItems: "center", gap: "10px" }}>
+                      {selectedPage?.icon && <span>{selectedPage.icon}</span>}
+                      {selectedPage?.title || "Database"}
+                    </h2>
+                    <p style={{ color: "var(--foreground-muted)", fontSize: "14px" }}>
+                      {databaseItems.length} items
+                    </p>
                   </div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {databaseItems.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          setSelectedNode(item);
+                          fetchPageContent(item.id, item.title);
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          padding: isMobile ? "14px 16px" : "12px 16px",
+                          borderRadius: "8px",
+                          backgroundColor: "rgba(255, 255, 255, 0.03)",
+                          border: "1px solid var(--glass-border)",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.06)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.03)";
+                        }}
+                      >
+                        <span style={{ fontSize: isMobile ? "20px" : "18px", flexShrink: 0 }}>
+                          {item.icon || "📄"}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: isMobile ? "16px" : "15px",
+                            fontWeight: 500,
+                            color: "var(--foreground)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}>
+                            {item.title || "Untitled"}
+                          </div>
+                        </div>
+                        <ChevronRight style={{ width: "18px", height: "18px", color: "var(--foreground-muted)", flexShrink: 0 }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : pageBlocks.length > 0 ? (
+                // Page view - show content
+                <div style={{
+                  maxWidth: "800px",
+                  margin: "0 auto",
+                }}>
+                  {selectedPage?.icon && (
+                    <div style={{ fontSize: "48px", marginBottom: "16px" }}>{selectedPage.icon}</div>
+                  )}
+                  <h1 style={{
+                    fontSize: isMobile ? "28px" : "36px",
+                    fontWeight: 700,
+                    color: "var(--foreground)",
+                    marginBottom: "24px",
+                    lineHeight: 1.2,
+                  }}>
+                    {selectedPage?.title || "Untitled"}
+                  </h1>
+                  <div>
+                    {pageBlocks.map((block) => (
+                      <BlockRenderer key={block.id} block={block} />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: "40px", color: "var(--foreground-muted)" }}>
+                  <FileText style={{ width: "48px", height: "48px", marginBottom: "16px", opacity: 0.5 }} />
+                  <p style={{ fontSize: "16px" }}>This page is empty</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       <style jsx global>{`
         @keyframes spin {

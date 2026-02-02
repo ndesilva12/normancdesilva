@@ -18,6 +18,14 @@ export interface WorkspaceItem {
     database_id?: string;
     workspace?: boolean;
   };
+  hasChildren?: boolean;
+  children?: WorkspaceItem[];
+}
+
+export interface TreeNode extends WorkspaceItem {
+  children: TreeNode[];
+  hasChildren: boolean;
+  expanded?: boolean;
 }
 
 // Helper to extract plain text from rich text array
@@ -367,6 +375,212 @@ export async function getDatabasePages(databaseId: string, limit = 50): Promise<
   }
 }
 
+// Get children of a specific page (child pages and child databases)
+export async function getPageChildren(pageId: string): Promise<WorkspaceItem[]> {
+  try {
+    const response = await fetch(
+      `https://api.notion.com/v1/blocks/${pageId}/children?page_size=100`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+          "Notion-Version": "2022-06-28",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Notion API error: ${response.statusText}`);
+    }
+
+    const data = await response.json() as any;
+
+    // Collect all fetch promises to run in parallel
+    const fetchPromises = (data.results || []).map(async (block: any): Promise<WorkspaceItem | null> => {
+      try {
+        if (block.type === "child_database") {
+          const dbResponse = await fetch(
+            `https://api.notion.com/v1/databases/${block.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+                "Notion-Version": "2022-06-28",
+              },
+            }
+          );
+          if (dbResponse.ok) {
+            const database = await dbResponse.json();
+            return {
+              id: database.id,
+              type: "database" as const,
+              title: getTitle(database),
+              icon: getIcon(database),
+              lastEditedTime: database.last_edited_time,
+              url: database.url,
+              hasChildren: true, // Databases always have potential children (entries)
+            };
+          }
+        } else if (block.type === "child_page") {
+          const pageResponse = await fetch(
+            `https://api.notion.com/v1/pages/${block.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+                "Notion-Version": "2022-06-28",
+              },
+            }
+          );
+          if (pageResponse.ok) {
+            const page = await pageResponse.json();
+            // Check if page has children
+            const hasChildren = await checkPageHasChildren(block.id);
+            return {
+              id: page.id,
+              type: "page" as const,
+              title: getTitle(page),
+              icon: getIcon(page),
+              lastEditedTime: page.last_edited_time,
+              url: page.url,
+              hasChildren,
+            };
+          }
+        }
+        return null;
+      } catch (err) {
+        console.error("Error fetching block details:", block.id, err);
+        return null;
+      }
+    });
+
+    // Execute all fetches in parallel
+    const results = await Promise.all(fetchPromises);
+
+    // Filter out null results - keep in order (no sorting by time)
+    return results.filter((item): item is WorkspaceItem => item !== null);
+  } catch (error) {
+    console.error("Error fetching page children:", error);
+    throw error;
+  }
+}
+
+// Check if a page has child pages or child databases
+async function checkPageHasChildren(pageId: string): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `https://api.notion.com/v1/blocks/${pageId}/children?page_size=10`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+          "Notion-Version": "2022-06-28",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const data = await response.json() as any;
+    // Check if any child is a page or database
+    return (data.results || []).some(
+      (block: any) => block.type === "child_page" || block.type === "child_database"
+    );
+  } catch {
+    return false;
+  }
+}
+
+// Get the full hierarchical tree from root
+export async function getWorkspaceTree(): Promise<WorkspaceItem[]> {
+  const rootPageId = process.env.NOTION_ROOT_PAGE_ID || process.env.NOTION_DATABASE_ID;
+
+  if (!rootPageId) {
+    throw new Error("NOTION_ROOT_PAGE_ID or NOTION_DATABASE_ID not configured");
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.notion.com/v1/blocks/${rootPageId}/children?page_size=100`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+          "Notion-Version": "2022-06-28",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Notion API error: ${response.statusText}`);
+    }
+
+    const data = await response.json() as any;
+
+    // Collect all fetch promises to run in parallel
+    const fetchPromises = (data.results || []).map(async (block: any): Promise<WorkspaceItem | null> => {
+      try {
+        if (block.type === "child_database") {
+          const dbResponse = await fetch(
+            `https://api.notion.com/v1/databases/${block.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+                "Notion-Version": "2022-06-28",
+              },
+            }
+          );
+          if (dbResponse.ok) {
+            const database = await dbResponse.json();
+            return {
+              id: database.id,
+              type: "database" as const,
+              title: getTitle(database),
+              icon: getIcon(database),
+              lastEditedTime: database.last_edited_time,
+              url: database.url,
+              hasChildren: true, // Databases always have potential children
+            };
+          }
+        } else if (block.type === "child_page") {
+          const pageResponse = await fetch(
+            `https://api.notion.com/v1/pages/${block.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.NOTION_API_KEY}`,
+                "Notion-Version": "2022-06-28",
+              },
+            }
+          );
+          if (pageResponse.ok) {
+            const page = await pageResponse.json();
+            const hasChildren = await checkPageHasChildren(block.id);
+            return {
+              id: page.id,
+              type: "page" as const,
+              title: getTitle(page),
+              icon: getIcon(page),
+              lastEditedTime: page.last_edited_time,
+              url: page.url,
+              hasChildren,
+            };
+          }
+        }
+        return null;
+      } catch (err) {
+        console.error("Error fetching block details:", block.id, err);
+        return null;
+      }
+    });
+
+    // Execute all fetches in parallel
+    const results = await Promise.all(fetchPromises);
+
+    // Filter out null results - keep in original order (Notion's order)
+    return results.filter((item): item is WorkspaceItem => item !== null);
+  } catch (error) {
+    console.error("Error fetching workspace tree:", error);
+    throw error;
+  }
+}
+
 // Search across workspace
 export async function searchWorkspace(query: string): Promise<WorkspaceItem[]> {
   try {
@@ -380,10 +594,10 @@ export async function searchWorkspace(query: string): Promise<WorkspaceItem[]> {
     });
 
     return response.results
-      .filter((item: any) => 
+      .filter((item: any) =>
         item.object === "page" || item.object === "database"
       )
-      .map((item) => ({
+      .map((item: any) => ({
         id: item.id,
         type: item.object as "page" | "database",
         title: getTitle(item),
