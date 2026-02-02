@@ -529,6 +529,62 @@ function SidebarTreeItem({
   );
 }
 
+// Cache keys and helpers
+const CACHE_KEY_TREE = "notion_tree_cache";
+const CACHE_KEY_PAGES = "notion_pages_cache";
+const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+function getCache<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      const entry: CacheEntry<T> = JSON.parse(cached);
+      return entry.data;
+    }
+  } catch {
+    // Ignore cache errors
+  }
+  return null;
+}
+
+function setCache<T>(key: string, data: T): void {
+  if (typeof window === "undefined") return;
+  try {
+    const entry: CacheEntry<T> = { data, timestamp: Date.now() };
+    localStorage.setItem(key, JSON.stringify(entry));
+  } catch {
+    // Ignore cache errors (e.g., quota exceeded)
+  }
+}
+
+function getPageCache(pageId: string): { blocks: NotionBlock[]; page: NotionPage } | null {
+  const cache = getCache<Record<string, { blocks: NotionBlock[]; page: NotionPage; timestamp: number }>>(CACHE_KEY_PAGES);
+  if (cache && cache[pageId]) {
+    return cache[pageId];
+  }
+  return null;
+}
+
+function setPageCache(pageId: string, blocks: NotionBlock[], page: NotionPage): void {
+  const cache = getCache<Record<string, { blocks: NotionBlock[]; page: NotionPage; timestamp: number }>>(CACHE_KEY_PAGES) || {};
+  cache[pageId] = { blocks, page, timestamp: Date.now() };
+  // Keep only last 50 pages in cache
+  const entries = Object.entries(cache);
+  if (entries.length > 50) {
+    entries.sort((a, b) => b[1].timestamp - a[1].timestamp);
+    const trimmed = Object.fromEntries(entries.slice(0, 50));
+    setCache(CACHE_KEY_PAGES, trimmed);
+  } else {
+    setCache(CACHE_KEY_PAGES, cache);
+  }
+}
+
 function NotionBrowserContent() {
   const searchParams = useSearchParams();
   const [tree, setTree] = useState<TreeNode[]>([]);
@@ -539,6 +595,7 @@ function NotionBrowserContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<TreeNode[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false); // Background refresh indicator
 
   // Selected item state
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
@@ -570,9 +627,23 @@ function NotionBrowserContent() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Fetch the tree structure
-  const fetchTree = useCallback(async () => {
-    setTreeLoading(true);
+  // Fetch the tree structure with caching
+  const fetchTree = useCallback(async (forceRefresh = false) => {
+    // If not forcing refresh, try to load from cache first
+    if (!forceRefresh) {
+      const cached = getCache<TreeNode[]>(CACHE_KEY_TREE);
+      if (cached && cached.length > 0) {
+        setTree(cached);
+        setTreeLoading(false);
+        // Refresh in background
+        setIsRefreshing(true);
+      } else {
+        setTreeLoading(true);
+      }
+    } else {
+      setIsRefreshing(true);
+    }
+
     setTreeError(null);
     try {
       const response = await fetch("/api/notion-workspace?action=tree");
@@ -586,16 +657,22 @@ function NotionBrowserContent() {
         children: [],
       }));
       setTree(items);
+      setCache(CACHE_KEY_TREE, items);
     } catch (err) {
-      setTreeError(err instanceof Error ? err.message : "Failed to load notes");
+      // Only show error if we don't have cached data
+      if (tree.length === 0) {
+        setTreeError(err instanceof Error ? err.message : "Failed to load notes");
+      }
     } finally {
       setTreeLoading(false);
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [tree.length]);
 
+  // Load tree on mount
   useEffect(() => {
     fetchTree();
-  }, [fetchTree]);
+  }, []);
 
   // Handle URL params for deep linking
   useEffect(() => {
@@ -679,13 +756,24 @@ function NotionBrowserContent() {
     setTree(newTree);
   }, [tree, fetchChildren]);
 
-  // Fetch page content
+  // Fetch page content with caching
   const fetchPageContent = useCallback(async (pageId: string, pageTitle: string) => {
-    setPageLoading(true);
     setPageError(null);
-    setSelectedPage({ id: pageId, title: pageTitle, createdTime: "", lastEditedTime: "", url: "" });
-    setPageBlocks([]);
     setDatabaseItems([]);
+
+    // Try to load from cache first for instant display
+    const cached = getPageCache(pageId);
+    if (cached) {
+      setSelectedPage(cached.page);
+      setPageBlocks(cached.blocks);
+      setPageLoading(false);
+      // Still refresh in background
+      setIsRefreshing(true);
+    } else {
+      setPageLoading(true);
+      setSelectedPage({ id: pageId, title: pageTitle, createdTime: "", lastEditedTime: "", url: "" });
+      setPageBlocks([]);
+    }
 
     try {
       const response = await fetch(`/api/notion-workspace?action=page-content&pageId=${pageId}`);
@@ -695,10 +783,16 @@ function NotionBrowserContent() {
       }
       setSelectedPage(data.page);
       setPageBlocks(data.blocks || []);
+      // Cache the result
+      setPageCache(pageId, data.blocks || [], data.page);
     } catch (err) {
-      setPageError(err instanceof Error ? err.message : "Failed to load page content");
+      // Only show error if we don't have cached data
+      if (!cached) {
+        setPageError(err instanceof Error ? err.message : "Failed to load page content");
+      }
     } finally {
       setPageLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -767,11 +861,10 @@ function NotionBrowserContent() {
   }, [isMobile, fetchDatabaseContents, fetchPageContent, navigationPath, selectedNode, isChildOfNode, findNodeInPath]);
 
   // Handle navigating into a child page/database (adds to navigation path)
-  const handleNavigateInto = useCallback((node: TreeNode, currentPath: TreeNode[]) => {
+  const handleNavigateInto = useCallback((node: TreeNode) => {
     setSelectedNode(node);
-    // Explicitly set the new path by appending to the current path
-    const newPath = [...currentPath, node];
-    setNavigationPath(newPath);
+    // Use functional setState to always get the latest path - avoids stale closure issues
+    setNavigationPath(prev => [...prev, node]);
 
     if (node.type === "database") {
       fetchDatabaseContents(node.id, node.title);
@@ -902,8 +995,9 @@ function NotionBrowserContent() {
             </div>
 
             <button
-              onClick={fetchTree}
-              disabled={treeLoading}
+              onClick={() => fetchTree(true)}
+              disabled={treeLoading || isRefreshing}
+              title={isRefreshing ? "Refreshing in background..." : "Refresh notes"}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -913,12 +1007,12 @@ function NotionBrowserContent() {
                 borderRadius: "8px",
                 backgroundColor: "rgba(255, 255, 255, 0.05)",
                 border: "1px solid var(--glass-border)",
-                color: "var(--foreground-muted)",
-                cursor: treeLoading ? "not-allowed" : "pointer",
+                color: isRefreshing ? "var(--accent)" : "var(--foreground-muted)",
+                cursor: (treeLoading || isRefreshing) ? "not-allowed" : "pointer",
                 flexShrink: 0,
               }}
             >
-              <RefreshCw style={{ width: "16px", height: "16px", animation: treeLoading ? "spin 1s linear infinite" : "none" }} />
+              <RefreshCw style={{ width: "16px", height: "16px", animation: (treeLoading || isRefreshing) ? "spin 1s linear infinite" : "none" }} />
             </button>
           </div>
 
@@ -1271,7 +1365,7 @@ function NotionBrowserContent() {
                     {databaseItems.map((item) => (
                       <div
                         key={item.id}
-                        onClick={() => handleNavigateInto(item, navigationPath)}
+                        onClick={() => handleNavigateInto(item)}
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -1343,7 +1437,7 @@ function NotionBrowserContent() {
                             url: "",
                             hasChildren: true,
                           };
-                          handleNavigateInto(node, navigationPath);
+                          handleNavigateInto(node);
                         }}
                         onPageClick={(id, title) => {
                           const node: TreeNode = {
@@ -1353,7 +1447,7 @@ function NotionBrowserContent() {
                             lastEditedTime: "",
                             url: "",
                           };
-                          handleNavigateInto(node, navigationPath);
+                          handleNavigateInto(node);
                         }}
                       />
                     ))}
