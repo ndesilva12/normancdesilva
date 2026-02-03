@@ -14,14 +14,14 @@ import {
 } from "lucide-react";
 
 const QUICK_TOOLS = [
-  { id: "notes", name: "Notion", icon: StickyNote, href: "/productivity/notion", color: "var(--foreground)" },
-  { id: "inbox", name: "Inbox", icon: Mail, href: "/productivity/inbox", color: "var(--accent)" },
-  { id: "calendar", name: "Calendar", icon: Calendar, href: "/productivity/calendar", color: "var(--success)" },
-  { id: "contacts", name: "Contacts", icon: Users, href: "/productivity/contacts", color: "var(--warning)" },
-  { id: "files", name: "Files", icon: FolderOpen, href: "/productivity/files", color: "#3b82f6" },
-  { id: "bookmarks", name: "Bookmarks", icon: Droplets, href: "/productivity/bookmarks", color: "#06b6d4" },
-  { id: "spotify", name: "Spotify", icon: Music, href: "/productivity/spotify", color: "#10b981" },
-  { id: "news", name: "News", icon: Newspaper, href: "/productivity/news", color: "#f59e0b" },
+  { id: "notes", name: "Notion", icon: StickyNote, href: "/tools/notion-browser", color: "var(--foreground)" },
+  { id: "inbox", name: "Inbox", icon: Mail, href: "/tools/emails", color: "var(--accent)" },
+  { id: "calendar", name: "Calendar", icon: Calendar, href: "/tools/calendar", color: "var(--success)" },
+  { id: "contacts", name: "Contacts", icon: Users, href: "/tools/contacts", color: "var(--warning)" },
+  { id: "files", name: "Files", icon: FolderOpen, href: "/tools/files", color: "#3b82f6" },
+  { id: "bookmarks", name: "Bookmarks", icon: Droplets, href: "/tools/raindrop", color: "#06b6d4" },
+  { id: "spotify", name: "Spotify", icon: Music, href: "/tools/spotify", color: "#10b981" },
+  { id: "news", name: "News", icon: Newspaper, href: "/tools/news", color: "#f59e0b" },
 ];
 
 export function QuickAccessDock() {
@@ -103,7 +103,7 @@ function QuickToolButton({ tool }: { tool: typeof QUICK_TOOLS[0] }) {
 
 function MoreButton() {
   return (
-    <Link href="/productivity" style={{ textDecoration: "none" }}>
+    <Link href="/intel" style={{ textDecoration: "none" }}>
       <div
         className="card"
         style={{
