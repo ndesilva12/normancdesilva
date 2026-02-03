@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Newspaper, Loader2, ExternalLink, RefreshCw, ChevronUp } from "lucide-react";
-import { useLayout } from "@/contexts/LayoutContext";
-
+import { Newspaper, Loader2, ExternalLink, RefreshCw } from "lucide-react";
 interface NewsArticle {
   title: string;
   link: string;
@@ -25,11 +23,7 @@ export function NewsPreview() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<NewsSource>("zerohedge");
-  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
   const router = useRouter();
-
-  const config = getWidgetConfig("previewWidgets", "news");
-  const isCollapsed = config?.size === "collapsed";
 
   const fetchArticles = useCallback(async (source: NewsSource) => {
     setLoading(true);
@@ -86,23 +80,18 @@ export function NewsPreview() {
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
+          borderBottom: "1px solid var(--glass-border)",
           flexShrink: 0,
-          cursor: isCollapsed ? "default" : "pointer",
+          cursor: "pointer",
         }}
         onClick={() => {
-          if (!isCollapsed) {
-            router.push("/tools/news");
-          }
+          router.push("/tools/news");
         }}
       >
         <Link
           href="/tools/news"
           onClick={(e) => {
             e.stopPropagation();
-            if (isCollapsed) {
-              e.preventDefault();
-            }
           }}
           style={{
             display: "flex",
@@ -112,7 +101,6 @@ export function NewsPreview() {
             flexShrink: 0,
             padding: "4px 8px 4px 0",
             margin: "-4px 0",
-            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <Newspaper style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
@@ -121,89 +109,54 @@ export function NewsPreview() {
           </span>
         </Link>
 
-        {/* Source Pills - inline with title (hidden when collapsed) */}
-        {!isCollapsed && (
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "4px",
-              flex: 1,
-              justifyContent: "flex-end",
-            }}
-          >
-            {NEWS_SOURCES.map((source) => (
-              <button
-                key={source.id}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleSourceChange(source.id);
-                }}
-                style={{
-                  padding: "3px 8px",
-                  borderRadius: "10px",
-                  border: "none",
-                  backgroundColor: selectedSource === source.id ? "var(--accent)" : "rgba(255, 255, 255, 0.08)",
-                  color: selectedSource === source.id ? "var(--background)" : "var(--foreground-muted)",
-                  fontSize: "10px",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-              >
-                {source.name}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Source Pills - inline with title */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "4px",
+            flex: 1,
+            justifyContent: "flex-end",
+          }}
+        >
+          {NEWS_SOURCES.map((source) => (
+            <button
+              key={source.id}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSourceChange(source.id);
+              }}
+              style={{
+                padding: "3px 8px",
+                borderRadius: "10px",
+                border: "none",
+                backgroundColor: selectedSource === source.id ? "var(--accent)" : "rgba(255, 255, 255, 0.08)",
+                color: selectedSource === source.id ? "var(--background)" : "var(--foreground-muted)",
+                fontSize: "10px",
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              {source.name}
+            </button>
+          ))}
+        </div>
 
-        {/* Spacer when collapsed */}
-        {isCollapsed && <div style={{ flex: 1 }} />}
-
-        {/* Collapse button (only shown when not collapsed and not in edit mode) */}
-        {!isCollapsed && !isEditMode && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleWidgetCollapse("previewWidgets", "news");
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "24px",
-              height: "24px",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "transparent",
-              color: "var(--foreground-muted)",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              flexShrink: 0,
-            }}
-            title="Collapse"
-          >
-            <ChevronUp style={{ width: "16px", height: "16px" }} />
-          </button>
-        )}
-
-        {!isCollapsed && (
-          <Link
-            href="/tools/news"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              textDecoration: "none",
-              flexShrink: 0,
-            }}
-          >
-            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-          </Link>
-        )}
+        <Link
+          href="/tools/news"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textDecoration: "none",
+            flexShrink: 0,
+          }}
+        >
+          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+        </Link>
       </div>
 
       {/* Content */}

@@ -106,8 +106,8 @@ export function Header({
         zIndex: 100,
         width: "100%",
         backdropFilter: "blur(20px)",
-        backgroundColor: "var(--header-bg)",
-        borderBottom: "1px solid var(--glass-border)",
+        background: "transparent",
+        borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
       }}
     >
       <div

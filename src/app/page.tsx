@@ -1,55 +1,254 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import {
-  FolderOpen,
-  Mail,
-  StickyNote,
-  TrendingUp,
-  Newspaper,
-  BookOpen,
-  BarChart3,
-  Calendar,
-  Users,
-  Rss,
-  Eye,
-  EyeOff,
-} from "lucide-react";
-import { Header } from "@/components/Header";
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
-import { FilesPreview } from "@/components/FilesPreview";
-import { EmailsPreview } from "@/components/EmailsPreview";
-import { ContactsPreview } from "@/components/ContactsPreview";
-import { NotesPreview } from "@/components/NotesPreview";
-import { StocksPreview } from "@/components/StocksPreview";
-import { CalendarPreview } from "@/components/CalendarPreview";
-import { NewsPreview } from "@/components/NewsPreview";
-import { RaindropPreview } from "@/components/RaindropPreview";
-import { TrendingPreview } from "@/components/TrendingPreview";
-import { InoreaderPreview } from "@/components/InoreaderPreview";
+import { IntelToolsBar } from "@/components/home/IntelToolsBar";
+import { QuickAccessDock } from "@/components/home/QuickAccessDock";
 import { RemindersBanner } from "@/components/RemindersBanner";
-import { LayoutEditor } from "@/components/LayoutEditor";
-import { DraggableWidget, useDragState } from "@/components/DraggableWidget";
-import { useLayout, WidgetConfig } from "@/contexts/LayoutContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
-// Widget metadata
-const WIDGET_META: Record<string, { title: string; icon: React.ComponentType<any>; href: string }> = {
-  news: { title: "News", icon: Newspaper, href: "/tools/news" },
-  trending: { title: "Trending", icon: TrendingUp, href: "/tools/trending" },
-  calendar: { title: "Calendar", icon: Calendar, href: "/tools/calendar" },
-  emails: { title: "Emails", icon: Mail, href: "/tools/emails" },
-  contacts: { title: "Contacts", icon: Users, href: "/tools/contacts" },
-  files: { title: "Files", icon: FolderOpen, href: "/tools/files" },
-  notes: { title: "Notes", icon: StickyNote, href: "/tools/notes" },
-  stocks: { title: "Market", icon: BarChart3, href: "/tools/market" },
-  reading: { title: "Reading", icon: BookOpen, href: "/tools/reading" },
-};
+// Import all preview components
+import { EmailsPreview } from "@/components/EmailsPreview";
+import { CalendarPreview } from "@/components/CalendarPreview";
+import { ContactsPreview } from "@/components/ContactsPreview";
+import { FilesPreview } from "@/components/FilesPreview";
+import { NotesPreview } from "@/components/NotesPreview";
+import { RaindropPreview } from "@/components/RaindropPreview";
+import { NewsPreview } from "@/components/NewsPreview";
+import { InoreaderPreview } from "@/components/InoreaderPreview";
+import { TrendingPreview } from "@/components/TrendingPreview";
+import { StocksPreview } from "@/components/StocksPreview";
+import { SpotifyPreview } from "@/components/SpotifyPreview";
+import { AccountsPreview } from "@/components/AccountsPreview";
 
-// Mobile Date/Time Banner
+export default function Home() {
+  const [isMobile, setIsMobile] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<{
+    id: string;
+    url: string;
+    color: string;
+    name: string;
+  } | null>(null);
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    // Check Google connection status
+    fetch("/api/auth/status")
+      .then((res) => res.json())
+      .then((data) => setIsGoogleConnected(data.isConnected))
+      .catch(() => setIsGoogleConnected(false));
+  }, []);
+
+  const handleToolClick = (toolId: string, toolUrl: string, toolColor: string, toolName: string) => {
+    setSelectedTool({ id: toolId, url: toolUrl, color: toolColor, name: toolName });
+  };
+
+  const handleConnectGoogle = () => {
+    window.location.href = "/api/auth/google";
+  };
+
+  const renderPreview = () => {
+    if (!selectedTool) {
+      return (
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
+          <p style={{ fontSize: "15px" }}>Click a tool above to preview it here</p>
+        </div>
+      );
+    }
+
+    switch (selectedTool.id) {
+      case "emails":
+        return <EmailsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
+      case "calendar":
+        return <CalendarPreview />;
+      case "contacts":
+        return <ContactsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
+      case "files":
+        return <FilesPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
+      case "notes":
+      case "notion-browser":
+        return <NotesPreview />;
+      case "raindrop":
+        return <RaindropPreview />;
+      case "news":
+        return <NewsPreview />;
+      case "inoreader":
+        return <InoreaderPreview />;
+      case "trending":
+        return <TrendingPreview />;
+      case "market":
+        return <StocksPreview />;
+      case "spotify":
+        return <SpotifyPreview />;
+      case "accounts":
+        return <AccountsPreview />;
+      default:
+        return (
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
+            <p style={{ fontSize: "15px", marginBottom: "20px" }}>
+              Preview not available for this tool yet
+            </p>
+            <button
+              onClick={() => router.push(selectedTool.url)}
+              style={{
+                padding: "10px 24px",
+                background: selectedTool.color,
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              Open Full Tool
+            </button>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <>
+      <TopNav />
+      <BottomNav />
+
+      <div
+        style={{
+          minHeight: "100vh",
+          paddingTop: "64px",
+          paddingBottom: isMobile ? "88px" : "24px",
+          padding: isMobile ? "64px 12px 88px 12px" : "64px 24px 24px 24px",
+        }}
+      >
+        <div
+          className="container"
+          style={{
+            maxWidth: "1200px",
+            margin: "0 auto",
+          }}
+        >
+          {/* Reminders */}
+          <RemindersBanner />
+
+          {/* Date/Time (mobile only) */}
+          {isMobile && <MobileDateTimeBanner />}
+
+          {/* Search */}
+          <div style={{ marginBottom: "32px" }}>
+            <MultiSourceSearch />
+          </div>
+
+          {/* Intel Tools Bar */}
+          <IntelToolsBar onToolClick={handleToolClick} />
+
+          {/* Quick Access Dock */}
+          <QuickAccessDock onToolClick={handleToolClick} />
+
+          {/* Preview Section */}
+          <div
+            style={{
+              marginTop: "32px",
+              background: "rgba(255, 255, 255, 0.03)",
+              borderRadius: "12px",
+              overflow: "hidden",
+              border: "1px solid var(--glass-border)",
+              position: "relative",
+            }}
+          >
+            {/* Colored top border */}
+            <div
+              style={{
+                height: "3px",
+                background: selectedTool?.color || "var(--accent)",
+                transition: "background 0.3s",
+              }}
+            />
+
+            {/* Preview header */}
+            <div
+              style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid var(--glass-border)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div>
+                <h2
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    color: "var(--foreground)",
+                    marginBottom: "4px",
+                  }}
+                >
+                  {selectedTool?.name || "Preview"}
+                </h2>
+                <p style={{ fontSize: "13px", color: "var(--muted)" }}>
+                  {selectedTool ? "Quick glance at this tool" : "Select a tool to preview"}
+                </p>
+              </div>
+              {selectedTool && (
+                <button
+                  onClick={() => router.push(selectedTool.url)}
+                  style={{
+                    padding: "8px 16px",
+                    background: selectedTool.color,
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  Open Full Tool →
+                </button>
+              )}
+            </div>
+
+            {/* Preview content */}
+            <div style={{ padding: "24px", minHeight: "400px" }}>
+              {renderPreview()}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function MobileDateTimeBanner() {
-  const { formatTime, formatDate } = useSettings();
   const [dateTime, setDateTime] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -60,260 +259,22 @@ function MobileDateTimeBanner() {
 
   if (!dateTime) return null;
 
-  const formattedDateStr = formatDate(dateTime, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-
-  const formattedTimeStr = formatTime(dateTime);
-
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "12px",
-        padding: "16px 0",
-        marginBottom: "8px",
+        marginBottom: "16px",
+        padding: "12px 16px",
+        background: "rgba(255, 255, 255, 0.03)",
+        borderRadius: "8px",
+        border: "1px solid var(--glass-border)",
+        textAlign: "center",
       }}
     >
-      <span style={{ fontSize: "15px", fontWeight: 600, color: "var(--foreground)" }}>
-        {formattedDateStr}
-      </span>
-      <span style={{ fontSize: "15px", fontWeight: 400, color: "var(--accent)", fontVariantNumeric: "tabular-nums" }}>
-        {formattedTimeStr}
-      </span>
-    </div>
-  );
-}
-
-export default function Home() {
-  const { isEditMode, layout, reorderWidgets } = useLayout();
-  const [isMobile, setIsMobile] = useState(false);
-  const [widgetsVisible, setWidgetsVisible] = useState(true);
-  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
-
-  const previewWidgets = layout.previewWidgets;
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 640);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  useEffect(() => {
-    // Check Google auth status
-    fetch("/api/auth/google/status")
-      .then(res => res.json())
-      .then(data => setIsGoogleConnected(data.authenticated))
-      .catch(() => setIsGoogleConnected(false));
-  }, []);
-
-  const handleConnectGoogle = () => {
-    window.location.href = "/api/auth/google";
-  };
-
-  // Drag-and-drop now handled in LayoutEditor
-  const handlePreviewDrop = () => {
-    // No-op
-  };
-
-  const renderWidgetContent = (id: string) => {
-    switch (id) {
-      case "files":
-        return <FilesPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
-      case "emails":
-        return <EmailsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
-      case "contacts":
-        return <ContactsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
-      case "notes":
-        return <NotesPreview />;
-      case "stocks":
-        return <StocksPreview />;
-      case "calendar":
-        return <CalendarPreview />;
-      case "news":
-        return <NewsPreview />;
-      case "raindrop":
-        return <RaindropPreview />;
-      case "trending":
-        return <TrendingPreview />;
-      case "inoreader":
-        return <InoreaderPreview />;
-      default:
-        return null;
-    }
-  };
-
-  const renderWidget = (widget: WidgetConfig, index: number) => {
-    const meta = WIDGET_META[widget.id];
-    if (!meta || !widget.visible) return null;
-
-    return (
-      <div
-        key={widget.id}
-        className="glass"
-        style={{
-          borderRadius: "12px",
-          overflow: "hidden",
-        }}
-      >
-        {renderWidgetContent(widget.id)}
+      <div style={{ fontSize: "20px", fontWeight: 700, color: "var(--foreground)", marginBottom: "4px" }}>
+        {dateTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
       </div>
-    );
-  };
-
-  // Filter visible widgets
-  const visibleWidgets = (previewWidgets || []).filter(w => w.visible);
-
-  return (
-    <div style={{ minHeight: "100vh", padding: isMobile ? "12px" : "24px" }}>
-      <Header />
-      
-      <div style={{ maxWidth: isMobile ? "100%" : "1400px", margin: "0 auto", paddingTop: "64px" }}>
-        <RemindersBanner />
-
-        {isMobile && <MobileDateTimeBanner />}
-
-        {/* Search Bar */}
-        <div style={{ marginBottom: "24px" }}>
-          <MultiSourceSearch />
-        </div>
-
-        {/* Layout Editor */}
-        {isEditMode && <LayoutEditor />}
-
-        {/* Widget Navigation Bar - Permanent, Icons Link to Tool Pages */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: isMobile ? "8px" : "12px",
-            flexWrap: "wrap",
-            marginBottom: "16px",
-          }}
-        >
-          {/* Show/Hide Toggle */}
-          <button
-            onClick={() => setWidgetsVisible(!widgetsVisible)}
-            title={widgetsVisible ? "Hide widgets" : "Show widgets"}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: isMobile ? "4px" : "6px",
-              padding: isMobile ? "12px" : "16px 20px",
-              minWidth: isMobile ? "70px" : "90px",
-              minHeight: isMobile ? "70px" : "80px",
-              backgroundColor: "rgba(255,255,255,0.05)",
-              border: "1px solid var(--glass-border)",
-              borderRadius: "12px",
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
-              e.currentTarget.style.transform = "translateY(-2px)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-          >
-            {widgetsVisible ? (
-              <EyeOff style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
-            ) : (
-              <Eye style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
-            )}
-            <span style={{ fontSize: isMobile ? "11px" : "12px", fontWeight: 500, color: "var(--foreground)" }}>
-              {widgetsVisible ? "Hide" : "Show"}
-            </span>
-          </button>
-
-          {/* Widget Icons - Only Visible Widgets */}
-          {visibleWidgets.map((widget) => {
-            const meta = WIDGET_META[widget.id];
-            if (!meta) return null;
-            const Icon = meta.icon;
-            return (
-              <Link
-                key={widget.id}
-                href={meta.href}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: isMobile ? "4px" : "6px",
-                  padding: isMobile ? "12px" : "16px 20px",
-                  minWidth: isMobile ? "70px" : "90px",
-                  minHeight: isMobile ? "70px" : "80px",
-                  backgroundColor: "rgba(255,255,255,0.05)",
-                  border: "1px solid var(--glass-border)",
-                  borderRadius: "12px",
-                  cursor: "pointer",
-                  textDecoration: "none",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
-              >
-                <Icon style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
-                <span style={{ fontSize: isMobile ? "11px" : "12px", fontWeight: 500, color: "var(--foreground)", textAlign: "center" }}>
-                  {meta.title}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Widgets Grid */}
-        {widgetsVisible && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-              gap: "16px",
-              gridAutoRows: "364px",
-              width: "100%",
-              maxWidth: "100%",
-              overflow: "hidden",
-            }}
-          >
-            {isEditMode ? (
-              // Edit mode: show all widgets with drag handles
-              (previewWidgets || []).map((widget, index) => renderWidget(widget, index))
-            ) : (
-              // Normal mode: show only visible widgets without drag handles
-              visibleWidgets.map((widget) => {
-                const meta = WIDGET_META[widget.id];
-                if (!meta) return null;
-                return (
-                  <div
-                    key={widget.id}
-                    className="glass"
-                    style={{
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {renderWidgetContent(widget.id)}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
+      <div style={{ fontSize: "13px", color: "var(--muted)" }}>
+        {dateTime.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
       </div>
     </div>
   );

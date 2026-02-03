@@ -43,7 +43,9 @@ interface RaindropCollection {
 export default function RaindropPage() {
   const [items, setItems] = useState<RaindropItem[]>([]);
   const [collections, setCollections] = useState<RaindropCollection[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<number | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -64,10 +66,13 @@ export default function RaindropPage() {
     try {
       const response = await fetch("/api/auth/raindrop/status");
       const data = await response.json();
-      setIsConnected(data.authenticated);
-      if (data.authenticated) {
+      // Fix: check for 'connected' not 'authenticated'
+      setIsConnected(data.connected);
+      if (data.connected) {
         fetchCollections();
         fetchItems();
+      } else {
+        setLoading(false);
       }
     } catch (err) {
       setError("Failed to check Raindrop connection");
@@ -81,10 +86,17 @@ export default function RaindropPage() {
 
   const fetchCollections = async () => {
     try {
-      const response = await fetch("/api/raindrop/collections");
+      // Use the same API as the widget for consistency
+      const response = await fetch("/api/raindrop?collections=true");
       if (!response.ok) throw new Error("Failed to fetch collections");
       const data = await response.json();
-      setCollections(data.items || []);
+      // Transform to match our interface
+      const collections = (data.collections || []).map((c: { id: number; title: string; count: number }) => ({
+        _id: c.id,
+        title: c.title,
+        count: c.count,
+      }));
+      setCollections(collections);
     } catch (err) {
       console.error("Error fetching collections:", err);
     }
@@ -94,13 +106,59 @@ export default function RaindropPage() {
     setLoading(true);
     setError(null);
     try {
-      const url = collectionId
-        ? `/api/raindrop/items?collectionId=${collectionId}`
-        : "/api/raindrop/items";
+      // Use the same API as the widget for consistency
+      const url = collectionId !== undefined && collectionId !== null
+        ? `/api/raindrop?collection=${collectionId}&limit=100`
+        : "/api/raindrop?collection=-1&limit=100";
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch items");
       const data = await response.json();
-      setItems(data.items || []);
+
+      // Transform the response to match our interface
+      const bookmarks = data.bookmarks || [];
+      const transformedItems: RaindropItem[] = bookmarks.map((b: { id: number; title: string; excerpt: string; url: string; domain: string; createdAt: string; tags: string[]; coverImage?: string; collectionId: number }) => ({
+        _id: b.id,
+        title: b.title,
+        excerpt: b.excerpt,
+        link: b.url,
+        domain: b.domain,
+        cover: b.coverImage || "",
+        created: b.createdAt,
+        tags: b.tags,
+        collection: { $id: b.collectionId, title: "" },
+      }));
+
+      setItems(transformedItems);
+
+      // Extract all unique tags with frequency counts
+      const tagCounts = new Map<string, number>();
+      transformedItems.forEach((item: RaindropItem) => {
+        item.tags?.forEach((tag: string) => {
+          tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+        });
+      });
+
+      // Priority tags that should appear first (in this order)
+      const priorityTags = ["links", "video", "reading"];
+
+      // Sort tags: priority tags first (in order), then remaining by frequency
+      const sortedTags = Array.from(tagCounts.keys()).sort((a, b) => {
+        const aIsPriority = priorityTags.indexOf(a.toLowerCase());
+        const bIsPriority = priorityTags.indexOf(b.toLowerCase());
+
+        // Both are priority tags - sort by priority order
+        if (aIsPriority !== -1 && bIsPriority !== -1) {
+          return aIsPriority - bIsPriority;
+        }
+        // Only a is priority
+        if (aIsPriority !== -1) return -1;
+        // Only b is priority
+        if (bIsPriority !== -1) return 1;
+        // Neither is priority - sort by frequency (descending)
+        return (tagCounts.get(b) || 0) - (tagCounts.get(a) || 0);
+      });
+
+      setAllTags(sortedTags);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load reading list");
     } finally {
@@ -110,13 +168,24 @@ export default function RaindropPage() {
 
   const handleCollectionClick = (collectionId: number) => {
     setSelectedCollection(collectionId);
+    setSelectedTag(null); // Clear tag filter when switching collections
     fetchItems(collectionId);
   };
 
   const handleShowAll = () => {
     setSelectedCollection(null);
+    setSelectedTag(null);
     fetchItems();
   };
+
+  const handleTagClick = (tag: string) => {
+    setSelectedTag(tag === selectedTag ? null : tag);
+  };
+
+  // Filter items by selected tag
+  const filteredItems = selectedTag
+    ? items.filter((item) => item.tags?.includes(selectedTag))
+    : items;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -143,11 +212,31 @@ export default function RaindropPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", padding: "24px" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a1a1a 0%, #1a2e2e 50%, #16262e 100%)", padding: "24px" }}>
       <Header />
       <div style={{ maxWidth: "1200px", margin: "0 auto", paddingTop: "64px" }}>
         <RemindersBanner />
         <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingTop: "24px" }}>
+          {/* Back Link */}
+          <div>
+            <Link
+              href="/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 12px",
+                borderRadius: "6px",
+                color: "var(--foreground-muted)",
+                textDecoration: "none",
+                fontSize: "14px",
+              }}
+            >
+              <ArrowLeft style={{ width: "16px", height: "16px" }} />
+              <span>Back to Dashboard</span>
+            </Link>
+          </div>
+
           {/* Title */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <BookOpen style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
@@ -244,9 +333,67 @@ export default function RaindropPage() {
                 <RefreshCw style={{ width: "18px", height: "18px" }} />
                 Refresh
               </button>
-              <OpenSourceButton />
+              <OpenSourceButton href="https://app.raindrop.io" label="Open in Raindrop" />
             </div>
           </div>
+
+          {/* Tag Filter Bar */}
+          {isConnected && allTags.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                flexWrap: "wrap",
+              }}
+            >
+              <Tag style={{ width: "16px", height: "16px", color: "var(--foreground-muted)", flexShrink: 0 }} />
+              <span style={{ fontSize: "13px", color: "var(--foreground-muted)", marginRight: "4px" }}>Filter by tag:</span>
+              {selectedTag && (
+                <button
+                  onClick={() => setSelectedTag(null)}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: "16px",
+                    border: "1px solid var(--glass-border)",
+                    backgroundColor: "transparent",
+                    color: "var(--foreground-muted)",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+              {allTags.slice(0, 15).map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => handleTagClick(tag)}
+                  style={{
+                    padding: "4px 12px",
+                    borderRadius: "16px",
+                    border: "none",
+                    backgroundColor: selectedTag === tag ? "var(--accent)" : "rgba(255, 255, 255, 0.08)",
+                    color: selectedTag === tag ? "var(--background)" : "var(--foreground-muted)",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  #{tag}
+                </button>
+              ))}
+              {allTags.length > 15 && (
+                <span style={{ fontSize: "12px", color: "var(--foreground-muted)" }}>
+                  +{allTags.length - 15} more
+                </span>
+              )}
+            </div>
+          )}
 
           {!isConnected ? (
             <div style={{ padding: "40px", textAlign: "center" }}>
@@ -315,10 +462,10 @@ export default function RaindropPage() {
                     Retry
                   </button>
                 </div>
-              ) : items.length === 0 ? (
+              ) : filteredItems.length === 0 ? (
                 <div style={{ padding: "40px", textAlign: "center" }}>
                   <p style={{ color: "var(--foreground-muted)", fontSize: "16px" }}>
-                    No items in your reading list
+                    {selectedTag ? `No items with tag #${selectedTag}` : "No items in your reading list"}
                   </p>
                 </div>
               ) : (
@@ -402,7 +549,7 @@ export default function RaindropPage() {
 
                     {/* Items List */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "0 8px" }}>
-                      {items.map((item) => (
+                      {filteredItems.map((item) => (
                         <motion.div
                           key={item._id}
                           initial={{ opacity: 0, y: 10 }}
@@ -450,18 +597,25 @@ export default function RaindropPage() {
                             {item.tags && item.tags.length > 0 && (
                               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
                                 {item.tags.slice(0, 3).map((tag) => (
-                                  <span
+                                  <button
                                     key={tag}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleTagClick(tag);
+                                    }}
                                     style={{
                                       fontSize: "12px",
                                       padding: "2px 6px",
                                       borderRadius: "4px",
-                                      backgroundColor: "rgba(255, 255, 255, 0.1)",
-                                      color: "var(--foreground-muted)",
+                                      border: "none",
+                                      backgroundColor: selectedTag === tag ? "var(--accent)" : "rgba(255, 255, 255, 0.1)",
+                                      color: selectedTag === tag ? "var(--background)" : "var(--foreground-muted)",
+                                      cursor: "pointer",
+                                      transition: "all 0.15s",
                                     }}
                                   >
                                     #{tag}
-                                  </span>
+                                  </button>
                                 ))}
                                 {item.tags.length > 3 && (
                                   <span

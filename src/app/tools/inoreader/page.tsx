@@ -78,12 +78,37 @@ export default function InoreaderPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a1a 0%, #1a2e2e 50%, #16262e 100%)", width: "100%" }}>
       <Header />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ maxWidth: "1400px", margin: "0 auto", padding: isMobile ? "16px" : "20px" }}>
           <RemindersBanner />
+
+          {/* Back Link */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{ marginBottom: "24px" }}
+          >
+            <Link
+              href="/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 12px",
+                borderRadius: "6px",
+                color: "var(--foreground-muted)",
+                textDecoration: "none",
+                fontSize: "14px",
+              }}
+            >
+              <ArrowLeft style={{ width: "16px", height: "16px" }} />
+              <span>Back to Dashboard</span>
+            </Link>
+          </motion.div>
 
           {/* Page Header */}
           <motion.div
@@ -91,22 +116,6 @@ export default function InoreaderPage() {
             animate={{ opacity: 1, y: 0 }}
             style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}
           >
-            <Link
-              href="/"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                color: "var(--foreground-muted)",
-                textDecoration: "none",
-              }}
-            >
-              <ArrowLeft style={{ width: "20px", height: "20px" }} />
-            </Link>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                 <Rss style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
@@ -118,27 +127,59 @@ export default function InoreaderPage() {
                 Latest articles from your RSS feeds
               </p>
             </div>
-            <button
-              onClick={fetchArticles}
-              disabled={loading}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "10px 18px",
-                borderRadius: "8px",
-                border: "1px solid var(--glass-border)",
-                backgroundColor: "transparent",
-                color: "var(--foreground-muted)",
-                fontSize: "14px",
-                fontWeight: 500,
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.5 : 1,
-              }}
-            >
-              <RefreshCw style={{ width: "16px", height: "16px", animation: loading ? "spin 1s linear infinite" : "none" }} />
-              Refresh
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <a
+                href="https://www.inoreader.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 18px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--glass-border)",
+                  backgroundColor: "transparent",
+                  color: "var(--foreground-muted)",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                  e.currentTarget.style.color = "var(--accent)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = "var(--foreground-muted)";
+                }}
+              >
+                <ExternalLink style={{ width: "16px", height: "16px" }} />
+                Open in Inoreader
+              </a>
+              <button
+                onClick={fetchArticles}
+                disabled={loading}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 18px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--glass-border)",
+                  backgroundColor: "transparent",
+                  color: "var(--foreground-muted)",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.5 : 1,
+                }}
+              >
+                <RefreshCw style={{ width: "16px", height: "16px", animation: loading ? "spin 1s linear infinite" : "none" }} />
+                Refresh
+              </button>
+            </div>
           </motion.div>
 
           {/* Content */}

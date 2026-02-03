@@ -658,7 +658,7 @@ export default function ContactFinderPage() {
 
   if (!user) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a1a 0%, #1a2e2e 50%, #16262e 100%)", width: "100%" }}>
         <Header />
         <main style={{ flex: 1, width: "100%", paddingTop: "64px", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div className="glass" style={{ padding: "40px", borderRadius: "16px", textAlign: "center", maxWidth: "400px" }}>
@@ -676,29 +676,33 @@ export default function ContactFinderPage() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a1a 0%, #1a2e2e 50%, #16262e 100%)", width: "100%" }}>
       <Header />
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px" }}>
           <RemindersBanner />
-          {/* Page Header */}
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+          {/* Back Link */}
+          <div style={{ marginBottom: "24px" }}>
             <Link
               href="/"
               style={{
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
-                justifyContent: "center",
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                gap: "6px",
+                padding: "8px 12px",
+                borderRadius: "6px",
                 color: "var(--foreground-muted)",
                 textDecoration: "none",
+                fontSize: "14px",
               }}
             >
-              <ArrowLeft style={{ width: "20px", height: "20px" }} />
+              <ArrowLeft style={{ width: "16px", height: "16px" }} />
+              <span>Back to Dashboard</span>
             </Link>
+          </div>
+
+          {/* Page Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <Search style={{ width: "24px", height: "24px", color: "var(--accent)" }} />

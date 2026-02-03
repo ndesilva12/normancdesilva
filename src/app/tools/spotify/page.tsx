@@ -263,7 +263,7 @@ export default function SpotifyPage() {
 
   if (isLoading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a0f 0%, #1a2e1e 50%, #16261e 100%)", width: "100%" }}>
         <Header />
         <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", paddingTop: "64px" }}>
           <Loader2 style={{ width: "40px", height: "40px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
@@ -274,10 +274,10 @@ export default function SpotifyPage() {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a0f 0%, #1a2e1e 50%, #16261e 100%)", width: "100%" }}>
         <Header />
         <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
-          <div style={{ width: "100%", maxWidth: "600px", margin: "0 auto", padding: "32px 24px" }}>
+          <div style={{ width: "80%", maxWidth: "1000px", margin: "0 auto", padding: "32px 24px" }}>
             <RemindersBanner />
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -359,11 +359,11 @@ export default function SpotifyPage() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a0f 0%, #1a2e1e 50%, #16261e 100%)", width: "100%" }}>
       <Header />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
-        <div style={{ width: "100%", maxWidth: "800px", margin: "0 auto", padding: "32px 24px 100px 24px" }}>
+        <div style={{ width: "80%", maxWidth: "1200px", margin: "0 auto", padding: "32px 24px 100px 24px" }}>
           <RemindersBanner />
           {/* Back Link */}
           <motion.div

@@ -19,6 +19,7 @@ import {
 import { useSettings } from "@/contexts/SettingsContext";
 import { useRecentSearches } from "@/contexts/RecentSearchesContext";
 import { useAuth } from "@/contexts/AuthContext";
+import JimmyChatInterface from "./JimmyChatInterface";
 
 interface TrendingSearch {
   title: string;
@@ -386,6 +387,9 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
 
   // AI follow-up conversation
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
+  
+  // Jimmy chat messages (separate from AI conversation)
+  const [jimmyMessages, setJimmyMessages] = useState<Array<{ role: "user" | "assistant"; content: string; timestamp: Date }>>([]);
   const [followUpInput, setFollowUpInput] = useState("");
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
 
@@ -686,6 +690,15 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                     (data as { summary?: string }).summary;
         }
 
+        // Special handling for Jimmy - populate chat messages
+        if (selectedSource === "jimmy" && content) {
+          setJimmyMessages(prev => [
+            ...prev,
+            { role: "user", content: query.trim(), timestamp: new Date() },
+            { role: "assistant", content, timestamp: new Date() },
+          ]);
+        }
+
         setToolResult({
           source: selectedSource,
           sourceName: sourceConfig.name,
@@ -713,6 +726,54 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
     setFollowUpInput("");
     setToolInputs({});
     setUploadedImage(null);
+    setJimmyMessages([]);
+  };
+
+  // Handle Jimmy chat message
+  const handleJimmyMessage = async (message: string) => {
+    if (!message.trim()) return;
+
+    // Add user message immediately
+    const userMessage = { role: "user" as const, content: message, timestamp: new Date() };
+    setJimmyMessages(prev => [...prev, userMessage]);
+
+    // Set loading state
+    setIsSearching(true);
+
+    try {
+      const response = await fetch("/api/jimmy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: message,
+          userId: user?.uid,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Request failed");
+      }
+
+      // Add assistant response
+      const assistantMessage = {
+        role: "assistant" as const,
+        content: data.content || "No response received",
+        timestamp: new Date(),
+      };
+      setJimmyMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      // Add error message
+      const errorMessage = {
+        role: "assistant" as const,
+        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        timestamp: new Date(),
+      };
+      setJimmyMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   // Handle AI follow-up
@@ -1203,6 +1264,19 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
     const sourceConfig = getSourceConfig(toolResult.source);
     const isAI = sourceConfig?.type === "ai";
 
+    // Special rendering for Jimmy chat
+    if (toolResult.source === "jimmy" && jimmyMessages.length > 0) {
+      return (
+        <div style={{ marginTop: "24px" }}>
+          <JimmyChatInterface
+            initialMessages={jimmyMessages}
+            onSendMessage={handleJimmyMessage}
+            isLoading={isSearching}
+          />
+        </div>
+      );
+    }
+
     return (
       <div
         className="glass"
@@ -1535,9 +1609,9 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
 
   // Build ordered source list for display
   const orderedSources = useMemo(() => {
-    // Order: Google, Images, News, Trends, Duck, Wikipedia, Grokipedia | tools | X, Youtube, Rumble, Amazon | individual AI
+    // Order: Google, Jimmy, Images, News, Trends, Duck, Wikipedia, Grokipedia | tools | X, Youtube, Rumble, Amazon | individual AI
     const order: UnifiedSourceId[] = [
-      "google", "images", "news", "trends", "duck", "wikipedia", "grokipedia",
+      "google", "jimmy", "images", "news", "trends", "duck", "wikipedia", "grokipedia",
       "deep-search", "dark-search", "corporate-info", "business-info", "contacts", "contact-finder",
       "image-lookup", "visuals", "rosters", "spotify",
       "x", "youtube", "rumble", "amazon",
@@ -1546,10 +1620,13 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
     return order.map(id => UNIFIED_SOURCES.find(s => s.id === id)).filter(Boolean) as typeof UNIFIED_SOURCES;
   }, []);
 
+  // Check if we're in Jimmy chat mode (active conversation)
+  const isJimmyChatActive = selectedSource === "jimmy" && jimmyMessages.length > 0;
+
   return (
     <div style={{ width: "100%", maxWidth: "900px", margin: "0 auto" }}>
-      {/* Trending Topics - always visible */}
-      {trends.length > 0 && (
+      {/* Trending Topics - hidden when Jimmy chat is active */}
+      {!isJimmyChatActive && trends.length > 0 && (
         <div
           style={{
             display: "flex",
@@ -1611,12 +1688,14 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
         </div>
       )}
 
-      <form onSubmit={handleSearch}>
-        {/* Search Bar */}
-        <div
-          className="glass"
-          style={{
-            display: "flex",
+      {/* Search form - hidden when Jimmy chat is active */}
+      {!isJimmyChatActive && (
+        <form onSubmit={handleSearch}>
+          {/* Search Bar */}
+          <div
+            className="glass"
+            style={{
+              display: "flex",
             alignItems: "flex-start",
             gap: isMobile ? "10px" : "8px",
             borderRadius: isMobile ? "14px" : "12px",
@@ -1708,24 +1787,43 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "6px",
+              justifyContent: "center",
+              gap: "8px",
               flexShrink: 0,
-              borderRadius: "8px",
-              backgroundColor: "var(--accent)",
-              padding: "10px 18px",
-              fontSize: "14px",
-              fontWeight: 500,
-              color: "var(--background)",
+              borderRadius: "10px",
+              background: isSearching ? "rgba(255, 255, 255, 0.1)" : "linear-gradient(135deg, #00d4ff 0%, #0ea5e9 100%)",
+              padding: "12px 32px",
+              fontSize: "15px",
+              fontWeight: 600,
+              color: "#ffffff",
               border: "none",
               cursor: isSearching ? "not-allowed" : "pointer",
-              opacity: isSearching ? 0.5 : 1,
+              opacity: isSearching ? 0.7 : 1,
               marginTop: "2px",
+              minWidth: "140px",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              if (!isSearching) {
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 212, 255, 0.4)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "none";
             }}
           >
             {isSearching ? (
-              <Loader2 style={{ width: "16px", height: "16px", animation: "spin 1s linear infinite" }} />
+              <>
+                <Loader2 style={{ width: "18px", height: "18px", animation: "spin 1s linear infinite" }} />
+                <span>Searching...</span>
+              </>
             ) : (
-              <span>Search</span>
+              <>
+                <Search style={{ width: "18px", height: "18px" }} />
+                <span>Search</span>
+              </>
             )}
           </button>
         </div>
@@ -1833,12 +1931,13 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
           )}
         </div>
 
-      </form>
+        </form>
+      )}
 
-      {/* Tool panel */}
-      {renderToolPanel()}
+      {/* Tool panel - hidden when Jimmy chat is active */}
+      {!isJimmyChatActive && renderToolPanel()}
 
-      {/* Results display */}
+      {/* Results display - always show (contains Jimmy chat when active) */}
       {renderResult()}
 
       <style jsx global>{`

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Loader2, RefreshCw, Search, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Users, Loader2, RefreshCw, Search, Mail, Phone, ExternalLink } from "lucide-react";
 import { GoogleContact } from "@/lib/google-services";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
@@ -113,29 +113,33 @@ export default function ContactsPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)", width: "100%" }}>
       <Header />
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "20px" }}>
+        <div style={{ maxWidth: "1200px", width: "80%", margin: "0 auto", padding: "20px" }}>
           <RemindersBanner />
-          {/* Page Header */}
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+          {/* Back Link */}
+          <div style={{ marginBottom: "24px" }}>
             <Link
               href="/"
               style={{
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
-                justifyContent: "center",
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                gap: "6px",
+                padding: "8px 12px",
+                borderRadius: "6px",
                 color: "var(--foreground-muted)",
                 textDecoration: "none",
+                fontSize: "14px",
               }}
             >
-              <ArrowLeft style={{ width: "20px", height: "20px" }} />
+              <ArrowLeft style={{ width: "16px", height: "16px" }} />
+              <span>Back to Dashboard</span>
             </Link>
+          </div>
+
+          {/* Page Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <Users style={{ width: "24px", height: "24px", color: "var(--accent)" }} />
@@ -146,25 +150,56 @@ export default function ContactsPage() {
               </p>
             </div>
             {isConnected && (
-              <button
-                onClick={() => fetchContacts()}
-                disabled={loading}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "8px 14px",
-                  borderRadius: "8px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  color: "var(--foreground-muted)",
-                  border: "none",
-                  cursor: loading ? "not-allowed" : "pointer",
-                  fontSize: "13px",
-                }}
-              >
-                <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
-                Refresh
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <a
+                  href="https://contacts.google.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    color: "var(--foreground-muted)",
+                    border: "1px solid var(--glass-border)",
+                    textDecoration: "none",
+                    fontSize: "13px",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                    e.currentTarget.style.color = "var(--accent)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                    e.currentTarget.style.color = "var(--foreground-muted)";
+                  }}
+                >
+                  <ExternalLink style={{ width: "14px", height: "14px" }} />
+                  Open in Google Contacts
+                </a>
+                <button
+                  onClick={() => fetchContacts()}
+                  disabled={loading}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    color: "var(--foreground-muted)",
+                    border: "none",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    fontSize: "13px",
+                  }}
+                >
+                  <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
+                  Refresh
+                </button>
+              </div>
             )}
           </div>
 

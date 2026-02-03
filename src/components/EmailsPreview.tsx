@@ -202,6 +202,7 @@ export function EmailsPreview({ isGoogleConnected: _unused1, onConnectGoogle: _u
           justifyContent: "center",
           zIndex: 1000,
           backdropFilter: "blur(4px)",
+          padding: "20px",
         }}
         onClick={() => setDeleteConfirm(null)}
       >
@@ -211,8 +212,9 @@ export function EmailsPreview({ isGoogleConnected: _unused1, onConnectGoogle: _u
             padding: "24px",
             borderRadius: "12px",
             maxWidth: "400px",
-            width: "90%",
+            width: "100%",
             textAlign: "center",
+            margin: "auto",
           }}
           onClick={(e) => e.stopPropagation()}
         >

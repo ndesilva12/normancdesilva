@@ -3,10 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText, Loader2, ExternalLink, RefreshCw, ChevronUp } from "lucide-react";
+import { FileText, Loader2, ExternalLink, RefreshCw } from "lucide-react";
 import { DriveFile, getDriveFileIcon, getDriveFileType } from "@/lib/google-services";
-import { useLayout } from "@/contexts/LayoutContext";
-
 interface FilesPreviewProps {
   isGoogleConnected?: boolean;
   onConnectGoogle?: () => void;
@@ -19,9 +17,6 @@ export function FilesPreview({ isGoogleConnected: _unused1, onConnectGoogle: _un
   const [isConnected, setIsConnected] = useState(false);
   const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
   const router = useRouter();
-
-  const config = getWidgetConfig("previewWidgets", "files");
-  const isCollapsed = config?.size === "collapsed";
 
   useEffect(() => {
     checkConnectionAndFetch();
@@ -93,24 +88,19 @@ export function FilesPreview({ isGoogleConnected: _unused1, onConnectGoogle: _un
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
+          borderBottom: "1px solid var(--glass-border)",
           transition: "background 0.15s",
           flexShrink: 0,
-          cursor: isCollapsed ? "default" : "pointer",
+          cursor: "pointer",
         }}
         onClick={() => {
-          if (!isCollapsed) {
-            router.push("/tools/files");
-          }
+          router.push("/tools/files");
         }}
       >
         <Link
           href="/tools/files"
           onClick={(e) => {
             e.stopPropagation();
-            if (isCollapsed) {
-              e.preventDefault();
-            }
           }}
           style={{
             display: "flex",
@@ -118,7 +108,6 @@ export function FilesPreview({ isGoogleConnected: _unused1, onConnectGoogle: _un
             gap: "10px",
             textDecoration: "none",
             flex: 1,
-            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <FileText style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
@@ -127,49 +116,19 @@ export function FilesPreview({ isGoogleConnected: _unused1, onConnectGoogle: _un
           </span>
         </Link>
 
-        {/* Collapse button (only shown when not collapsed and not in edit mode) */}
-        {!isCollapsed && !isEditMode && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleWidgetCollapse("previewWidgets", "files");
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "24px",
-              height: "24px",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "transparent",
-              color: "var(--foreground-muted)",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              flexShrink: 0,
-            }}
-            title="Collapse"
-          >
-            <ChevronUp style={{ width: "16px", height: "16px" }} />
-          </button>
-        )}
-
-        {!isCollapsed && (
-          <Link
-            href="/tools/files"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              textDecoration: "none",
-              flexShrink: 0,
-            }}
-          >
-            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-          </Link>
-        )}
+        <Link
+          href="/tools/files"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textDecoration: "none",
+            flexShrink: 0,
+          }}
+        >
+          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+        </Link>
       </div>
 
       {/* Content */}

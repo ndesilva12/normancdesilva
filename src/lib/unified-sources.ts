@@ -283,29 +283,16 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     type: "web",
     searchUrlTemplate: "https://www.amazon.com/s?k={query}",
   },
-  // More tool sources
   {
-    id: "image-lookup",
-    name: "Image Lookup",
-    description: "Reverse image search",
-    longDescription: "Reverse image search using Google Lens and Bing Visual Search to find image sources and similar images.",
+    id: "contacts",
+    name: "Contacts",
+    description: "Search Google Contacts",
+    longDescription: "Search and manage your Google Contacts directly from the dashboard.",
     type: "tool",
-    apiEndpoint: "/api/image-lookup",
-    toolHref: "/tools/image-lookup",
-    toolOptions: [
-      {
-        id: "engine",
-        type: "toggle",
-        label: "Search Engine",
-        options: [
-          { value: "google", label: "Google Lens" },
-          { value: "bing", label: "Bing Visual" },
-        ],
-        defaultValue: "google",
-      },
-    ],
-    // Special handling for image upload - no text input needed
-    exampleSearches: [],
+    apiEndpoint: "/api/contacts",
+    usesSearchInput: true,
+    toolHref: "/tools/contacts",
+    exampleSearches: ["John Smith", "email contains @gmail", "phone 555"],
   },
   {
     id: "rosters",
