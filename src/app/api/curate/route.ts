@@ -8,8 +8,11 @@ export async function POST(request: NextRequest) {
   try {
     const { topic, source } = await request.json();
     
-    // Build the curate command
-    let command = "cd /home/ubuntu/clawd/skills/curate && python3 curate_v3.py";
+    // Build the curate command using script from project root
+    const projectRoot = process.cwd();
+    const scriptPath = `${projectRoot}/scripts/curate_v3.py`;
+    
+    let command = `python3 ${scriptPath}`;
     
     if (topic && topic !== "general") {
       command += ` --topic "${topic.replace(/"/g, '\\"')}"`;
@@ -31,6 +34,9 @@ export async function POST(request: NextRequest) {
       env: {
         ...process.env,
         PYTHONUNBUFFERED: "1",
+        XAI_API_KEY: process.env.XAI_API_KEY || "",
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+        BRAVE_API_KEY: process.env.BRAVE_API_KEY || "",
       },
     });
     
