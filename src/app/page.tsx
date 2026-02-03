@@ -165,7 +165,7 @@ export default function Home() {
     if (!meta || !widget.visible) return null;
 
     return (
-      <Card key={widget.id} accentColor="cyan" className="overflow-hidden p-0">
+      <Card key={widget.id} accentColor="cyan" noPadding>
         {renderWidgetContent(widget.id)}
       </Card>
     );
@@ -175,7 +175,11 @@ export default function Home() {
   const visibleWidgets = (previewWidgets || []).filter(w => w.visible);
 
   return (
-    <div style={{ minHeight: "100vh", padding: isMobile ? "12px" : "24px" }}>
+    <div style={{ 
+      minHeight: "100vh", 
+      background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)",
+      padding: isMobile ? "12px" : "24px" 
+    }}>
       <Header />
       
       <div style={{ maxWidth: isMobile ? "100%" : "1400px", margin: "0 auto", paddingTop: "64px" }}>
@@ -375,7 +379,7 @@ export default function Home() {
                 const meta = WIDGET_META[widget.id];
                 if (!meta) return null;
                 return (
-                  <Card key={widget.id} accentColor="cyan" className="overflow-hidden p-0">
+                  <Card key={widget.id} accentColor="cyan" noPadding>
                     {renderWidgetContent(widget.id)}
                   </Card>
                 );
