@@ -100,7 +100,6 @@ export default function Home() {
   const { isEditMode, layout, reorderWidgets } = useLayout();
   const [isMobile, setIsMobile] = useState(false);
   const [widgetsVisible, setWidgetsVisible] = useState(true);
-  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
 
   const previewWidgets = layout.previewWidgets;
 
@@ -111,18 +110,6 @@ export default function Home() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  useEffect(() => {
-    // Check Google auth status
-    fetch("/api/auth/google/status")
-      .then(res => res.json())
-      .then(data => setIsGoogleConnected(data.authenticated))
-      .catch(() => setIsGoogleConnected(false));
-  }, []);
-
-  const handleConnectGoogle = () => {
-    window.location.href = "/api/auth/google";
-  };
-
   // Drag-and-drop now handled in LayoutEditor
   const handlePreviewDrop = () => {
     // No-op
@@ -131,11 +118,11 @@ export default function Home() {
   const renderWidgetContent = (id: string) => {
     switch (id) {
       case "files":
-        return <FilesPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
+        return <FilesPreview />;
       case "emails":
-        return <EmailsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
+        return <EmailsPreview />;
       case "contacts":
-        return <ContactsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
+        return <ContactsPreview />;
       case "notes":
         return <NotesPreview />;
       case "stocks":

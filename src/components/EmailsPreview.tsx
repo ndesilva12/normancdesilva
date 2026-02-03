@@ -61,26 +61,26 @@ export function EmailsPreview({ isGoogleConnected: _unused1, onConnectGoogle: _u
   // Refresh emails when window regains focus (user returns from viewing email on detail page)
   useEffect(() => {
     const handleFocus = () => {
-      if (isGoogleConnected && !loading) {
+      if (isConnected && !loading) {
         fetchEmails();
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [isGoogleConnected, loading]);
+  }, [isConnected, loading]);
 
   // Refresh emails when navigating back to dashboard from email detail page
   useEffect(() => {
     const wasOnEmailPage = prevPathname.current?.startsWith('/tools/emails');
     const isNowOnDashboard = pathname === '/' || pathname === '/dashboard';
 
-    if (wasOnEmailPage && isNowOnDashboard && isGoogleConnected) {
+    if (wasOnEmailPage && isNowOnDashboard && isConnected) {
       fetchEmails();
     }
 
     prevPathname.current = pathname;
-  }, [pathname, isGoogleConnected]);
+  }, [pathname, isConnected]);
 
   // Keyboard handler for delete confirmation modal
   useEffect(() => {
