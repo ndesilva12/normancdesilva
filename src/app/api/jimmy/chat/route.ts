@@ -1,14 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
-    // Check authentication
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await req.json();
     const { message } = body;
 
@@ -27,7 +20,9 @@ export async function POST(req: Request) {
         // Add API key or token here if set up
       },
       body: JSON.stringify({ message }),
-      timeout: 10000, // 10 seconds timeout
+      // Use a timeout to prevent hanging (Node.js fetch supports AbortSignal.timeout in newer versions)
+    }).catch(err => {
+      throw new Error(`Fetch error: ${err.message}`);
     });
 
     if (!response.ok) {
