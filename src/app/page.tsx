@@ -144,22 +144,7 @@ export default function Home() {
 
               // CSS for active state and widget styling
               const style = document.createElement('style');
-              style.textContent = `
-                .card.active {
-                  background: rgba(255, 255, 255, 0.1);
-                  transform: translateY(-2px);
-                }
-                .widget-preview {
-                  background: rgba(255, 255, 255, 0.08);
-                  padding: 16px;
-                  border-radius: 6px;
-                  border: 1px solid rgba(255, 255, 255, 0.15);
-                }
-                .widget-preview h3 {
-                  margin-top: 0;
-                  color: var(--accent);
-                }
-              `;
+              style.textContent = '.card.active { background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); } .widget-preview { background: rgba(255, 255, 255, 0.08); padding: 16px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); } .widget-preview h3 { margin-top: 0; color: var(--accent); }';
               document.head.appendChild(style);
             });
           `,
