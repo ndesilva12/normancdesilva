@@ -66,6 +66,8 @@ export interface UnifiedSourceConfig {
   usesSearchInput?: boolean;
   // Tool page href for reference
   toolHref?: string;
+  // Whether clicking on this tool should navigate directly to its page (no inline preview)
+  navigateDirectly?: boolean;
   // Example searches
   exampleSearches?: string[];
 }
@@ -132,6 +134,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     apiEndpoint: "/api/deep-search",
     usesSearchInput: true,
     toolHref: "/tools/deep-search",
+    navigateDirectly: true,
     exampleSearches: [
       "How do central banks actually control inflation?",
       "The hidden mechanics of social media algorithms",
@@ -147,6 +150,7 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     apiEndpoint: "/api/dark-search",
     usesSearchInput: true,
     toolHref: "/tools/dark-search",
+    navigateDirectly: true,
     toolOptions: [
       {
         id: "mode",
