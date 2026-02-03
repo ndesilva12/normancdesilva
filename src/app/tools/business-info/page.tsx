@@ -140,8 +140,8 @@ export default function BusinessInfoPage() {
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div
           style={{
-            width: "100%",
-            maxWidth: "1000px",
+            width: "80%",
+            maxWidth: "1200px",
             margin: "0 auto",
             padding: "32px 24px 100px 24px",
           }}

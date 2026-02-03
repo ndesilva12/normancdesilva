@@ -17,8 +17,6 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
-  Code,
-  FileText,
 } from "lucide-react";
 import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
 
@@ -64,15 +62,6 @@ export function EmailDetailModal({
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showHtml, setShowHtml] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Check for mobile viewport
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   useEffect(() => {
     if (emailId) {
@@ -86,31 +75,6 @@ export function EmailDetailModal({
       setError(null);
     }
   }, [emailId]);
-
-  // Automatically mark email as read when opened
-  useEffect(() => {
-    if (email && email.isUnread) {
-      // Mark as read silently (don't show loading state)
-      // If no accountEmail, API will use primary/first account
-      fetch(`/api/gmail/${email.id}/actions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "mark-read",
-          ...(email.accountEmail && { account: email.accountEmail }),
-        }),
-      })
-        .then((response) => {
-          if (response.ok) {
-            setEmail((prev) => (prev ? { ...prev, isUnread: false } : prev));
-            onEmailUpdated(); // Update the email list to reflect read status
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to mark email as read:", err);
-        });
-    }
-  }, [email?.id, email?.isUnread, email?.accountEmail]);
 
   // Keyboard handler for Escape to close modal
   useEffect(() => {
@@ -141,13 +105,7 @@ export function EmailDetailModal({
       if (!response.ok) {
         throw new Error(data.error || "Failed to fetch email details");
       }
-      // API returns { email, account } - extract the email object and merge accountEmail
-      // Note: "unknown" is returned for legacy single-account tokens, treat as undefined
-      const emailData = data.email || data;
-      const resolvedAccount = (data.account && data.account !== "unknown") ? data.account :
-                              (emailData.accountEmail && emailData.accountEmail !== "unknown") ? emailData.accountEmail :
-                              account;
-      setEmail({ ...emailData, accountEmail: resolvedAccount });
+      setEmail(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load email");
     } finally {
@@ -156,7 +114,7 @@ export function EmailDetailModal({
   };
 
   const handleEmailAction = async (action: "archive" | "trash" | "star" | "unstar" | "mark-read" | "mark-unread") => {
-    if (!email) return;
+    if (!email || !email.accountEmail) return;
 
     setActionLoading(action);
     try {
@@ -167,7 +125,7 @@ export function EmailDetailModal({
         },
         body: JSON.stringify({
           action,
-          ...(email.accountEmail && { account: email.accountEmail }),
+          account: email.accountEmail,
         }),
       });
 
@@ -224,49 +182,39 @@ export function EmailDetailModal({
   };
 
   const getAttachmentUrl = (attachmentId: string) => {
-    if (!email) return "#";
-    const url = `/api/gmail/${email.id}/attachment/${attachmentId}`;
-    return email.accountEmail ? `${url}?account=${encodeURIComponent(email.accountEmail)}` : url;
+    if (!email || !email.accountEmail) return "#";
+    return `/api/gmail/${email.id}/attachment/${attachmentId}?account=${encodeURIComponent(email.accountEmail)}`;
   };
 
   // Render email body - either HTML or plain text
   const renderEmailBody = () => {
     if (!email) return null;
 
-    // HTML emails keep white background to preserve original styling
     if (showHtml && email.bodyHtml) {
       return (
         <div
           style={{
             flex: 1,
             overflowY: "auto",
-            backgroundColor: "#ffffff",
-            borderRadius: "8px",
-            padding: "20px",
-            color: "#1a1a1a",
+            padding: "16px 0",
+            color: "var(--foreground)",
             lineHeight: 1.6,
-            fontSize: "14px",
           }}
           dangerouslySetInnerHTML={{ __html: email.bodyHtml }}
         />
       );
     }
 
-    // Plain text emails follow app theme
     return (
       <pre
         style={{
           flex: 1,
           overflowY: "auto",
-          backgroundColor: "rgba(255, 255, 255, 0.05)",
-          borderRadius: "8px",
-          padding: "20px",
+          padding: "16px 0",
           color: "var(--foreground)",
           lineHeight: 1.6,
           fontFamily: "inherit",
           whiteSpace: "pre-wrap",
-          fontSize: "14px",
-          border: "1px solid var(--glass-border)",
         }}
       >
         {email.body}
@@ -288,30 +236,34 @@ export function EmailDetailModal({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: isMobile ? "var(--background)" : "rgba(0, 0, 0, 0.7)",
-            backdropFilter: isMobile ? "none" : "blur(5px)",
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            backdropFilter: "blur(5px)",
             zIndex: 999,
             display: "flex",
-            alignItems: "flex-start",
+            alignItems: "center",
             justifyContent: "center",
-            paddingTop: isMobile ? "0" : "5vh",
           }}
-          onClick={isMobile ? undefined : onClose}
+          onClick={onClose}
         >
           <motion.div
-            initial={{ scale: isMobile ? 1 : 0.95, y: isMobile ? 20 : 0 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: isMobile ? 1 : 0.95, y: isMobile ? 20 : 0 }}
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             style={{
-              width: isMobile ? "100%" : "94%",
-              maxWidth: isMobile ? "none" : "1100px",
-              height: isMobile ? "100%" : "85vh",
-              backgroundColor: isMobile ? "var(--background)" : "rgba(26, 26, 26, 0.95)",
-              backdropFilter: isMobile ? "none" : "blur(20px)",
-              border: isMobile ? "none" : "1px solid var(--glass-border)",
-              borderRadius: isMobile ? "0" : "16px",
-              boxShadow: isMobile ? "none" : "0 8px 32px rgba(0, 0, 0, 0.3)",
+              position: "fixed",
+              top: "15vh",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "90%",
+              maxWidth: "900px",
+              height: "80vh",
+              backgroundColor: "rgba(26, 26, 26, 0.95)",
+              backdropFilter: "blur(20px)",
+              border: "1px solid var(--glass-border)",
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+              zIndex: 1000,
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
@@ -321,44 +273,20 @@ export function EmailDetailModal({
             {/* Header */}
             <div
               style={{
-                padding: isMobile ? "12px 16px" : "16px 20px",
+                padding: "16px 20px",
                 borderBottom: "1px solid var(--glass-border)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: "12px",
               }}
             >
-              {/* Back button on left for mobile */}
-              {isMobile && (
-                <button
-                  onClick={onClose}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
-                    border: "1px solid var(--glass-border)",
-                    color: "var(--foreground)",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    gap: "6px",
-                    flexShrink: 0,
-                  }}
-                >
-                  <X style={{ width: "18px", height: "18px" }} />
-                  Back
-                </button>
-              )}
-              <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "12px", flex: 1, minWidth: 0 }}>
-                <Mail style={{ width: isMobile ? "18px" : "20px", height: isMobile ? "18px" : "20px", color: "var(--accent)", flexShrink: 0 }} />
-                <h2 style={{ fontSize: isMobile ? "15px" : "18px", fontWeight: 600, color: "var(--foreground)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {isMobile ? "Email" : "Email Details"}
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <Mail style={{ width: "20px", height: "20px", color: "var(--accent)" }} />
+                <h2 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
+                  Email Details
                 </h2>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "12px", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 {email && email.accountEmail && (
                   <button
                     onClick={() => {
@@ -369,7 +297,7 @@ export function EmailDetailModal({
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      padding: isMobile ? "10px 12px" : "6px 10px",
+                      padding: "6px 10px",
                       borderRadius: "8px",
                       backgroundColor: "rgba(255, 255, 255, 0.05)",
                       border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -380,29 +308,27 @@ export function EmailDetailModal({
                     }}
                   >
                     <ExternalLink style={{ width: "14px", height: "14px" }} />
-                    {!isMobile && <span>Open in Superhuman</span>}
+                    <span className="hidden sm:inline">Open in Gmail</span>
                   </button>
                 )}
-                {!isMobile && (
-                  <button
-                    onClick={onClose}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "28px",
-                      height: "28px",
-                      borderRadius: "8px",
-                      backgroundColor: "rgba(255, 100, 100, 0.1)",
-                      border: "1px solid rgba(255, 100, 100, 0.2)",
-                      color: "var(--foreground-muted)",
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    <X style={{ width: "16px", height: "16px" }} />
-                  </button>
-                )}
+                <button
+                  onClick={onClose}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(255, 100, 100, 0.1)",
+                    border: "1px solid rgba(255, 100, 100, 0.2)",
+                    color: "var(--foreground-muted)",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <X style={{ width: "16px", height: "16px" }} />
+                </button>
               </div>
             </div>
 
@@ -438,18 +364,18 @@ export function EmailDetailModal({
                 {/* Email Header */}
                 <div
                   style={{
-                    padding: isMobile ? "14px 16px" : "16px 20px",
+                    padding: "16px 20px",
                     borderBottom: "1px solid var(--glass-border)",
                     display: "flex",
                     flexDirection: "column",
                     gap: "8px",
                   }}
                 >
-                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: isMobile ? "6px" : "16px" }}>
-                    <h3 style={{ fontSize: isMobile ? "16px" : "18px", fontWeight: 600, color: "var(--foreground)", margin: 0, flex: 1, lineHeight: 1.4 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
+                    <h3 style={{ fontSize: "18px", fontWeight: 600, color: "var(--foreground)", margin: 0, flex: 1 }}>
                       {email.subject || "(No Subject)"}
                     </h3>
-                    <span style={{ fontSize: isMobile ? "12px" : "13px", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: "13px", color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
                       {formatDate(email.date)}
                     </span>
                   </div>
@@ -503,14 +429,12 @@ export function EmailDetailModal({
                 {/* Action Bar */}
                 <div
                   style={{
-                    padding: isMobile ? "10px 16px" : "12px 20px",
+                    padding: "12px 20px",
                     borderBottom: "1px solid var(--glass-border)",
                     display: "flex",
                     alignItems: "center",
-                    gap: isMobile ? "8px" : "12px",
+                    gap: "12px",
                     flexShrink: 0,
-                    overflowX: isMobile ? "auto" : "visible",
-                    flexWrap: isMobile ? "nowrap" : "wrap",
                   }}
                 >
                   <button
@@ -520,7 +444,7 @@ export function EmailDetailModal({
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      padding: isMobile ? "10px 12px" : "6px 12px",
+                      padding: "6px 12px",
                       borderRadius: "8px",
                       backgroundColor: email.isUnread ? "rgba(100, 255, 100, 0.1)" : "rgba(255, 255, 255, 0.05)",
                       border: email.isUnread ? "1px solid rgba(100, 255, 100, 0.2)" : "1px solid rgba(255, 255, 255, 0.1)",
@@ -529,7 +453,6 @@ export function EmailDetailModal({
                       cursor: actionLoading ? "not-allowed" : "pointer",
                       transition: "all 0.15s",
                       opacity: actionLoading === (email.isUnread ? "mark-read" : "mark-unread") ? 0.5 : 1,
-                      flexShrink: 0,
                     }}
                   >
                     {actionLoading === (email.isUnread ? "mark-read" : "mark-unread") ? (
@@ -537,7 +460,9 @@ export function EmailDetailModal({
                     ) : (
                       <MailOpen style={{ width: "14px", height: "14px" }} />
                     )}
-                    {!isMobile && <span>{email.isUnread ? "Mark Read" : "Mark Unread"}</span>}
+                    <span className="hidden sm:inline">
+                      {email.isUnread ? "Mark Read" : "Mark Unread"}
+                    </span>
                   </button>
 
                   <button
@@ -547,7 +472,7 @@ export function EmailDetailModal({
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      padding: isMobile ? "10px 12px" : "6px 12px",
+                      padding: "6px 12px",
                       borderRadius: "8px",
                       backgroundColor: email.isStarred ? "rgba(255, 215, 0, 0.1)" : "rgba(255, 255, 255, 0.05)",
                       border: email.isStarred ? "1px solid rgba(255, 215, 0, 0.2)" : "1px solid rgba(255, 255, 255, 0.1)",
@@ -556,7 +481,6 @@ export function EmailDetailModal({
                       cursor: actionLoading ? "not-allowed" : "pointer",
                       transition: "all 0.15s",
                       opacity: actionLoading === (email.isStarred ? "unstar" : "star") ? 0.5 : 1,
-                      flexShrink: 0,
                     }}
                   >
                     {actionLoading === (email.isStarred ? "unstar" : "star") ? (
@@ -564,7 +488,7 @@ export function EmailDetailModal({
                     ) : (
                       <Star style={{ width: "14px", height: "14px", fill: email.isStarred ? "var(--foreground)" : "none" }} />
                     )}
-                    {!isMobile && <span>{email.isStarred ? "Unstar" : "Star"}</span>}
+                    <span className="hidden sm:inline">{email.isStarred ? "Unstar" : "Star"}</span>
                   </button>
 
                   <button
@@ -574,7 +498,7 @@ export function EmailDetailModal({
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      padding: isMobile ? "10px 12px" : "6px 12px",
+                      padding: "6px 12px",
                       borderRadius: "8px",
                       backgroundColor: "rgba(255, 255, 255, 0.05)",
                       border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -583,7 +507,6 @@ export function EmailDetailModal({
                       cursor: actionLoading ? "not-allowed" : "pointer",
                       transition: "all 0.15s",
                       opacity: actionLoading === "archive" ? 0.5 : 1,
-                      flexShrink: 0,
                     }}
                   >
                     {actionLoading === "archive" ? (
@@ -591,7 +514,7 @@ export function EmailDetailModal({
                     ) : (
                       <Archive style={{ width: "14px", height: "14px" }} />
                     )}
-                    {!isMobile && <span>Archive</span>}
+                    <span className="hidden sm:inline">Archive</span>
                   </button>
 
                   <button
@@ -601,7 +524,7 @@ export function EmailDetailModal({
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      padding: isMobile ? "10px 12px" : "6px 12px",
+                      padding: "6px 12px",
                       borderRadius: "8px",
                       backgroundColor: "rgba(255, 100, 100, 0.1)",
                       border: "1px solid rgba(255, 100, 100, 0.2)",
@@ -610,7 +533,6 @@ export function EmailDetailModal({
                       cursor: actionLoading ? "not-allowed" : "pointer",
                       transition: "all 0.15s",
                       opacity: actionLoading === "trash" ? 0.5 : 1,
-                      flexShrink: 0,
                     }}
                   >
                     {actionLoading === "trash" ? (
@@ -618,10 +540,10 @@ export function EmailDetailModal({
                     ) : (
                       <Trash2 style={{ width: "14px", height: "14px" }} />
                     )}
-                    {!isMobile && <span>Delete</span>}
+                    <span className="hidden sm:inline">Delete</span>
                   </button>
 
-                  <div style={{ flex: 1, minWidth: isMobile ? "8px" : "auto" }} />
+                  <div style={{ flex: 1 }} />
 
                   <button
                     onClick={() => {
@@ -633,7 +555,7 @@ export function EmailDetailModal({
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      padding: isMobile ? "10px 12px" : "6px 12px",
+                      padding: "6px 12px",
                       borderRadius: "8px",
                       backgroundColor: "rgba(255, 255, 255, 0.05)",
                       border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -641,11 +563,10 @@ export function EmailDetailModal({
                       fontSize: "13px",
                       cursor: actionLoading ? "not-allowed" : "pointer",
                       transition: "all 0.15s",
-                      flexShrink: 0,
                     }}
                   >
                     <Reply style={{ width: "14px", height: "14px" }} />
-                    {!isMobile && <span>Reply</span>}
+                    <span className="hidden sm:inline">Reply</span>
                   </button>
 
                   <button
@@ -658,7 +579,7 @@ export function EmailDetailModal({
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      padding: isMobile ? "10px 12px" : "6px 12px",
+                      padding: "6px 12px",
                       borderRadius: "8px",
                       backgroundColor: "rgba(255, 255, 255, 0.05)",
                       border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -666,49 +587,15 @@ export function EmailDetailModal({
                       fontSize: "13px",
                       cursor: actionLoading ? "not-allowed" : "pointer",
                       transition: "all 0.15s",
-                      flexShrink: 0,
                     }}
                   >
                     <Forward style={{ width: "14px", height: "14px" }} />
-                    {!isMobile && <span>Forward</span>}
+                    <span className="hidden sm:inline">Forward</span>
                   </button>
                 </div>
 
                 {/* Email Body */}
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", padding: isMobile ? "0 16px 16px" : "0 20px 16px" }}>
-                  {/* HTML/Text Toggle */}
-                  {email.bodyHtml && (
-                    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px", flexShrink: 0 }}>
-                      <button
-                        onClick={() => setShowHtml(!showHtml)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          padding: "6px 10px",
-                          borderRadius: "6px",
-                          backgroundColor: "rgba(255, 255, 255, 0.05)",
-                          border: "1px solid rgba(255, 255, 255, 0.1)",
-                          color: "var(--foreground-muted)",
-                          fontSize: "12px",
-                          cursor: "pointer",
-                          transition: "all 0.15s",
-                        }}
-                      >
-                        {showHtml ? (
-                          <>
-                            <FileText style={{ width: "14px", height: "14px" }} />
-                            Show Plain Text
-                          </>
-                        ) : (
-                          <>
-                            <Code style={{ width: "14px", height: "14px" }} />
-                            Show HTML
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
+                <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
                   {renderEmailBody()}
                 </div>
 

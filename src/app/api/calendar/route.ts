@@ -96,9 +96,11 @@ async function getPrimaryAccountTokens(): Promise<GoogleTokens | null> {
 // Extended event type with account info
 interface CalendarEventWithAccount extends CalendarEvent {
   accountEmail?: string;
+  calendarId?: string;
+  eventType?: string;
 }
 
-// GET - List calendar events from ALL connected accounts
+// GET - List calendar events from selected calendars
 export async function GET(request: Request) {
   const accounts = await getAllAccountTokens();
 
@@ -110,42 +112,82 @@ export async function GET(request: Request) {
   const timeMin = searchParams.get("timeMin") || new Date().toISOString();
   const timeMax = searchParams.get("timeMax") || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  try {
-    // Fetch events from all accounts in parallel
-    const eventPromises = accounts.map(async (account) => {
-      try {
-        const events = await getCalendarEvents(account.tokens.access_token, timeMin, timeMax);
-        // Add account email to each event for identification
-        return events.map((event: CalendarEventWithAccount) => ({
-          ...event,
-          accountEmail: account.email,
-        }));
-      } catch (error) {
-        console.error(`Error fetching events for ${account.email}:`, error);
-        return []; // Return empty array for failed accounts
-      }
-    });
+  // Get selected calendar IDs (comma-separated), default to "primary" only
+  const calendarsParam = searchParams.get("calendars");
+  const selectedCalendars = calendarsParam
+    ? calendarsParam.split(",").map(id => id.trim()).filter(Boolean)
+    : ["primary"];
 
-    const allEventArrays = await Promise.all(eventPromises);
-    const allEvents = allEventArrays.flat();
+  // Option to hide birthday events (default: true to hide them)
+  const hideBirthdays = searchParams.get("hideBirthdays") !== "false";
+
+  try {
+    // For each account, fetch events from each selected calendar
+    const allEvents: CalendarEventWithAccount[] = [];
+
+    for (const account of accounts) {
+      for (const calendarId of selectedCalendars) {
+        try {
+          const events = await getCalendarEvents(
+            account.tokens.access_token,
+            timeMin,
+            timeMax,
+            calendarId
+          );
+          // Add account email and calendar ID to each event for identification
+          for (const event of events) {
+            allEvents.push({
+              ...event,
+              accountEmail: account.email,
+              calendarId,
+            } as CalendarEventWithAccount);
+          }
+        } catch (error) {
+          // Silently skip calendars that fail (may not exist for this account)
+          console.error(`Error fetching events for ${account.email}/${calendarId}:`, error);
+        }
+      }
+    }
+
+    // Filter out birthday events if requested
+    let filteredEvents = allEvents;
+    if (hideBirthdays) {
+      filteredEvents = allEvents.filter((event) => {
+        // Filter by eventType (Google's official field)
+        if (event.eventType === "birthday") return false;
+        // Also filter by common birthday patterns in summary
+        const summary = (event.summary || "").toLowerCase();
+        if (summary.includes("birthday") && (summary.includes("'s") || summary.endsWith("birthday"))) {
+          return false;
+        }
+        return true;
+      });
+    }
 
     // Sort by start time
-    allEvents.sort((a: CalendarEventWithAccount, b: CalendarEventWithAccount) => {
+    filteredEvents.sort((a: CalendarEventWithAccount, b: CalendarEventWithAccount) => {
       const dateA = new Date(a.start.dateTime || a.start.date || "");
       const dateB = new Date(b.start.dateTime || b.start.date || "");
       return dateA.getTime() - dateB.getTime();
     });
 
     // Remove duplicates (same event ID can appear if calendars are shared)
-    const uniqueEvents = allEvents.filter(
+    const uniqueEvents = filteredEvents.filter(
       (event: CalendarEventWithAccount, index: number, self: CalendarEventWithAccount[]) =>
         index === self.findIndex((e) => e.id === event.id)
     );
 
-    return NextResponse.json({
-      events: uniqueEvents,
-      accountCount: accounts.length,
-    });
+    return NextResponse.json(
+      {
+        events: uniqueEvents,
+        accountCount: accounts.length,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching events:", error);
     return NextResponse.json(

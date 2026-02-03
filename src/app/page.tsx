@@ -15,6 +15,9 @@ import {
   Rss,
   Eye,
   EyeOff,
+  Wallet,
+  Droplets,
+  Music,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
@@ -28,6 +31,7 @@ import { NewsPreview } from "@/components/NewsPreview";
 import { RaindropPreview } from "@/components/RaindropPreview";
 import { TrendingPreview } from "@/components/TrendingPreview";
 import { InoreaderPreview } from "@/components/InoreaderPreview";
+import { AccountsPreview } from "@/components/AccountsPreview";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { LayoutEditor } from "@/components/LayoutEditor";
 import { DraggableWidget, useDragState } from "@/components/DraggableWidget";
@@ -45,6 +49,9 @@ const WIDGET_META: Record<string, { title: string; icon: React.ComponentType<any
   notes: { title: "Notes", icon: StickyNote, href: "/tools/notes" },
   stocks: { title: "Market", icon: BarChart3, href: "/tools/market" },
   reading: { title: "Reading", icon: BookOpen, href: "/tools/reading" },
+  accounts: { title: "Accounts", icon: Wallet, href: "/tools/accounts" },
+  raindrop: { title: "Raindrop", icon: Droplets, href: "/tools/raindrop" },
+  inoreader: { title: "Feeds", icon: Rss, href: "/tools/inoreader" },
 };
 
 // Mobile Date/Time Banner
@@ -143,6 +150,8 @@ export default function Home() {
         return <TrendingPreview />;
       case "inoreader":
         return <InoreaderPreview />;
+      case "accounts":
+        return <AccountsPreview />;
       default:
         return null;
     }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, ExternalLink, Tag, Clock, Loader2, Link as LinkIcon, ChevronUp } from "lucide-react";
+import { Bookmark, ExternalLink, Tag, Clock, Loader2, Link as LinkIcon } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 
 interface RaindropItem {
@@ -28,15 +28,14 @@ interface Collection {
 export function RaindropPreview() {
   const [bookmarks, setBookmarks] = useState<RaindropItem[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<number>(-1); // -1 = All
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
-  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+  const { isEditMode } = useLayout();
   const router = useRouter();
-
-  const config = getWidgetConfig("previewWidgets", "raindrop");
-  const isCollapsed = config?.size === "collapsed";
 
   // Connect to Raindrop via OAuth
   const handleConnect = async () => {
@@ -82,7 +81,7 @@ export function RaindropPreview() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/raindrop?collection=${selectedCollection}&limit=12`);
+        const response = await fetch(`/api/raindrop?collection=${selectedCollection}&limit=50`);
         const data = await response.json();
 
         if (data.needsAuth) {
@@ -92,7 +91,38 @@ export function RaindropPreview() {
           setError(data.error);
           setBookmarks([]);
         } else {
-          setBookmarks(data.bookmarks || []);
+          const fetchedBookmarks = data.bookmarks || [];
+          setBookmarks(fetchedBookmarks);
+
+          // Extract all unique tags with frequency counts
+          const tagCounts = new Map<string, number>();
+          fetchedBookmarks.forEach((b: RaindropItem) => {
+            b.tags?.forEach((tag: string) => {
+              tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+            });
+          });
+
+          // Priority tags that should appear first (in this order)
+          const priorityTags = ["links", "video", "reading"];
+
+          // Sort tags: priority tags first (in order), then remaining by frequency
+          const sortedTags = Array.from(tagCounts.keys()).sort((a, b) => {
+            const aIsPriority = priorityTags.indexOf(a.toLowerCase());
+            const bIsPriority = priorityTags.indexOf(b.toLowerCase());
+
+            // Both are priority tags - sort by priority order
+            if (aIsPriority !== -1 && bIsPriority !== -1) {
+              return aIsPriority - bIsPriority;
+            }
+            // Only a is priority
+            if (aIsPriority !== -1) return -1;
+            // Only b is priority
+            if (bIsPriority !== -1) return 1;
+            // Neither is priority - sort by frequency (descending)
+            return (tagCounts.get(b) || 0) - (tagCounts.get(a) || 0);
+          });
+
+          setAllTags(sortedTags);
         }
       } catch (err) {
         setError("Failed to load bookmarks");
@@ -103,6 +133,14 @@ export function RaindropPreview() {
     }
     fetchBookmarks();
   }, [selectedCollection, needsAuth]);
+
+  // Filter bookmarks by selected tag
+  const filteredBookmarks = selectedTag
+    ? bookmarks.filter((b) => b.tags?.includes(selectedTag))
+    : bookmarks;
+
+  // Display only first 12 filtered bookmarks
+  const displayBookmarks = filteredBookmarks.slice(0, 12);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -122,30 +160,25 @@ export function RaindropPreview() {
 
   return (
     <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}>
-      {/* Header with Collection Pills */}
+      {/* Header with Tag Pills */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
+          borderBottom: "1px solid var(--glass-border)",
           flexShrink: 0,
-          cursor: isCollapsed ? "default" : "pointer",
+          cursor: "pointer",
         }}
         onClick={() => {
-          if (!isCollapsed) {
-            router.push("/tools/raindrop");
-          }
+          router.push("/tools/raindrop");
         }}
       >
         <Link
           href="/tools/raindrop"
           onClick={(e) => {
             e.stopPropagation();
-            if (isCollapsed) {
-              e.preventDefault();
-            }
           }}
           style={{
             display: "flex",
@@ -155,7 +188,6 @@ export function RaindropPreview() {
             textDecoration: "none",
             padding: "4px 8px 4px 0",
             margin: "-4px 0",
-            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <Bookmark style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
@@ -164,8 +196,8 @@ export function RaindropPreview() {
           </span>
         </Link>
 
-        {/* Collection Pills - hidden when collapsed */}
-        {!isCollapsed && (
+        {/* Tag Pills */}
+        {allTags.length > 0 && (
           <div
             style={{
               display: "flex",
@@ -175,19 +207,18 @@ export function RaindropPreview() {
               justifyContent: "flex-end",
             }}
           >
-            {visibleCollections.map((collection) => (
+            {selectedTag && (
               <button
-                key={collection.id}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedCollection(collection.id);
+                  setSelectedTag(null);
                 }}
                 style={{
                   padding: "3px 8px",
                   borderRadius: "10px",
-                  border: "none",
-                  backgroundColor: selectedCollection === collection.id ? "var(--accent)" : "rgba(255, 255, 255, 0.08)",
-                  color: selectedCollection === collection.id ? "var(--background)" : "var(--foreground-muted)",
+                  border: "1px solid var(--glass-border)",
+                  backgroundColor: "transparent",
+                  color: "var(--foreground-muted)",
                   fontSize: "10px",
                   fontWeight: 500,
                   cursor: "pointer",
@@ -195,59 +226,52 @@ export function RaindropPreview() {
                   whiteSpace: "nowrap",
                 }}
               >
-                {collection.title}
+                Clear
+              </button>
+            )}
+            {allTags.slice(0, 6).map((tag) => (
+              <button
+                key={tag}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedTag(tag === selectedTag ? null : tag);
+                }}
+                style={{
+                  padding: "3px 8px",
+                  borderRadius: "10px",
+                  border: "none",
+                  backgroundColor: selectedTag === tag ? "var(--accent)" : "rgba(255, 255, 255, 0.08)",
+                  color: selectedTag === tag ? "var(--background)" : "var(--foreground-muted)",
+                  fontSize: "10px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                #{tag}
               </button>
             ))}
           </div>
         )}
 
-        {/* Spacer when collapsed */}
-        {isCollapsed && <div style={{ flex: 1 }} />}
+        {/* Spacer when no tags */}
+        {allTags.length === 0 && <div style={{ flex: 1 }} />}
 
-        {/* Collapse button (only shown when not collapsed and not in edit mode) */}
-        {!isCollapsed && !isEditMode && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleWidgetCollapse("previewWidgets", "raindrop");
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "24px",
-              height: "24px",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "transparent",
-              color: "var(--foreground-muted)",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              flexShrink: 0,
-            }}
-            title="Collapse"
-          >
-            <ChevronUp style={{ width: "16px", height: "16px" }} />
-          </button>
-        )}
-
-        {!isCollapsed && (
-          <a
-            href="https://app.raindrop.io"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-          </a>
-        )}
+        <a
+          href="https://app.raindrop.io"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+        </a>
       </div>
 
       {/* Content */}
@@ -293,13 +317,13 @@ export function RaindropPreview() {
           <div style={{ padding: "20px", textAlign: "center", color: "var(--foreground-muted)", fontSize: "13px" }}>
             {error}
           </div>
-        ) : bookmarks.length === 0 ? (
+        ) : displayBookmarks.length === 0 ? (
           <div style={{ padding: "20px", textAlign: "center", color: "var(--foreground-muted)", fontSize: "13px" }}>
-            No bookmarks found
+            {selectedTag ? `No bookmarks with tag #${selectedTag}` : "No bookmarks found"}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {bookmarks.map((bookmark) => (
+            {displayBookmarks.map((bookmark) => (
               <a
                 key={bookmark.id}
                 href={bookmark.url}
@@ -381,22 +405,30 @@ export function RaindropPreview() {
                   {bookmark.tags.length > 0 && (
                     <div style={{ display: "flex", gap: "4px", marginTop: "6px", flexWrap: "wrap" }}>
                       {bookmark.tags.slice(0, 3).map((tag) => (
-                        <span
+                        <button
                           key={tag}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedTag(tag === selectedTag ? null : tag);
+                          }}
                           style={{
                             display: "flex",
                             alignItems: "center",
                             gap: "3px",
                             padding: "2px 6px",
                             borderRadius: "4px",
-                            backgroundColor: "rgba(var(--accent-rgb), 0.15)",
+                            border: "none",
+                            backgroundColor: selectedTag === tag ? "var(--accent)" : "rgba(var(--accent-rgb), 0.15)",
                             fontSize: "10px",
-                            color: "var(--accent)",
+                            color: selectedTag === tag ? "var(--background)" : "var(--accent)",
+                            cursor: "pointer",
+                            transition: "all 0.15s",
                           }}
                         >
                           <Tag style={{ width: "8px", height: "8px" }} />
                           {tag}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   )}

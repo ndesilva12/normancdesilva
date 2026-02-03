@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Wallet, ExternalLink, ChevronUp, Plus, RefreshCw, Loader2, Building2, CreditCard, PiggyBank, TrendingUp } from "lucide-react";
+import { Wallet, ExternalLink, Plus, RefreshCw, Loader2, Building2, CreditCard, PiggyBank, TrendingUp } from "lucide-react";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { PlaidLinkButton } from "./PlaidLink";
@@ -56,7 +56,7 @@ function formatCurrency(amount: number | null, currency: string | null = "USD"):
 }
 
 export function AccountsPreview() {
-  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
+  const { isEditMode } = useLayout();
   const { user } = useAuth();
   const router = useRouter();
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -64,9 +64,6 @@ export function AccountsPreview() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showLinkButton, setShowLinkButton] = useState(false);
-
-  const config = getWidgetConfig("previewWidgets", "accounts");
-  const isCollapsed = config?.size === "collapsed";
 
   const fetchAccounts = async () => {
     if (!user) {
@@ -149,21 +146,18 @@ export function AccountsPreview() {
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
+          borderBottom: "1px solid var(--glass-border)",
           flexShrink: 0,
-          cursor: isCollapsed ? "default" : "pointer",
+          cursor: "pointer",
         }}
         onClick={() => {
-          if (!isCollapsed) {
-            router.push("/tools/accounts");
-          }
+          router.push("/tools/accounts");
         }}
       >
         <Link
           href="/tools/accounts"
           onClick={(e) => {
             e.stopPropagation();
-            if (isCollapsed) e.preventDefault();
           }}
           style={{
             display: "flex",
@@ -171,80 +165,53 @@ export function AccountsPreview() {
             gap: "10px",
             textDecoration: "none",
             flex: 1,
-            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <Wallet style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
           <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--foreground)" }}>Accounts</span>
         </Link>
 
-        {!isCollapsed && !isEditMode && (
-          <>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRefresh();
-              }}
-              disabled={refreshing}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "24px",
-                height: "24px",
-                borderRadius: "6px",
-                border: "none",
-                backgroundColor: "transparent",
-                color: "var(--foreground-muted)",
-                cursor: refreshing ? "not-allowed" : "pointer",
-              }}
-              title="Refresh"
-            >
-              <RefreshCw
-                style={{
-                  width: "14px",
-                  height: "14px",
-                  animation: refreshing ? "spin 1s linear infinite" : "none",
-                }}
-              />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleWidgetCollapse("previewWidgets", "accounts");
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "24px",
-                height: "24px",
-                borderRadius: "6px",
-                border: "none",
-                backgroundColor: "transparent",
-                color: "var(--foreground-muted)",
-                cursor: "pointer",
-              }}
-              title="Collapse"
-            >
-              <ChevronUp style={{ width: "16px", height: "16px" }} />
-            </button>
-          </>
-        )}
-        {!isCollapsed && (
-          <Link
-            href="/tools/accounts"
-            onClick={(e) => e.stopPropagation()}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", flexShrink: 0 }}
+        {!isEditMode && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRefresh();
+            }}
+            disabled={refreshing}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "24px",
+              height: "24px",
+              borderRadius: "6px",
+              border: "none",
+              backgroundColor: "transparent",
+              color: "var(--foreground-muted)",
+              cursor: refreshing ? "not-allowed" : "pointer",
+            }}
+            title="Refresh"
           >
-            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-          </Link>
+            <RefreshCw
+              style={{
+                width: "14px",
+                height: "14px",
+                animation: refreshing ? "spin 1s linear infinite" : "none",
+              }}
+            />
+          </button>
         )}
+        <Link
+          href="/tools/accounts"
+          onClick={(e) => e.stopPropagation()}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", flexShrink: 0 }}
+        >
+          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+        </Link>
       </div>
 
       {/* Content */}
-      {!isCollapsed && (
-        <div style={{ flex: 1, overflow: "auto", padding: "16px" }}>
+      <div style={{ flex: 1, overflow: "auto", padding: "16px" }}>
           {loading ? (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
               <Loader2 style={{ width: "24px", height: "24px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
@@ -362,7 +329,6 @@ export function AccountsPreview() {
             </div>
           )}
         </div>
-      )}
     </div>
   );
 }

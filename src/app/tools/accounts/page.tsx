@@ -452,12 +452,25 @@ export default function AccountsPage() {
   if (!user) {
     return (
       <div style={{ minHeight: "100vh", padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
-          <Link href="/" style={{ color: "var(--foreground-muted)", display: "flex" }}>
-            <ArrowLeft style={{ width: "20px", height: "20px" }} />
+        <div style={{ marginBottom: "24px" }}>
+          <Link
+            href="/"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "8px 12px",
+              borderRadius: "6px",
+              color: "var(--foreground-muted)",
+              textDecoration: "none",
+              fontSize: "14px",
+            }}
+          >
+            <ArrowLeft style={{ width: "16px", height: "16px" }} />
+            <span>Back to Dashboard</span>
           </Link>
-          <h1 style={{ fontSize: "24px", fontWeight: 700, color: "var(--foreground)" }}>Accounts</h1>
         </div>
+        <h1 style={{ fontSize: "24px", fontWeight: 700, color: "var(--foreground)", marginBottom: "24px" }}>Accounts</h1>
         <div className="glass" style={{ padding: "60px", borderRadius: "12px", textAlign: "center" }}>
           <p style={{ color: "var(--foreground-muted)" }}>Please sign in to view your accounts</p>
         </div>
@@ -468,12 +481,25 @@ export default function AccountsPage() {
   if (!pinVerified) {
     return (
       <div style={{ minHeight: "100vh", padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
-          <Link href="/" style={{ color: "var(--foreground-muted)", display: "flex" }}>
-            <ArrowLeft style={{ width: "20px", height: "20px" }} />
+        <div style={{ marginBottom: "24px" }}>
+          <Link
+            href="/"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "8px 12px",
+              borderRadius: "6px",
+              color: "var(--foreground-muted)",
+              textDecoration: "none",
+              fontSize: "14px",
+            }}
+          >
+            <ArrowLeft style={{ width: "16px", height: "16px" }} />
+            <span>Back to Dashboard</span>
           </Link>
-          <h1 style={{ fontSize: "24px", fontWeight: 700, color: "var(--foreground)" }}>Accounts</h1>
         </div>
+        <h1 style={{ fontSize: "24px", fontWeight: 700, color: "var(--foreground)", marginBottom: "24px" }}>Accounts</h1>
         <PinEntry onVerify={setPinVerified} hasExistingPin={hasExistingPin} />
       </div>
     );
@@ -481,12 +507,29 @@ export default function AccountsPage() {
 
   return (
     <div style={{ minHeight: "100vh", padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
+      {/* Back Link */}
+      <div style={{ marginBottom: "24px" }}>
+        <Link
+          href="/"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "8px 12px",
+            borderRadius: "6px",
+            color: "var(--foreground-muted)",
+            textDecoration: "none",
+            fontSize: "14px",
+          }}
+        >
+          <ArrowLeft style={{ width: "16px", height: "16px" }} />
+          <span>Back to Dashboard</span>
+        </Link>
+      </div>
+
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <Link href="/" style={{ color: "var(--foreground-muted)", display: "flex" }}>
-            <ArrowLeft style={{ width: "20px", height: "20px" }} />
-          </Link>
           <h1 style={{ fontSize: "24px", fontWeight: 700, color: "var(--foreground)" }}>Accounts</h1>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

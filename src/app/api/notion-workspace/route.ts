@@ -5,12 +5,16 @@ import {
   getWorkspacePages,
   getDatabasePages,
   searchWorkspace,
+  getPageChildren,
+  getWorkspaceTree,
 } from "@/lib/notion-workspace";
+import { getNotionPage, getNotionPageContent } from "@/lib/notion";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action") || "workspace";
   const databaseId = searchParams.get("databaseId");
+  const pageId = searchParams.get("pageId");
   const query = searchParams.get("query");
   const limit = parseInt(searchParams.get("limit") || "50");
 
@@ -19,6 +23,17 @@ export async function GET(request: NextRequest) {
       case "workspace":
         const workspaceItems = await getWorkspaceItems();
         return NextResponse.json({ items: workspaceItems });
+
+      case "tree":
+        const treeItems = await getWorkspaceTree();
+        return NextResponse.json({ items: treeItems });
+
+      case "children":
+        if (!pageId) {
+          return NextResponse.json({ error: "Page ID is required" }, { status: 400 });
+        }
+        const childItems = await getPageChildren(pageId);
+        return NextResponse.json({ items: childItems });
 
       case "databases":
         const databases = await getWorkspaceDatabases();
@@ -34,6 +49,16 @@ export async function GET(request: NextRequest) {
         }
         const databasePages = await getDatabasePages(databaseId, limit);
         return NextResponse.json({ items: databasePages });
+
+      case "page-content":
+        if (!pageId) {
+          return NextResponse.json({ error: "Page ID is required" }, { status: 400 });
+        }
+        const [pageInfo, pageBlocks] = await Promise.all([
+          getNotionPage(pageId),
+          getNotionPageContent(pageId),
+        ]);
+        return NextResponse.json({ page: pageInfo, blocks: pageBlocks });
 
       case "search":
         if (!query) {

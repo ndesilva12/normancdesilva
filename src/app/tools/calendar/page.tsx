@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Calendar, ExternalLink, Loader2, RefreshCw, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { ArrowLeft, Calendar, ExternalLink, Loader2, RefreshCw, ChevronLeft, ChevronRight, Plus, X, Settings, Check } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
@@ -15,7 +15,16 @@ interface CalendarEvent {
   htmlLink?: string;
 }
 
+interface CalendarListEntry {
+  id: string;
+  summary: string;
+  backgroundColor?: string;
+  primary?: boolean;
+}
+
 type ViewMode = "day" | "week" | "month";
+
+const CALENDAR_SETTINGS_KEY = "calendar_selected_calendars";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_NAMES_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -36,6 +45,9 @@ export default function CalendarPage() {
     time: "",
     endTime: "",
   });
+  const [availableCalendars, setAvailableCalendars] = useState<CalendarListEntry[]>([]);
+  const [selectedCalendars, setSelectedCalendars] = useState<string[]>(["primary"]);
+  const [showCalendarSettings, setShowCalendarSettings] = useState(false);
 
   // Check for mobile viewport
   useEffect(() => {
@@ -49,12 +61,14 @@ export default function CalendarPage() {
     checkAuthAndLoadEvents();
   }, []);
 
-  const loadEvents = useCallback(async () => {
+  const loadEventsWithCalendars = useCallback(async (calendars: string[]) => {
     try {
       const { start, end } = getDateRange();
+      const calendarsParam = calendars.join(",");
 
       const response = await fetch(
-        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`
+        `/api/calendar?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}&calendars=${encodeURIComponent(calendarsParam)}`,
+        { cache: "no-store" }
       );
 
       if (response.ok) {
@@ -65,6 +79,10 @@ export default function CalendarPage() {
       console.error("Failed to load events:", error);
     }
   }, [currentDate, viewMode]);
+
+  const loadEvents = useCallback(async () => {
+    await loadEventsWithCalendars(selectedCalendars);
+  }, [selectedCalendars, loadEventsWithCalendars]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -91,6 +109,78 @@ export default function CalendarPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showAddModal, isCreating, newEvent]);
 
+  // Close calendar settings when clicking outside
+  useEffect(() => {
+    if (!showCalendarSettings) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-calendar-settings]")) {
+        setShowCalendarSettings(false);
+      }
+    };
+
+    // Use setTimeout to avoid the click that opened the menu from closing it immediately
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("click", handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [showCalendarSettings]);
+
+  const loadCalendarList = async () => {
+    try {
+      const response = await fetch("/api/calendar/list", { cache: "no-store" });
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableCalendars(data.calendars || []);
+      }
+    } catch (error) {
+      console.error("Failed to load calendar list:", error);
+    }
+  };
+
+  const loadSavedCalendarSettings = () => {
+    try {
+      const saved = localStorage.getItem(CALENDAR_SETTINGS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSelectedCalendars(parsed);
+          return parsed;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load calendar settings:", error);
+    }
+    return ["primary"];
+  };
+
+  const saveCalendarSettings = (calendars: string[]) => {
+    try {
+      localStorage.setItem(CALENDAR_SETTINGS_KEY, JSON.stringify(calendars));
+    } catch (error) {
+      console.error("Failed to save calendar settings:", error);
+    }
+  };
+
+  const toggleCalendar = (calendarId: string) => {
+    setSelectedCalendars((prev) => {
+      const newSelection = prev.includes(calendarId)
+        ? prev.filter((id) => id !== calendarId)
+        : [...prev, calendarId];
+      // Ensure at least one calendar is selected
+      if (newSelection.length === 0) {
+        return prev;
+      }
+      saveCalendarSettings(newSelection);
+      return newSelection;
+    });
+  };
+
   const checkAuthAndLoadEvents = async () => {
     try {
       const authResponse = await fetch("/api/auth/google/status");
@@ -98,7 +188,12 @@ export default function CalendarPage() {
       setIsAuthenticated(authData.authenticated);
 
       if (authData.authenticated) {
-        await loadEvents();
+        // Load saved settings first
+        const savedCalendars = loadSavedCalendarSettings();
+        // Load calendar list
+        await loadCalendarList();
+        // Load events with saved calendars
+        await loadEventsWithCalendars(savedCalendars);
       }
     } catch (error) {
       console.error("Auth check failed:", error);
@@ -470,9 +565,11 @@ export default function CalendarPage() {
                   backgroundColor: isToday(day) ? "rgba(var(--accent-rgb), 0.05)" : "transparent",
                   cursor: "pointer",
                   minHeight: "200px",
+                  overflow: "hidden",
+                  minWidth: 0,
                 }}
               >
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: 0 }}>
                   {dayEvents.slice(0, isMobile ? 2 : 4).map((event) => (
                     <div
                       key={event.id}
@@ -485,6 +582,7 @@ export default function CalendarPage() {
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
+                        maxWidth: "100%",
                       }}
                     >
                       {!isMobile && (
@@ -555,13 +653,15 @@ export default function CalendarPage() {
                 key={idx}
                 onClick={() => day && goToDate(day)}
                 style={{
-                  minHeight: isMobile ? "50px" : "100px",
+                  minHeight: isMobile ? "60px" : "130px",
                   padding: isMobile ? "4px" : "8px",
                   borderRight: (idx + 1) % 7 !== 0 ? "1px solid var(--glass-border)" : "none",
                   borderBottom: idx < monthDays.length - 7 ? "1px solid var(--glass-border)" : "none",
                   backgroundColor: todayClass ? "rgba(var(--accent-rgb), 0.1)" : "transparent",
                   cursor: day ? "pointer" : "default",
                   transition: "background-color 0.15s",
+                  overflow: "hidden",
+                  minWidth: 0,
                 }}
                 onMouseEnter={(e) => {
                   if (day && !todayClass) {
@@ -607,7 +707,7 @@ export default function CalendarPage() {
                         </div>
                       )
                     ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
                         {dayEvents.slice(0, 3).map((event) => (
                           <div
                             key={event.id}
@@ -620,6 +720,7 @@ export default function CalendarPage() {
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
+                              maxWidth: "100%",
                             }}
                           >
                             {event.summary}
@@ -650,7 +751,7 @@ export default function CalendarPage() {
         <div
           style={{
             width: "100%",
-            maxWidth: "1100px",
+            maxWidth: "1400px",
             margin: "0 auto",
             padding: "32px 24px 100px 24px",
           }}
@@ -912,6 +1013,130 @@ export default function CalendarPage() {
                   >
                     <RefreshCw style={{ width: "16px", height: "16px" }} />
                   </button>
+                  <div style={{ position: "relative" }} data-calendar-settings>
+                    <button
+                      onClick={() => setShowCalendarSettings(!showCalendarSettings)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "6px",
+                        border: "1px solid var(--glass-border)",
+                        backgroundColor: showCalendarSettings ? "rgba(255, 255, 255, 0.1)" : "transparent",
+                        color: "var(--foreground-muted)",
+                        cursor: "pointer",
+                      }}
+                      title="Calendar Settings"
+                    >
+                      <Settings style={{ width: "16px", height: "16px" }} />
+                    </button>
+                    {showCalendarSettings && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          right: 0,
+                          marginTop: "8px",
+                          minWidth: "280px",
+                          borderRadius: "12px",
+                          border: "1px solid var(--glass-border)",
+                          backgroundColor: "var(--background)",
+                          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+                          zIndex: 100,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            padding: "12px 16px",
+                            borderBottom: "1px solid var(--glass-border)",
+                            backgroundColor: "rgba(255, 255, 255, 0.02)",
+                          }}
+                        >
+                          <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--foreground)" }}>
+                            Show Calendars
+                          </div>
+                          <div style={{ fontSize: "11px", color: "var(--foreground-muted)", marginTop: "2px" }}>
+                            Select which calendars to display
+                          </div>
+                        </div>
+                        <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+                          {availableCalendars.length === 0 ? (
+                            <div style={{ padding: "16px", textAlign: "center", color: "var(--foreground-muted)", fontSize: "13px" }}>
+                              Loading calendars...
+                            </div>
+                          ) : (
+                            availableCalendars.map((cal) => (
+                              <button
+                                key={cal.id}
+                                onClick={() => toggleCalendar(cal.id)}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "12px",
+                                  width: "100%",
+                                  padding: "10px 16px",
+                                  border: "none",
+                                  backgroundColor: "transparent",
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  transition: "background-color 0.15s",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = "transparent";
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: "20px",
+                                    height: "20px",
+                                    borderRadius: "4px",
+                                    border: selectedCalendars.includes(cal.id)
+                                      ? "none"
+                                      : "2px solid var(--glass-border)",
+                                    backgroundColor: selectedCalendars.includes(cal.id)
+                                      ? (cal.backgroundColor || "var(--accent)")
+                                      : "transparent",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {selectedCalendars.includes(cal.id) && (
+                                    <Check style={{ width: "14px", height: "14px", color: "white" }} />
+                                  )}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div
+                                    style={{
+                                      fontSize: "13px",
+                                      color: "var(--foreground)",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {cal.summary}
+                                  </div>
+                                  {cal.primary && (
+                                    <div style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>
+                                      Primary
+                                    </div>
+                                  )}
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

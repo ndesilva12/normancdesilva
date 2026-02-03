@@ -237,6 +237,9 @@ export function getDriveFileIcon(mimeType: string): string {
 
 // Helper to format email sender
 export function formatEmailSender(from: string): string {
+  // Handle undefined/null/empty from field
+  if (!from) return "Unknown Sender";
+  
   // Extract name from "Name <email@example.com>" format
   const match = from.match(/^(.+?)\s*<.+>$/);
   if (match) {
