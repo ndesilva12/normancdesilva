@@ -1,5 +1,3 @@
-// Temporary update for debugging
-
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
@@ -21,11 +19,25 @@ export async function POST(req: Request) {
     // Log the attempt to communicate for debugging
     console.log("Attempting to send message to Jimmy:", message);
     
-    // Here you would typically call the Clawdbot API or command
-    // For now, return a placeholder response to confirm the API route is working
+    // Call the Clawdbot API on the EC2 instance
+    const response = await fetch('http://3.128.31.231/clawdbot-api', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Add API key or token here if set up
+      },
+      body: JSON.stringify({ message }),
+      timeout: 10000, // 10 seconds timeout
+    });
+
+    if (!response.ok) {
+      throw new Error(`API call failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
     return NextResponse.json({
       role: "assistant",
-      content: "This is a placeholder response from Jimmy. The actual connection to Clawdbot needs to be configured.",
+      content: data.response || "Response from Jimmy received.",
       timestamp: new Date().toISOString()
     });
   } catch (error) {
