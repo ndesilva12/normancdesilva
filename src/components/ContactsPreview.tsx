@@ -16,15 +16,16 @@ interface Contact {
 }
 
 interface ContactsPreviewProps {
-  isGoogleConnected: boolean;
-  onConnectGoogle: () => void;
+  isGoogleConnected?: boolean;
+  onConnectGoogle?: () => void;
 }
 
-export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: ContactsPreviewProps) {
+export function ContactsPreview({ isGoogleConnected: _unused1, onConnectGoogle: _unused2 }: ContactsPreviewProps) {
   const router = useRouter();
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
@@ -33,10 +34,8 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
   const isCollapsed = config?.size === "collapsed";
 
   useEffect(() => {
-    if (isGoogleConnected) {
-      fetchContacts();
-    }
-  }, [isGoogleConnected]);
+    checkConnectionAndFetch();
+  }, []);
 
   // Debounce search input
   useEffect(() => {
@@ -48,10 +47,28 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
 
   // Re-fetch when search changes
   useEffect(() => {
-    if (isGoogleConnected) {
+    if (isConnected) {
       fetchContacts(debouncedSearch);
     }
-  }, [debouncedSearch, isGoogleConnected]);
+  }, [debouncedSearch, isConnected]);
+
+  const checkConnectionAndFetch = async () => {
+    try {
+      const accountsResponse = await fetch("/api/auth/google/accounts");
+      const accountsData = await accountsResponse.json();
+
+      if (accountsData.connected && accountsData.accounts.length > 0) {
+        setIsConnected(true);
+        await fetchContacts();
+      } else {
+        setIsConnected(false);
+        setLoading(false);
+      }
+    } catch {
+      setIsConnected(false);
+      setLoading(false);
+    }
+  };
 
   const fetchContacts = async (query?: string) => {
     setLoading(true);
@@ -74,9 +91,21 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
     }
   };
 
+  const handleConnect = async () => {
+    try {
+      const returnUrl = encodeURIComponent("/");
+      const response = await fetch(`/api/auth/google?returnUrl=${returnUrl}`);
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("Failed to connect:", err);
+    }
+  };
+
   const handleReconnect = async () => {
-    await fetch("/api/auth/google/status", { method: "POST" });
-    onConnectGoogle();
+    handleConnect();
   };
 
   const handleEmailClick = (e: React.MouseEvent, email: string) => {
@@ -194,13 +223,13 @@ export function ContactsPreview({ isGoogleConnected, onConnectGoogle }: Contacts
 
       {/* Content */}
       <div style={{ padding: "12px 16px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
-        {!isGoogleConnected ? (
+        {!isConnected ? (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <p style={{ color: "var(--foreground-muted)", fontSize: "13px", marginBottom: "12px" }}>
               Connect Google to see your contacts
             </p>
             <button
-              onClick={onConnectGoogle}
+              onClick={handleConnect}
               style={{
                 padding: "8px 16px",
                 borderRadius: "6px",
