@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { Mail, Loader2, ExternalLink, RefreshCw, Archive, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Mail, Loader2, ExternalLink, RefreshCw, Archive, Trash2, ChevronUp } from "lucide-react";
 import { formatEmailSender } from "@/lib/google-services";
 import { useLayout } from "@/contexts/LayoutContext";
-import { EmailDetailModal } from "./EmailDetailModal";
 
 interface EmailWithAccount {
   id: string;
@@ -38,50 +36,17 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ emailId: string; accountEmail?: string; subject: string } | null>(null);
-  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-  const { isEditMode } = useLayout();
+  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
   const router = useRouter();
-  const pathname = usePathname();
-  const prevPathname = useRef(pathname);
 
-  // Email detail modal state - open emails directly on dashboard
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
-  const [selectedEmailAccount, setSelectedEmailAccount] = useState<string | undefined>(undefined);
-
-  // Set up portal container for delete confirmation modal
-  useEffect(() => {
-    setPortalContainer(document.body);
-  }, []);
+  const config = getWidgetConfig("previewWidgets", "emails");
+  const isCollapsed = config?.size === "collapsed";
 
   useEffect(() => {
     if (isGoogleConnected) {
       fetchEmails();
     }
   }, [isGoogleConnected]);
-
-  // Refresh emails when window regains focus (user returns from viewing email on detail page)
-  useEffect(() => {
-    const handleFocus = () => {
-      if (isGoogleConnected && !loading) {
-        fetchEmails();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [isGoogleConnected, loading]);
-
-  // Refresh emails when navigating back to dashboard from email detail page
-  useEffect(() => {
-    const wasOnEmailPage = prevPathname.current?.startsWith('/tools/emails');
-    const isNowOnDashboard = pathname === '/' || pathname === '/dashboard';
-
-    if (wasOnEmailPage && isNowOnDashboard && isGoogleConnected) {
-      fetchEmails();
-    }
-
-    prevPathname.current = pathname;
-  }, [pathname, isGoogleConnected]);
 
   // Keyboard handler for delete confirmation modal
   useEffect(() => {
@@ -186,116 +151,87 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  // Delete confirmation modal rendered via portal at document body level
-  const deleteConfirmModal = deleteConfirm && portalContainer ? createPortal(
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.6)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 9999,
-        backdropFilter: "blur(4px)",
-      }}
-      onClick={() => setDeleteConfirm(null)}
-    >
-      <div
-        className="glass"
-        style={{
-          padding: "24px",
-          borderRadius: "12px",
-          maxWidth: "400px",
-          width: "90%",
-          textAlign: "center",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Trash2 style={{ width: "32px", height: "32px", color: "#ef4444", marginBottom: "16px" }} />
-        <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
-          Delete Email?
-        </h3>
-        <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginBottom: "20px", lineHeight: 1.5 }}>
-          Are you sure you want to delete &quot;{deleteConfirm.subject.length > 50 ? deleteConfirm.subject.substring(0, 50) + "..." : deleteConfirm.subject}&quot;?
-        </p>
-        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-          <button
-            onClick={() => setDeleteConfirm(null)}
-            style={{
-              padding: "10px 20px",
-              borderRadius: "8px",
-              border: "1px solid var(--glass-border)",
-              backgroundColor: "transparent",
-              color: "var(--foreground)",
-              fontSize: "14px",
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "background 0.15s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={confirmDelete}
-            style={{
-              padding: "10px 20px",
-              borderRadius: "8px",
-              border: "none",
-              backgroundColor: "#ef4444",
-              color: "white",
-              fontSize: "14px",
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "background 0.15s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#dc2626")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#ef4444")}
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>,
-    portalContainer
-  ) : null;
-
-  // Handle email modal updates (archive, delete, etc.)
-  const handleEmailUpdated = () => {
-    fetchEmails();
-  };
-
-  // Handle reply - navigate to email tool page with compose
-  const handleReply = (email: { id: string; accountEmail?: string }) => {
-    setSelectedEmailId(null);
-    router.push(`/tools/emails?emailId=${email.id}${email.accountEmail ? `&account=${encodeURIComponent(email.accountEmail)}` : ''}&action=reply`);
-  };
-
-  // Handle forward - navigate to email tool page with compose
-  const handleForward = (email: { id: string; accountEmail?: string }) => {
-    setSelectedEmailId(null);
-    router.push(`/tools/emails?emailId=${email.id}${email.accountEmail ? `&account=${encodeURIComponent(email.accountEmail)}` : ''}&action=forward`);
-  };
-
   return (
     <>
-    {/* Delete Confirmation Modal - rendered via portal at document root */}
-    {deleteConfirmModal}
-
-    {/* Email Detail Modal - opens on dashboard without navigation */}
-    <EmailDetailModal
-      emailId={selectedEmailId}
-      account={selectedEmailAccount}
-      onClose={() => setSelectedEmailId(null)}
-      onReply={handleReply}
-      onForward={handleForward}
-      onEmailUpdated={handleEmailUpdated}
-    />
+    {/* Delete Confirmation Modal */}
+    {deleteConfirm && (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          backdropFilter: "blur(4px)",
+          padding: "20px",
+        }}
+        onClick={() => setDeleteConfirm(null)}
+      >
+        <div
+          className="glass"
+          style={{
+            padding: "24px",
+            borderRadius: "12px",
+            maxWidth: "400px",
+            width: "100%",
+            textAlign: "center",
+            margin: "auto",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Trash2 style={{ width: "32px", height: "32px", color: "#ef4444", marginBottom: "16px" }} />
+          <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+            Delete Email?
+          </h3>
+          <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginBottom: "20px", lineHeight: 1.5 }}>
+            Are you sure you want to delete &quot;{deleteConfirm.subject.length > 50 ? deleteConfirm.subject.substring(0, 50) + "..." : deleteConfirm.subject}&quot;?
+          </p>
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+            <button
+              onClick={() => setDeleteConfirm(null)}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "8px",
+                border: "1px solid var(--glass-border)",
+                backgroundColor: "transparent",
+                color: "var(--foreground)",
+                fontSize: "14px",
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "8px",
+                border: "none",
+                backgroundColor: "#ef4444",
+                color: "white",
+                fontSize: "14px",
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#dc2626")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#ef4444")}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header - clickable to navigate to full page */}
@@ -305,18 +241,23 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
           alignItems: "center",
           gap: "10px",
           padding: "18px 16px",
-          borderBottom: "1px solid var(--glass-border)",
+          borderBottom: isCollapsed ? "none" : "1px solid var(--glass-border)",
           transition: "background 0.15s",
-          cursor: "pointer",
+          cursor: isCollapsed ? "default" : "pointer",
         }}
         onClick={() => {
-          router.push("/tools/emails");
+          if (!isCollapsed) {
+            router.push("/tools/emails");
+          }
         }}
       >
         <Link
           href="/tools/emails"
           onClick={(e) => {
             e.stopPropagation();
+            if (isCollapsed) {
+              e.preventDefault();
+            }
           }}
           style={{
             display: "flex",
@@ -324,6 +265,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
             gap: "10px",
             textDecoration: "none",
             flex: 1,
+            pointerEvents: isCollapsed ? "none" : "auto",
           }}
         >
           <Mail style={{ width: "18px", height: "18px", color: "var(--accent)" }} />
@@ -333,7 +275,8 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
         </Link>
 
         {/* Refresh button */}
-        <button
+        {!isCollapsed && (
+          <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -358,20 +301,51 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
           >
             <RefreshCw style={{ width: "14px", height: "14px", animation: loading ? "spin 1s linear infinite" : "none" }} />
           </button>
+        )}
 
-        <Link
-          href="/tools/emails"
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            textDecoration: "none",
-            flexShrink: 0,
-          }}
-        >
-          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
-        </Link>
+        {/* Collapse button (only shown when not collapsed and not in edit mode) */}
+        {!isCollapsed && !isEditMode && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWidgetCollapse("previewWidgets", "emails");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "24px",
+              height: "24px",
+              borderRadius: "6px",
+              border: "none",
+              backgroundColor: "transparent",
+              color: "var(--foreground-muted)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              flexShrink: 0,
+            }}
+            title="Collapse"
+          >
+            <ChevronUp style={{ width: "16px", height: "16px" }} />
+          </button>
+        )}
+
+        {!isCollapsed && (
+          <Link
+            href="/tools/emails"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textDecoration: "none",
+              flexShrink: 0,
+            }}
+          >
+            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
+          </Link>
+        )}
       </div>
 
       {/* Content */}
@@ -444,19 +418,9 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                 onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                {/* Email Content - Open modal on dashboard (don't navigate away) */}
-                <button
-                  onClick={() => {
-                    // Mark as read immediately in local state
-                    if (email.isUnread) {
-                      setEmails((prev) => prev.map((e) => (e.id === email.id ? { ...e, isUnread: false } : e)));
-                    }
-                    // Open the email detail modal
-                    // Use email's account or fall back to first account in list
-                    const accountToUse = email.accountEmail || (accounts.length > 0 ? accounts[0].email : undefined);
-                    setSelectedEmailId(email.id);
-                    setSelectedEmailAccount(accountToUse);
-                  }}
+                {/* Email Content - Navigate to internal email tool page */}
+                <Link
+                  href={`/tools/emails?emailId=${email.id}${email.accountEmail ? `&account=${encodeURIComponent(email.accountEmail)}` : ''}`}
                   style={{
                     flex: 1,
                     display: "flex",
@@ -465,10 +429,6 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                     padding: "8px",
                     textDecoration: "none",
                     minWidth: 0,
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    textAlign: "left",
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -509,7 +469,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                       {email.accountName || email.accountEmail}
                     </div>
                   )}
-                </button>
+                </Link>
 
                 {/* Action Buttons */}
                 <div
@@ -525,7 +485,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                   onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
                 >
                   <button
-                    onClick={(e) => handleEmailAction(e, email.id, "archive", email.accountEmail || (accounts.length > 0 ? accounts[0].email : undefined))}
+                    onClick={(e) => handleEmailAction(e, email.id, "archive", email.accountEmail)}
                     title="Archive"
                     style={{
                       padding: "6px",
@@ -544,7 +504,7 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
                     <Archive style={{ width: "14px", height: "14px", color: "var(--foreground-muted)" }} />
                   </button>
                   <button
-                    onClick={(e) => handleEmailAction(e, email.id, "trash", email.accountEmail || (accounts.length > 0 ? accounts[0].email : undefined), email.subject)}
+                    onClick={(e) => handleEmailAction(e, email.id, "trash", email.accountEmail, email.subject)}
                     title="Delete"
                     style={{
                       padding: "6px",

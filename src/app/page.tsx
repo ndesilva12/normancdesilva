@@ -18,6 +18,7 @@ import {
   Wallet,
   Droplets,
   Music,
+  Sparkles,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
@@ -205,6 +206,41 @@ export default function Home() {
             marginBottom: "16px",
           }}
         >
+          {/* Curate Button - Special Featured Tool */}
+          <Link
+            href="/tools/curate"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: isMobile ? "4px" : "6px",
+              padding: isMobile ? "12px" : "16px 20px",
+              minWidth: isMobile ? "70px" : "90px",
+              minHeight: isMobile ? "70px" : "80px",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              border: "none",
+              borderRadius: "12px",
+              cursor: "pointer",
+              textDecoration: "none",
+              transition: "all 0.2s",
+              boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px) scale(1.05)";
+              e.currentTarget.style.boxShadow = "0 8px 24px rgba(102, 126, 234, 0.5)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0) scale(1)";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.3)";
+            }}
+          >
+            <Sparkles style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "#ffffff" }} />
+            <span style={{ fontSize: isMobile ? "11px" : "12px", fontWeight: 600, color: "#ffffff" }}>
+              Curate
+            </span>
+          </Link>
+
           {/* Show/Hide Toggle */}
           <button
             onClick={() => setWidgetsVisible(!widgetsVisible)}
