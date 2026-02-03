@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, TrendingUp, ExternalLink, RefreshCw, Hash, Globe } from "lucide-react";
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
 
 interface TrendingTopic {
   topic: string;
@@ -132,18 +134,24 @@ export default function TrendingPage() {
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #1a0f0a 0%, #2a1e1a 50%, #1e1a26 100%)",
-      color: "#ffffff",
-      padding: isMobile ? "16px" : "32px",
-    }}>
-      {/* Header */}
+    <>
+      <TopNav />
+      <BottomNav />
+      
       <div style={{
-        maxWidth: "1200px",
-        margin: "0 auto",
-        marginBottom: "48px",
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #1a0f0a 0%, #2a1e1a 50%, #1e1a26 100%)",
+        color: "#ffffff",
+        paddingTop: "64px",
+        paddingBottom: isMobile ? "88px" : "32px",
+        padding: isMobile ? "80px 16px 88px 16px" : "80px 32px 32px 32px",
       }}>
+        {/* Header */}
+        <div style={{
+          maxWidth: "1200px",
+          margin: "0 auto",
+          marginBottom: "48px",
+        }}>
         <Link 
           href="/"
           style={{
@@ -491,6 +499,7 @@ export default function TrendingPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

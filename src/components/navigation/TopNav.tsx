@@ -49,7 +49,7 @@ export function TopNav() {
             letterSpacing: "-0.02em",
           }}
         >
-          Norman
+          Norman C. de Silva
         </Link>
 
         {/* Main Nav */}

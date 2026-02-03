@@ -1785,7 +1785,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
               gap: "8px",
               flexShrink: 0,
               borderRadius: "10px",
-              background: isSearching ? "rgba(255, 255, 255, 0.1)" : "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+              background: isSearching ? "rgba(255, 255, 255, 0.1)" : "linear-gradient(135deg, #00d4ff 0%, #0ea5e9 100%)",
               padding: "12px 32px",
               fontSize: "15px",
               fontWeight: 600,
@@ -1800,7 +1800,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
             onMouseEnter={(e) => {
               if (!isSearching) {
                 e.currentTarget.style.transform = "translateY(-1px)";
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(245, 158, 11, 0.4)";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 212, 255, 0.4)";
               }
             }}
             onMouseLeave={(e) => {
