@@ -1,6 +1,27 @@
 # Dashboard Redesign Progress
 
-## ✅ Completed (Latest)
+## ✅ Completed
+
+### Commit `a7de6e1` - Deep Search & Dark Search Redesign + Background Gradient
+**Changes:**
+1. **Deep Search** (`/tools/deep-search`) - Completely redesigned:
+   - Blue gradient theme (`#3b82f6` → `#1d4ed8`)
+   - Clean card-based results layout
+   - Categorized sections (Hidden Mechanics, Counterintuitive Insights, Expert Debates, Social Highlights, Podcasts)
+   - Matching Curate/L3D aesthetic
+
+2. **Dark Search** (`/tools/dark-search`) - Completely redesigned:
+   - Red gradient theme (`#ef4444` → `#b91c1c`)
+   - Output mode selector (Long/Short/Links)
+   - Clean search interface
+   - Matching Curate/L3D aesthetic
+
+3. **Body Background Gradient:**
+   - Updated from 2-stop to 3-stop gradient
+   - `linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)`
+   - Matches Curate page exactly
+
+### Commit `c34e807` - Restored Intelligence Tools Section
 
 ### Phase 1: Core Components & Home Page
 **Commit:** `cfb69c8` - "Apply Curate/L3D aesthetic: update Card/Section components and home page background"
