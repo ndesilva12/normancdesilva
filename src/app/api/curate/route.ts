@@ -8,72 +8,11 @@ export async function POST(request: NextRequest) {
   try {
     const { topic, source } = await request.json();
     
-    // For now, return mock data until the curate script is ready
-    // TODO: Uncomment the actual implementation below once dependencies are resolved
-    
-    const mockItems = [
-      {
-        id: "short-unique-1",
-        title: "Understanding Austrian Economics: A First Principles Approach",
-        url: "https://twitter.com/example/status/123",
-        summary: "Deep dive into how Austrian economics explains market cycles through time preference and capital structure.",
-        source: "X (@libertarian_economist)",
-        duration: "3 min",
-        category: "short-unique" as const,
-      },
-      {
-        id: "short-unique-2",
-        title: "Hidden NBA Analytics: Why Box Score Stats Mislead",
-        url: "https://reddit.com/r/nba/comments/example",
-        summary: "Statistical breakdown showing how traditional stats miss defensive positioning and off-ball movement impact.",
-        source: "Reddit (r/nba)",
-        duration: "4 min",
-        category: "short-unique" as const,
-      },
-      {
-        id: "short-trending-1",
-        title: "Fed Rate Decision: Contrarian Analysis",
-        url: "https://twitter.com/example/status/456",
-        summary: "Breaking down why today's Fed decision reveals hidden liquidity crisis that mainstream media is missing.",
-        source: "X (@economic_contrarian)",
-        duration: "5 min",
-        category: "short-trending" as const,
-      },
-      {
-        id: "long-unique-1",
-        title: "The Real Story Behind Woodrow Wilson and the Federal Reserve",
-        url: "https://youtube.com/watch?v=example",
-        summary: "Documentary revealing primary source documents showing banker influence on Federal Reserve Act creation.",
-        source: "YouTube (History Uncensored)",
-        duration: "45 min",
-        category: "long-unique" as const,
-      },
-      {
-        id: "long-trending-1",
-        title: "Joe Rogan: Intelligence Agencies and Tech Company Origins",
-        url: "https://youtube.com/watch?v=example2",
-        summary: "Viral episode with investigative journalist connecting CIA funding to major tech company foundings.",
-        source: "YouTube (Joe Rogan Experience)",
-        duration: "2h 15min",
-        category: "long-trending" as const,
-      },
-    ];
-    
-    return NextResponse.json({
-      success: true,
-      items: mockItems,
-      topic: topic || "general",
-      source: source || "all",
-      note: "Using mock data - curate script integration pending",
-    });
-    
-    /* ACTUAL IMPLEMENTATION - Uncomment when ready:
-    
     // Build the curate command
-    let command = "python3 /home/ubuntu/clawd/skills/curate/curate_v3.py";
+    let command = "cd /home/ubuntu/clawd/skills/curate && python3 curate_v3.py";
     
     if (topic && topic !== "general") {
-      command += ` --topic "${topic}"`;
+      command += ` --topic "${topic.replace(/"/g, '\\"')}"`;
     }
     
     if (source && source !== "all") {
@@ -89,6 +28,10 @@ export async function POST(request: NextRequest) {
     const { stdout, stderr } = await execAsync(command, {
       timeout: 120000, // 2 minute timeout
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      env: {
+        ...process.env,
+        PYTHONUNBUFFERED: "1",
+      },
     });
     
     if (stderr) {
@@ -117,8 +60,8 @@ export async function POST(request: NextRequest) {
             title: item.title || "Untitled",
             url: item.url || "#",
             summary: item.summary || "No summary available",
-            source: item.source || "Unknown",
-            duration: item.duration || "Unknown",
+            source: item.source_name || item.source || "Unknown",
+            duration: `${item.estimated_minutes || "?"}min`,
             category: type,
           });
         });
@@ -128,10 +71,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       items,
-      topic,
-      source,
+      topic: topic || "general",
+      source: source || "all",
     });
-    */
     
   } catch (error) {
     console.error("Curate error:", error);
@@ -140,6 +82,7 @@ export async function POST(request: NextRequest) {
       { 
         success: false, 
         error: error instanceof Error ? error.message : "Failed to curate content",
+        details: error instanceof Error ? error.stack : undefined,
       },
       { status: 500 }
     );

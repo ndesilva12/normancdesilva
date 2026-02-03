@@ -11,97 +11,36 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Mock data for demonstration
-    // TODO: Integrate actual L3D research logic
+    // Use the Python research script
+    const command = `cd /home/ubuntu/clawd/skills/last30days-lite && python3 research.py --query "${query.replace(/"/g, '\\"')}" --output json`;
     
-    const mockResult = {
-      patterns: [
-        "Users report best results when providing specific context about their use case and desired output format upfront",
-        "Breaking complex tasks into smaller, explicit steps yields significantly better outcomes than single monolithic prompts",
-        "Including examples (few-shot prompting) dramatically improves consistency, especially for formatting and tone",
-        "Iterative refinement based on initial outputs performs better than trying to perfect prompts from scratch",
-      ],
-      mistakes: [
-        "Being too vague about requirements - AI fills in gaps unpredictably",
-        "Not specifying output format or length constraints leads to inconsistent results",
-        "Forgetting to test prompts multiple times before deploying (single-run optimization)",
-        "Overcomplicating prompts with unnecessary instructions that confuse the model",
-      ],
-      techniques: [
-        {
-          technique: "Chain-of-thought prompting: Explicitly ask the model to show its reasoning step-by-step before giving final answer",
-          source: "Reddit u/ml_researcher",
-          url: "https://reddit.com/r/ChatGPT/comments/example1",
-        },
-        {
-          technique: "Role prompting: Define a specific expert persona (e.g., 'You are a senior software architect with 15 years experience')",
-          source: "X @prompt_engineer",
-          url: "https://twitter.com/example/status/123",
-        },
-        {
-          technique: "Constrained output: Use structured formats like JSON, XML, or markdown tables to enforce consistency",
-          source: "Reddit r/LocalLLaMA",
-          url: "https://reddit.com/r/LocalLLaMA/comments/example2",
-        },
-      ],
-      sources: [
-        {
-          url: "https://reddit.com/r/ChatGPT/comments/example1",
-          description: "Detailed guide on advanced prompting techniques with 500+ upvotes",
-          platform: "Reddit",
-        },
-        {
-          url: "https://twitter.com/example/status/123",
-          description: "Viral thread breaking down what actually works for GPT-4 prompting",
-          platform: "X",
-        },
-        {
-          url: "https://example.com/blog/prompting-guide",
-          description: "Comprehensive analysis of 100+ prompt experiments with success metrics",
-          platform: "Web",
-        },
-        {
-          url: "https://reddit.com/r/LocalLLaMA/comments/example2",
-          description: "Community discussion on structured output generation techniques",
-          platform: "Reddit",
-        },
-      ],
-      prompt: `You are an expert ${query} specialist with deep practical experience.
-
-Task: [Describe your specific task here]
-
-Context:
-- [Provide relevant background information]
-- [Include any constraints or requirements]
-- [Specify your target audience or use case]
-
-Instructions:
-1. First, analyze the problem and identify key considerations
-2. Then, provide your solution with clear reasoning
-3. Finally, summarize actionable next steps
-
-Output format: [Specify desired format - e.g., markdown, JSON, bullet points]
-
-Please show your step-by-step thinking before providing the final answer.`,
-    };
+    console.log("Executing L3D research command:", command);
+    
+    const { exec } = require("child_process");
+    const { promisify } = require("util");
+    const execAsync = promisify(exec);
+    
+    const { stdout, stderr } = await execAsync(command, {
+      timeout: 60000, // 1 minute timeout
+      maxBuffer: 5 * 1024 * 1024, // 5MB buffer
+      env: {
+        ...process.env,
+        PYTHONUNBUFFERED: "1",
+      },
+    });
+    
+    if (stderr) {
+      console.error("L3D stderr:", stderr);
+    }
+    
+    // Parse the JSON output
+    const result = JSON.parse(stdout);
     
     return NextResponse.json({
       success: true,
-      result: mockResult,
-      query,
-      note: "Using mock data - L3D research integration pending",
-    });
-    
-    /* ACTUAL IMPLEMENTATION - TODO:
-    
-    const research = await conductL3DResearch(query);
-    
-    return NextResponse.json({
-      success: true,
-      result: research,
+      result,
       query,
     });
-    */
     
   } catch (error) {
     console.error("Last30Days error:", error);
@@ -110,6 +49,7 @@ Please show your step-by-step thinking before providing the final answer.`,
       { 
         success: false, 
         error: error instanceof Error ? error.message : "Failed to research topic",
+        details: error instanceof Error ? error.stack : undefined,
       },
       { status: 500 }
     );
