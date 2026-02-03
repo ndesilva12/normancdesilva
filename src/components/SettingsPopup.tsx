@@ -31,12 +31,10 @@ const TOOL_NAMES: Record<ToolId, string> = {
   "notes": "Notes",
   "emails": "Emails",
   "calendar": "Calendar",
-  "contacts": "Contacts",
   "files": "Files",
   "market": "Market",
   "news": "News",
   "trending": "Trending",
-  "visuals": "Visuals",
   "business-info": "Business Info",
   "deep-search": "Deep Search",
   "dark-search": "Dark Search",
@@ -45,6 +43,8 @@ const TOOL_NAMES: Record<ToolId, string> = {
   "spotify": "Spotify",
   "image-lookup": "Image Lookup",
   "visual-rosters": "Visual Rosters",
+  "curate": "Curate",
+  "l3d": "Last 30 Days (L3D)",
 };
 
 type SettingsTab = "appearance" | "time" | "search" | "integrations";
@@ -56,19 +56,10 @@ interface GoogleAccount {
 }
 
 export function SettingsPopup() {
-  const { settings, updateSettings, isSettingsOpen, closeSettings } = useSettings();
-  const { layout, setSearchSourceMode } = useLayout();
+  const { settings, updateSettings, getToolColor, updateToolColor, isSettingsOpen, closeSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<SettingsTab>("appearance");
   const [googleAccounts, setGoogleAccounts] = useState<GoogleAccount[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
-  const [customColor, setCustomColor] = useState(settings.themeColor);
-
-  // Sync custom color with settings
-  useEffect(() => {
-    setCustomColor(settings.themeColor);
-  }, [settings.themeColor]);
-
-  const isCustomColor = !THEME_COLORS.some(c => c.value === settings.themeColor);
 
   // Fetch connected Google accounts when integrations tab is shown
   useEffect(() => {
@@ -359,119 +350,62 @@ export function SettingsPopup() {
                     </div>
                   </div>
 
-                  {/* Theme Color */}
+                  {/* Per-Tool Colors */}
                   <div>
-                    <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "12px" }}>
-                      Accent Color
+                    <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
+                      Tool Colors
                     </label>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: "8px" }}>
-                      {THEME_COLORS.map((color) => (
-                        <button
-                          key={color.value}
-                          onClick={() => updateSettings({ themeColor: color.value })}
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: "8px",
-                            padding: "12px 8px",
-                            borderRadius: "10px",
-                            backgroundColor: settings.themeColor === color.value ? `${color.value}20` : "rgba(255, 255, 255, 0.03)",
-                            border: settings.themeColor === color.value ? `2px solid ${color.value}` : "2px solid transparent",
-                            cursor: "pointer",
-                            transition: "all 0.15s",
-                          }}
-                        >
+                    <p style={{ fontSize: "12px", color: "var(--foreground-muted)", marginBottom: "16px" }}>
+                      Set custom colors for each tool (dashboard & tool page)
+                    </p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {TOOL_IDS.map((toolId) => {
+                        const toolColor = getToolColor(toolId);
+                        return (
                           <div
+                            key={toolId}
                             style={{
-                              width: "32px",
-                              height: "32px",
-                              borderRadius: "50%",
-                              backgroundColor: color.value,
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "center",
+                              justifyContent: "space-between",
+                              padding: "12px 16px",
+                              borderRadius: "10px",
+                              backgroundColor: "rgba(255, 255, 255, 0.03)",
+                              border: "1px solid var(--glass-border)",
                             }}
                           >
-                            {settings.themeColor === color.value && (
-                              <Check style={{ width: "16px", height: "16px", color: "#000" }} />
-                            )}
+                            <span style={{ fontSize: "13px", color: "var(--foreground)", fontWeight: 500 }}>
+                              {TOOL_NAMES[toolId]}
+                            </span>
+                            <select
+                              value={toolColor}
+                              onChange={(e) => updateToolColor(toolId, e.target.value)}
+                              style={{
+                                padding: "6px 32px 6px 12px",
+                                borderRadius: "6px",
+                                backgroundColor: toolColor,
+                                border: "1px solid rgba(0, 0, 0, 0.2)",
+                                color: "#000",
+                                fontSize: "12px",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                outline: "none",
+                                appearance: "none",
+                                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                                backgroundRepeat: "no-repeat",
+                                backgroundPosition: "right 8px center",
+                                backgroundSize: "16px",
+                              }}
+                            >
+                              {THEME_COLORS.map((color) => (
+                                <option key={color.value} value={color.value}>
+                                  {color.name}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                          <span style={{ fontSize: "11px", color: "var(--foreground-muted)" }}>{color.name}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Custom Color Picker */}
-                    <div style={{ marginTop: "16px", padding: "16px", borderRadius: "10px", backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid var(--glass-border)" }}>
-                      <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 500, color: "var(--foreground)", marginBottom: "12px" }}>
-                        <Pipette style={{ width: "14px", height: "14px" }} />
-                        Custom Color
-                      </label>
-                      <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                        <div style={{ position: "relative" }}>
-                          <input
-                            type="color"
-                            value={customColor}
-                            onChange={(e) => {
-                              setCustomColor(e.target.value);
-                              updateSettings({ themeColor: e.target.value });
-                            }}
-                            style={{
-                              width: "48px",
-                              height: "48px",
-                              border: "none",
-                              borderRadius: "10px",
-                              cursor: "pointer",
-                              backgroundColor: "transparent",
-                            }}
-                          />
-                          {isCustomColor && (
-                            <div style={{
-                              position: "absolute",
-                              bottom: "2px",
-                              right: "2px",
-                              width: "16px",
-                              height: "16px",
-                              borderRadius: "50%",
-                              backgroundColor: "var(--accent)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}>
-                              <Check style={{ width: "10px", height: "10px", color: "#000" }} />
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <input
-                            type="text"
-                            value={customColor}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCustomColor(val);
-                              if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-                                updateSettings({ themeColor: val });
-                              }
-                            }}
-                            placeholder="#00d4ff"
-                            style={{
-                              width: "100%",
-                              padding: "10px 12px",
-                              borderRadius: "8px",
-                              backgroundColor: "rgba(255, 255, 255, 0.05)",
-                              border: "1px solid var(--glass-border)",
-                              color: "var(--foreground)",
-                              fontSize: "13px",
-                              fontFamily: "monospace",
-                              outline: "none",
-                            }}
-                          />
-                          <p style={{ fontSize: "11px", color: "var(--foreground-muted)", marginTop: "4px" }}>
-                            Enter any hex color code
-                          </p>
-                        </div>
-                      </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

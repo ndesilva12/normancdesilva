@@ -6,21 +6,39 @@ import { useRouter } from "next/navigation";
 import { FileText, Loader2, ExternalLink, RefreshCw } from "lucide-react";
 import { DriveFile, getDriveFileIcon, getDriveFileType } from "@/lib/google-services";
 interface FilesPreviewProps {
-  isGoogleConnected: boolean;
-  onConnectGoogle: () => void;
+  isGoogleConnected?: boolean;
+  onConnectGoogle?: () => void;
 }
 
-export function FilesPreview({ isGoogleConnected, onConnectGoogle }: FilesPreviewProps) {
+export function FilesPreview({ isGoogleConnected: _unused1, onConnectGoogle: _unused2 }: FilesPreviewProps) {
   const [files, setFiles] = useState<DriveFile[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
   const router = useRouter();
 
   useEffect(() => {
-    if (isGoogleConnected) {
-      fetchFiles();
+    checkConnectionAndFetch();
+  }, []);
+
+  const checkConnectionAndFetch = async () => {
+    try {
+      const accountsResponse = await fetch("/api/auth/google/accounts");
+      const accountsData = await accountsResponse.json();
+
+      if (accountsData.connected && accountsData.accounts.length > 0) {
+        setIsConnected(true);
+        await fetchFiles();
+      } else {
+        setIsConnected(false);
+        setLoading(false);
+      }
+    } catch {
+      setIsConnected(false);
+      setLoading(false);
     }
-  }, [isGoogleConnected]);
+  };
 
   const fetchFiles = async () => {
     setLoading(true);
@@ -39,11 +57,21 @@ export function FilesPreview({ isGoogleConnected, onConnectGoogle }: FilesPrevie
     }
   };
 
+  const handleConnect = async () => {
+    try {
+      const returnUrl = encodeURIComponent("/");
+      const response = await fetch(`/api/auth/google?returnUrl=${returnUrl}`);
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("Failed to connect:", err);
+    }
+  };
+
   const handleReconnect = async () => {
-    // Clear existing tokens first
-    await fetch("/api/auth/google/status", { method: "POST" });
-    // Then start new auth flow
-    onConnectGoogle();
+    handleConnect();
   };
 
   const formatDate = (dateString: string) => {
@@ -105,13 +133,13 @@ export function FilesPreview({ isGoogleConnected, onConnectGoogle }: FilesPrevie
 
       {/* Content */}
       <div style={{ padding: "12px 16px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
-        {!isGoogleConnected ? (
+        {!isConnected ? (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <p style={{ color: "var(--foreground-muted)", fontSize: "13px", marginBottom: "12px" }}>
               Connect Google to see your files
             </p>
             <button
-              onClick={onConnectGoogle}
+              onClick={handleConnect}
               style={{
                 padding: "8px 16px",
                 borderRadius: "6px",

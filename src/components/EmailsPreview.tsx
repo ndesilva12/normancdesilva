@@ -26,15 +26,16 @@ interface AccountInfo {
 }
 
 interface EmailsPreviewProps {
-  isGoogleConnected: boolean;
-  onConnectGoogle: () => void;
+  isGoogleConnected?: boolean;
+  onConnectGoogle?: () => void;
 }
 
-export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPreviewProps) {
+export function EmailsPreview({ isGoogleConnected: _unused1, onConnectGoogle: _unused2 }: EmailsPreviewProps) {
   const [emails, setEmails] = useState<EmailWithAccount[]>([]);
   const [accounts, setAccounts] = useState<AccountInfo[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ emailId: string; accountEmail?: string; subject: string } | null>(null);
   const { getWidgetConfig, toggleWidgetCollapse, isEditMode } = useLayout();
   const router = useRouter();
@@ -43,10 +44,8 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
   const isCollapsed = config?.size === "collapsed";
 
   useEffect(() => {
-    if (isGoogleConnected) {
-      fetchEmails();
-    }
-  }, [isGoogleConnected]);
+    checkConnectionAndFetch();
+  }, []);
 
   // Keyboard handler for delete confirmation modal
   useEffect(() => {
@@ -67,6 +66,27 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [deleteConfirm]);
 
+  const checkConnectionAndFetch = async () => {
+    try {
+      // Check accounts endpoint first
+      const accountsResponse = await fetch("/api/auth/google/accounts");
+      const accountsData = await accountsResponse.json();
+
+      if (accountsData.connected && accountsData.accounts.length > 0) {
+        setIsConnected(true);
+        setAccounts(accountsData.accounts);
+        // Fetch emails immediately
+        await fetchEmails();
+      } else {
+        setIsConnected(false);
+        setLoading(false);
+      }
+    } catch {
+      setIsConnected(false);
+      setLoading(false);
+    }
+  };
+
   const fetchEmails = async () => {
     setLoading(true);
     setError(null);
@@ -78,7 +98,9 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
       }
       const data = await response.json();
       setEmails(data.emails || []);
-      setAccounts(data.accounts || []);
+      if (data.accounts) {
+        setAccounts(data.accounts);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load emails");
     } finally {
@@ -86,9 +108,21 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
     }
   };
 
+  const handleConnect = async () => {
+    try {
+      const returnUrl = encodeURIComponent("/");
+      const response = await fetch(`/api/auth/google?returnUrl=${returnUrl}`);
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("Failed to connect:", err);
+    }
+  };
+
   const handleReconnect = async () => {
-    await fetch("/api/auth/google/status", { method: "POST" });
-    onConnectGoogle();
+    handleConnect();
   };
 
   const handleEmailAction = async (
@@ -350,13 +384,13 @@ export function EmailsPreview({ isGoogleConnected, onConnectGoogle }: EmailsPrev
 
       {/* Content */}
       <div style={{ padding: "12px 16px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
-        {!isGoogleConnected ? (
+        {!isConnected ? (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <p style={{ color: "var(--foreground-muted)", fontSize: "13px", marginBottom: "12px" }}>
               Connect Google to see your emails
             </p>
             <button
-              onClick={onConnectGoogle}
+              onClick={handleConnect}
               style={{
                 padding: "8px 16px",
                 borderRadius: "6px",

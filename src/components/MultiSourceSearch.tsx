@@ -591,6 +591,12 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
       return;
     }
 
+    // Handle tools with navigateDirectly flag - navigate to tool page
+    if (sourceConfig.type === "tool" && sourceConfig.navigateDirectly && sourceConfig.toolHref) {
+      window.location.href = sourceConfig.toolHref;
+      return;
+    }
+
     // Handle AI and tool sources - fetch and display results
     setIsSearching(true);
     setToolResult({
