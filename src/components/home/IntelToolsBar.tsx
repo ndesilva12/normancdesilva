@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Sparkles, TrendingUp, Search, Lock } from "lucide-react";
 
 const INTEL_TOOLS = [
@@ -38,6 +39,8 @@ const INTEL_TOOLS = [
 ];
 
 export function IntelToolsBar({ onToolClick }: { onToolClick?: (toolId: string, toolUrl: string, toolColor: string, toolName: string) => void }) {
+  const router = useRouter();
+
   return (
     <div
       style={{
@@ -70,14 +73,14 @@ export function IntelToolsBar({ onToolClick }: { onToolClick?: (toolId: string, 
         }}
       >
         {INTEL_TOOLS.map((tool) => (
-          <IntelToolCard key={tool.id} tool={tool} onClick={onToolClick} />
+          <IntelToolCard key={tool.id} tool={tool} router={router} />
         ))}
       </div>
     </div>
   );
 }
 
-function IntelToolCard({ tool, onClick }: { tool: typeof INTEL_TOOLS[0]; onClick?: (toolId: string, toolUrl: string, toolColor: string, toolName: string) => void }) {
+function IntelToolCard({ tool, router }: { tool: typeof INTEL_TOOLS[0]; router: ReturnType<typeof useRouter> }) {
   const Icon = tool.icon;
 
   return (
@@ -90,7 +93,7 @@ function IntelToolCard({ tool, onClick }: { tool: typeof INTEL_TOOLS[0]; onClick
         position: "relative",
         overflow: "hidden",
       }}
-      onClick={() => onClick?.(tool.id, tool.href, tool.color, tool.name)}
+      onClick={() => router.push(tool.href)}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-4px)";
         e.currentTarget.style.borderColor = tool.color;

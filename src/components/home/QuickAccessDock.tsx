@@ -28,13 +28,12 @@ interface GlanceData {
 }
 
 const QUICK_TOOLS = [
-  // Row 1: Communication & Organization (8 tools)
+  // Row 1: Communication & Organization (7 tools)
   { id: "emails", name: "Emails", icon: Mail, href: "/tools/emails", color: "#3b82f6" },
   { id: "calendar", name: "Calendar", icon: Calendar, href: "/tools/calendar", color: "#10b981" },
   { id: "contacts", name: "Contacts", icon: Users, href: "/tools/contacts", color: "#f59e0b" },
   { id: "files", name: "Files", icon: FolderOpen, href: "/tools/files", color: "#8b5cf6" },
   { id: "notes", name: "Notes", icon: StickyNote, href: "/tools/notes", color: "#ec4899" },
-  { id: "notion-browser", name: "Notion", icon: StickyNote, href: "/tools/notion-browser", color: "#6366f1" },
   { id: "raindrop", name: "Bookmarks", icon: Droplets, href: "/tools/raindrop", color: "#06b6d4" },
   { id: "spotify", name: "Spotify", icon: Music, href: "/tools/spotify", color: "#10b981" },
   

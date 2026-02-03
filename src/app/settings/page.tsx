@@ -94,47 +94,6 @@ export default function SettingsPage() {
                 ))}
               </div>
             </SettingRow>
-
-            {/* Theme Color */}
-            <SettingRow label="Accent Color">
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile ? "repeat(6, 1fr)" : "repeat(8, 1fr)",
-                  gap: "8px",
-                }}
-              >
-                {THEME_COLORS.map((color) => (
-                  <button
-                    key={color.value}
-                    onClick={() => updateSettings({ themeColor: color.value })}
-                    title={color.name}
-                    style={{
-                      width: "100%",
-                      aspectRatio: "1",
-                      borderRadius: "8px",
-                      backgroundColor: color.value,
-                      border: settings.themeColor === color.value
-                        ? "3px solid #ffffff"
-                        : "2px solid rgba(255, 255, 255, 0.2)",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                      boxShadow: settings.themeColor === color.value
-                        ? `0 0 0 2px ${color.value}`
-                        : "none",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (settings.themeColor !== color.value) {
-                        e.currentTarget.style.transform = "scale(1.1)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "scale(1)";
-                    }}
-                  />
-                ))}
-              </div>
-            </SettingRow>
           </Section>
 
           {/* Time & Date Settings */}
