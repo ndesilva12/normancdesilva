@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewData = {
         email: {
             content: '<div class="widget-preview"><h3>Email Widget</h3><p><strong>Unread Emails:</strong> 3</p><p>Latest: "Meeting Tomorrow" from John Doe</p><p>[Placeholder for Email Widget Content]</p></div>',
-            fullUrl: '/tools/email'
+            fullUrl: '/tools/emails'
         },
         trending: {
             content: '<div class="widget-preview"><h3>Trending Widget</h3><p><strong>Top Topics:</strong> AI, Crypto, Tech Stocks</p><p>Click to see full trends.</p><p>[Placeholder for Trending Widget Content]</p></div>',
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         reader: {
             content: '<div class="widget-preview"><h3>Reader Widget</h3><p><strong>Latest Articles:</strong> "AI Breakthroughs 2026", "Market Analysis"</p><p>[Placeholder for Reader Widget Content]</p></div>',
-            fullUrl: '/tools/reader'
+            fullUrl: '/tools/inoreader'
         },
         news: {
             content: '<div class="widget-preview"><h3>News Widget</h3><p><strong>Top Stories:</strong> Global Tech Summit, New Policy Impact</p><p>[Placeholder for News Widget Content]</p></div>',
