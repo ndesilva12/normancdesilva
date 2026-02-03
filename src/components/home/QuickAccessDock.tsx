@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   StickyNote,
@@ -52,7 +51,7 @@ const QUICK_TOOLS = [
   { id: "accounts", name: "Accounts", icon: Globe, href: "/tools/accounts", color: "#64748b" },
 ];
 
-export function QuickAccessDock() {
+export function QuickAccessDock({ onToolClick }: { onToolClick?: (toolId: string, toolUrl: string, toolColor: string, toolName: string) => void }) {
   const [glanceData, setGlanceData] = useState<GlanceData>({
     emailCount: 0,
     todayEventCount: 0,
@@ -109,6 +108,7 @@ export function QuickAccessDock() {
           <QuickToolButton 
             key={tool.id} 
             tool={tool} 
+            onClick={onToolClick}
             badge={
               tool.id === "emails" ? glanceData.emailCount :
               tool.id === "calendar" ? glanceData.todayEventCount :
@@ -121,69 +121,68 @@ export function QuickAccessDock() {
   );
 }
 
-function QuickToolButton({ tool, badge }: { tool: typeof QUICK_TOOLS[0]; badge?: number }) {
+function QuickToolButton({ tool, badge, onClick }: { tool: typeof QUICK_TOOLS[0]; badge?: number; onClick?: (toolId: string, toolUrl: string, toolColor: string, toolName: string) => void }) {
   const Icon = tool.icon;
   const showBadge = badge !== undefined && badge > 0;
 
   return (
-    <Link href={tool.href} style={{ textDecoration: "none" }}>
-      <div
-        className="card"
+    <div
+      className="card"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "12px 14px",
+        cursor: "pointer",
+        transition: "all 0.2s",
+        position: "relative",
+      }}
+      onClick={() => onClick?.(tool.id, tool.href, tool.color, tool.name)}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.borderColor = tool.color;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.borderColor = "var(--glass-border)";
+      }}
+    >
+      <Icon style={{ width: "18px", height: "18px", color: tool.color, flexShrink: 0 }} />
+      <span
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          padding: "12px 14px",
-          cursor: "pointer",
-          transition: "all 0.2s",
-          position: "relative",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-2px)";
-          e.currentTarget.style.borderColor = tool.color;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.borderColor = "var(--glass-border)";
+          fontSize: "13px",
+          fontWeight: 600,
+          color: "var(--foreground)",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
         }}
       >
-        <Icon style={{ width: "18px", height: "18px", color: tool.color, flexShrink: 0 }} />
-        <span
+        {tool.name}
+      </span>
+      {showBadge && (
+        <div
           style={{
-            fontSize: "13px",
-            fontWeight: 600,
-            color: "var(--foreground)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
+            position: "absolute",
+            top: "6px",
+            right: "6px",
+            minWidth: "18px",
+            height: "18px",
+            borderRadius: "9px",
+            backgroundColor: "var(--accent)",
+            color: "#ffffff",
+            fontSize: "11px",
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 5px",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
           }}
         >
-          {tool.name}
-        </span>
-        {showBadge && (
-          <div
-            style={{
-              position: "absolute",
-              top: "6px",
-              right: "6px",
-              minWidth: "18px",
-              height: "18px",
-              borderRadius: "9px",
-              backgroundColor: "var(--accent)",
-              color: "#ffffff",
-              fontSize: "11px",
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "0 5px",
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-            }}
-          >
-            {badge > 99 ? "99+" : badge}
-          </div>
-        )}
-      </div>
-    </Link>
+          {badge > 99 ? "99+" : badge}
+        </div>
+      )}
+    </div>
   );
 }
