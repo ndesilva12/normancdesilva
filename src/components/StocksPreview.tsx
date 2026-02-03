@@ -95,7 +95,7 @@ function TradingViewPreviewWidget() {
       style={{
         width: "100%",
         height: "100%",
-        minHeight: "300px",
+        minHeight: "500px",
       }}
     />
   );
@@ -107,7 +107,7 @@ export function StocksPreview() {
   const router = useRouter();
 
   return (
-    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
+    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", position: "relative", minHeight: "600px", display: "flex", flexDirection: "column" }}>
       {/* Header - clickable to navigate to market page */}
       <div
         style={{

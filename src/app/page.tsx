@@ -76,7 +76,6 @@ export default function Home() {
       case "files":
         return <FilesPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
       case "notes":
-      case "notion-browser":
         return <NotesPreview />;
       case "raindrop":
         return <RaindropPreview />;

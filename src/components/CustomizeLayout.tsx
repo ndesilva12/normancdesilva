@@ -10,6 +10,7 @@ interface LayoutItem {
   name: string;
   visible: boolean;
   order: number;
+  color?: string; // Hex color for the tool
 }
 
 interface LayoutConfig {
@@ -52,19 +53,18 @@ const DEFAULT_QUICK_ACCESS: LayoutItem[] = [
   { id: "contacts", name: "Contacts", visible: true, order: 2 },
   { id: "files", name: "Files", visible: true, order: 3 },
   { id: "notes", name: "Notes", visible: true, order: 4 },
-  { id: "notion-browser", name: "Notion", visible: true, order: 5 },
-  { id: "raindrop", name: "Bookmarks", visible: true, order: 6 },
-  { id: "spotify", name: "Spotify", visible: true, order: 7 },
-  { id: "news", name: "News", visible: true, order: 8 },
-  { id: "market", name: "Market", visible: true, order: 9 },
-  { id: "inoreader", name: "RSS", visible: true, order: 10 },
-  { id: "trending", name: "Trending", visible: true, order: 11 },
-  { id: "business-info", name: "Business Info", visible: true, order: 12 },
-  { id: "visual-rosters", name: "Rosters", visible: true, order: 13 },
-  { id: "corporate-info", name: "Corporate", visible: true, order: 14 },
-  { id: "contact-finder", name: "Contact Finder", visible: true, order: 15 },
-  { id: "image-lookup", name: "Image Lookup", visible: true, order: 16 },
-  { id: "accounts", name: "Accounts", visible: true, order: 17 },
+  { id: "raindrop", name: "Bookmarks", visible: true, order: 5 },
+  { id: "spotify", name: "Spotify", visible: true, order: 6 },
+  { id: "news", name: "News", visible: true, order: 7 },
+  { id: "market", name: "Market", visible: true, order: 8 },
+  { id: "inoreader", name: "RSS", visible: true, order: 9 },
+  { id: "trending", name: "Trending", visible: true, order: 10 },
+  { id: "business-info", name: "Business Info", visible: true, order: 11 },
+  { id: "visual-rosters", name: "Rosters", visible: true, order: 12 },
+  { id: "corporate-info", name: "Corporate", visible: true, order: 13 },
+  { id: "contact-finder", name: "Contact Finder", visible: true, order: 14 },
+  { id: "image-lookup", name: "Image Lookup", visible: true, order: 15 },
+  { id: "accounts", name: "Accounts", visible: true, order: 16 },
 ];
 
 export function CustomizeLayout() {
@@ -104,6 +104,15 @@ export function CustomizeLayout() {
       ...prev,
       [category]: prev[category].map(item =>
         item.id === id ? { ...item, visible: !item.visible } : item
+      ),
+    }));
+  };
+
+  const updateColor = (category: keyof LayoutConfig, id: string, color: string) => {
+    setConfig(prev => ({
+      ...prev,
+      [category]: prev[category].map(item =>
+        item.id === id ? { ...item, color } : item
       ),
     }));
   };
@@ -183,6 +192,7 @@ export function CustomizeLayout() {
         items={config.searchSources}
         onToggleVisibility={(id) => toggleVisibility("searchSources", id)}
         onMove={(id, dir) => moveItem("searchSources", id, dir)}
+        onUpdateColor={(id, color) => updateColor("searchSources", id, color)}
       />
 
       {/* Intel Tools */}
@@ -191,6 +201,7 @@ export function CustomizeLayout() {
         items={config.intelTools}
         onToggleVisibility={(id) => toggleVisibility("intelTools", id)}
         onMove={(id, dir) => moveItem("intelTools", id, dir)}
+        onUpdateColor={(id, color) => updateColor("intelTools", id, color)}
       />
 
       {/* Quick Access Tools */}
@@ -199,6 +210,7 @@ export function CustomizeLayout() {
         items={config.quickAccessTools}
         onToggleVisibility={(id) => toggleVisibility("quickAccessTools", id)}
         onMove={(id, dir) => moveItem("quickAccessTools", id, dir)}
+        onUpdateColor={(id, color) => updateColor("quickAccessTools", id, color)}
       />
     </div>
   );
@@ -209,11 +221,13 @@ function CategorySection({
   items,
   onToggleVisibility,
   onMove,
+  onUpdateColor,
 }: {
   title: string;
   items: LayoutItem[];
   onToggleVisibility: (id: string) => void;
   onMove: (id: string, direction: "up" | "down") => void;
+  onUpdateColor: (id: string, color: string) => void;
 }) {
   const sortedItems = [...items].sort((a, b) => a.order - b.order);
 
@@ -266,6 +280,22 @@ function CategorySection({
             <div style={{ flex: 1, fontSize: "14px", color: "var(--foreground)" }}>
               {item.name}
             </div>
+
+            {/* Color picker */}
+            <input
+              type="color"
+              value={item.color || "#3b82f6"}
+              onChange={(e) => onUpdateColor(item.id, e.target.value)}
+              title="Choose color"
+              style={{
+                width: "32px",
+                height: "32px",
+                border: "1px solid var(--glass-border)",
+                borderRadius: "6px",
+                cursor: "pointer",
+                backgroundColor: "transparent",
+              }}
+            />
 
             {/* Move buttons */}
             <button
