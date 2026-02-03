@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Sparkles, AlertCircle, Clock, TrendingUp, History, X as XIcon } from "lucide-react";
 import Link from "next/link";
-import { Header } from "@/components/Header";
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { CompanySearchBar } from "@/components/company/CompanySearchBar";
 import { CompanyReport } from "@/components/company/CompanyReport";
@@ -83,7 +84,11 @@ export default function CompanyPoliticsPage() {
         }
       );
 
-      return () => unsubscribe();
+      return (
+    <>
+      <TopNav />
+      <BottomNav />
+      ) => unsubscribe();
     } else {
       // Fallback to localStorage only
       const stored = localStorage.getItem(storageKey);
@@ -173,7 +178,7 @@ export default function CompanyPoliticsPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0f0a1a 0%, #1a1a2e 50%, #16213e 100%)", width: "100%" }}>
-      <Header />
+      
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div

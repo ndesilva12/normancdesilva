@@ -30,7 +30,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
-import { Header } from "@/components/Header";
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import {
   SearchType,
@@ -99,6 +100,10 @@ function ContactMethodCard({ contact }: { contact: ContactMethod }) {
   const link = getContactLink();
 
   return (
+    <>
+      <TopNav />
+      <BottomNav />
+      
     <div
       className="glass"
       style={{
@@ -659,7 +664,7 @@ export default function ContactFinderPage() {
   if (!user) {
     return (
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a1a 0%, #1a2e2e 50%, #16262e 100%)", width: "100%" }}>
-        <Header />
+        
         <main style={{ flex: 1, width: "100%", paddingTop: "64px", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div className="glass" style={{ padding: "40px", borderRadius: "16px", textAlign: "center", maxWidth: "400px" }}>
             <AlertCircle style={{ width: "48px", height: "48px", color: "var(--accent)", margin: "0 auto 16px" }} />
@@ -677,7 +682,7 @@ export default function ContactFinderPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a1a 0%, #1a2e2e 50%, #16262e 100%)", width: "100%" }}>
-      <Header />
+      
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px" }}>
           <RemindersBanner />

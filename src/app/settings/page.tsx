@@ -3,6 +3,7 @@
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { useSettings, THEME_COLORS, TIMEZONES, TOOL_IDS } from "@/contexts/SettingsContext";
+import { CustomizeLayout } from "@/components/CustomizeLayout";
 import { Settings as SettingsIcon, Palette, Clock, Search, History } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -282,6 +283,11 @@ export default function SettingsPage() {
               </div>
             </SettingRow>
           </Section>
+
+          {/* Customize Layout */}
+          <div className="glass" style={{ padding: "24px", borderRadius: "12px", marginBottom: "24px" }}>
+            <CustomizeLayout />
+          </div>
         </div>
       </div>
     </>

@@ -17,7 +17,8 @@ import {
   Gem,
 } from "lucide-react";
 import Link from "next/link";
-import { Header } from "@/components/Header";
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
 type Action = "search" | "generate";
@@ -135,8 +136,12 @@ export default function VisualsPage() {
   };
 
   return (
+    <>
+      <TopNav />
+      <BottomNav />
+      
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
-      <Header />
+      
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div

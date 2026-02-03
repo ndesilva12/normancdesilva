@@ -4,7 +4,8 @@ import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, ScanSearch, Upload, Link2, ExternalLink, Loader2, X } from "lucide-react";
 import Link from "next/link";
-import { Header } from "@/components/Header";
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -146,8 +147,12 @@ export default function ImageLookupPage() {
   const canSearch = (imageUrl.trim() !== "") || (uploadedImage !== null);
 
   return (
+    <>
+      <TopNav />
+      <BottomNav />
+      
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #1a0a1a 0%, #2a1a2e 50%, #261e2e 100%)", width: "100%" }}>
-      <Header />
+      
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div
