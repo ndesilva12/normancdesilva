@@ -24,9 +24,9 @@ export function TopNav() {
         left: 0,
         right: 0,
         height: "64px",
-        background: "rgba(10, 10, 10, 0.8)",
+        background: "linear-gradient(180deg, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0.7) 50%, rgba(10, 10, 10, 0) 100%)",
         backdropFilter: "blur(12px)",
-        borderBottom: "1px solid var(--glass-border)",
+        borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
         zIndex: 1000,
       }}
     >

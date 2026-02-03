@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Sparkles, TrendingUp, Search, Lock } from "lucide-react";
 
 const INTEL_TOOLS = [
@@ -38,7 +37,7 @@ const INTEL_TOOLS = [
   },
 ];
 
-export function IntelToolsBar() {
+export function IntelToolsBar({ onToolClick }: { onToolClick?: (toolId: string, toolUrl: string, toolColor: string, toolName: string) => void }) {
   return (
     <div
       style={{
@@ -71,102 +70,96 @@ export function IntelToolsBar() {
         }}
       >
         {INTEL_TOOLS.map((tool) => (
-          <IntelToolCard key={tool.id} tool={tool} />
+          <IntelToolCard key={tool.id} tool={tool} onClick={onToolClick} />
         ))}
       </div>
     </div>
   );
 }
 
-function IntelToolCard({ tool }: { tool: typeof INTEL_TOOLS[0] }) {
+function IntelToolCard({ tool, onClick }: { tool: typeof INTEL_TOOLS[0]; onClick?: (toolId: string, toolUrl: string, toolColor: string, toolName: string) => void }) {
   const Icon = tool.icon;
 
   return (
-    <Link
-      href={tool.href}
+    <div
+      className="card"
       style={{
-        textDecoration: "none",
+        padding: "20px",
+        cursor: "pointer",
+        transition: "all 0.2s",
+        position: "relative",
+        overflow: "hidden",
+      }}
+      onClick={() => onClick?.(tool.id, tool.href, tool.color, tool.name)}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-4px)";
+        e.currentTarget.style.borderColor = tool.color;
+        const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
+        if (overlay) overlay.style.opacity = "0.1";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.borderColor = "var(--glass-border)";
+        const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
+        if (overlay) overlay.style.opacity = "0";
       }}
     >
+      {/* Background overlay */}
       <div
-        className="card"
+        className="tool-overlay"
         style={{
-          padding: "20px",
-          cursor: "pointer",
-          transition: "all 0.2s",
-          position: "relative",
-          overflow: "hidden",
+          position: "absolute",
+          inset: 0,
+          background: tool.color,
+          opacity: 0,
+          transition: "opacity 0.2s",
+          pointerEvents: "none",
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-4px)";
-          e.currentTarget.style.borderColor = tool.color;
-          const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
-          if (overlay) overlay.style.opacity = "0.1";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.borderColor = "var(--glass-border)";
-          const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
-          if (overlay) overlay.style.opacity = "0";
-        }}
-      >
-        {/* Background overlay */}
-        <div
-          className="tool-overlay"
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: tool.color,
-            opacity: 0,
-            transition: "opacity 0.2s",
-            pointerEvents: "none",
-          }}
-        />
+      />
 
-        {/* Content */}
-        <div style={{ position: "relative", zIndex: 1 }}>
+      {/* Content */}
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            marginBottom: "8px",
+          }}
+        >
           <div
             style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "10px",
+              background: `${tool.color}20`,
               display: "flex",
               alignItems: "center",
-              gap: "12px",
-              marginBottom: "8px",
+              justifyContent: "center",
             }}
           >
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                background: `${tool.color}20`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Icon style={{ width: "20px", height: "20px", color: tool.color }} />
-            </div>
-            <h3
-              style={{
-                fontSize: "18px",
-                fontWeight: 700,
-                color: "var(--foreground)",
-              }}
-            >
-              {tool.name}
-            </h3>
+            <Icon style={{ width: "20px", height: "20px", color: tool.color }} />
           </div>
-          <p
+          <h3
             style={{
-              fontSize: "13px",
-              color: "var(--muted)",
-              lineHeight: 1.4,
+              fontSize: "18px",
+              fontWeight: 700,
+              color: "var(--foreground)",
             }}
           >
-            {tool.description}
-          </p>
+            {tool.name}
+          </h3>
         </div>
+        <p
+          style={{
+            fontSize: "13px",
+            color: "var(--muted)",
+            lineHeight: 1.4,
+          }}
+        >
+          {tool.description}
+        </p>
       </div>
-    </Link>
+    </div>
   );
 }
