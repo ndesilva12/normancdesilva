@@ -27,8 +27,7 @@ import {
   PanelLeftClose,
   PanelLeft,
 } from "lucide-react";
-import { TopNav } from "@/components/navigation/TopNav";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
 interface TreeNode {
@@ -80,10 +79,6 @@ function RichTextRenderer({ segments, style }: { segments?: RichTextSegment[]; s
   if (!segments || segments.length === 0) return null;
 
   return (
-    <>
-      <TopNav />
-      <BottomNav />
-      
     <span style={style}>
       {segments.map((segment, index) => {
         let element: React.ReactNode = segment.text;
@@ -948,7 +943,7 @@ function NotionBrowserContent() {
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)", display: "flex", flexDirection: "column" }}>
-      
+      <Header />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingTop: isMobile ? "56px" : "64px" }}>
         {/* Back Link */}
         <div style={{

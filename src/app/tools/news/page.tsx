@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Newspaper, ExternalLink, Loader2, RefreshCw, Clock, Tag, X, Plus, Trash2, Rss } from "lucide-react";
 import Link from "next/link";
-import { TopNav } from "@/components/navigation/TopNav";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { useNewsSources, CustomNewsSource } from "@/contexts/NewsSourcesContext";
 
@@ -90,11 +89,7 @@ export default function NewsPage() {
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return (
-    <>
-      <TopNav />
-      <BottomNav />
-      ) => window.removeEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showAddModal, addingSource, newSourceName, newSourceRssUrl]);
 
   // Keyboard handler for reader modal
@@ -210,7 +205,7 @@ export default function NewsPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a0f 0%, #1a2e1e 50%, #16261e 100%)", width: "100%" }}>
-      
+      <Header />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div

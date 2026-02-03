@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, FileText, Loader2, RefreshCw, ExternalLink } from "lucide-react";
 import { DriveFile, getDriveFileIcon, getDriveFileType } from "@/lib/google-services";
-import { TopNav } from "@/components/navigation/TopNav";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
 export default function FilesPage() {
@@ -76,12 +75,8 @@ export default function FilesPage() {
   };
 
   return (
-    <>
-      <TopNav />
-      <BottomNav />
-      
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)", width: "100%" }}>
-      
+      <Header />
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ maxWidth: "1200px", width: "80%", margin: "0 auto", padding: "20px" }}>
           <RemindersBanner />

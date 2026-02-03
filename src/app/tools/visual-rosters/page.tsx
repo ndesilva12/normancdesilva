@@ -24,8 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { TopNav } from "@/components/navigation/TopNav";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { League, LEAGUES, TeamRoster, Player, TeamProfile } from "@/types/roster";
 
@@ -99,10 +98,6 @@ function TeamProfileCard({ roster }: { roster: TeamRoster }) {
   };
 
   return (
-    <>
-      <TopNav />
-      <BottomNav />
-      
     <div className="glass rounded-2xl overflow-hidden">
       {/* Team Header with Logo */}
       <div
@@ -812,7 +807,7 @@ export default function VisualRostersPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)", width: "100%" }}>
-      
+      <Header />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div

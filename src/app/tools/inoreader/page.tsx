@@ -10,8 +10,7 @@ import {
   ExternalLink,
   RefreshCw,
 } from "lucide-react";
-import { TopNav } from "@/components/navigation/TopNav";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
 interface RSSArticle {
@@ -39,11 +38,7 @@ export default function InoreaderPage() {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
-    return (
-    <>
-      <TopNav />
-      <BottomNav />
-      ) => window.removeEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   const fetchArticles = useCallback(async () => {
@@ -84,7 +79,7 @@ export default function InoreaderPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a1a 0%, #1a2e2e 50%, #16262e 100%)", width: "100%" }}>
-      
+      <Header />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ maxWidth: "1400px", margin: "0 auto", padding: isMobile ? "16px" : "20px" }}>

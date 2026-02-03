@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Calendar, ExternalLink, Loader2, RefreshCw, ChevronLeft, ChevronRight, Plus, X, Settings, Check } from "lucide-react";
 import Link from "next/link";
-import { TopNav } from "@/components/navigation/TopNav";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
 interface CalendarEvent {
@@ -55,11 +54,7 @@ export default function CalendarPage() {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
-    return (
-    <>
-      <TopNav />
-      <BottomNav />
-      ) => window.removeEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   useEffect(() => {
@@ -750,7 +745,7 @@ export default function CalendarPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)" }}>
-      
+      <Header />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div

@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Users, Loader2, RefreshCw, Search, Mail, Phone, ExternalLink } from "lucide-react";
 import { GoogleContact } from "@/lib/google-services";
-import { TopNav } from "@/components/navigation/TopNav";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
 export default function ContactsPage() {
@@ -108,18 +107,14 @@ export default function ContactsPage() {
   const getInitials = (name: string): string => {
     const parts = name.split(" ");
     if (parts.length >= 2) {
-      return (
-    <>
-      <TopNav />
-      <BottomNav />
-      parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)", width: "100%" }}>
-      
+      <Header />
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ maxWidth: "1200px", width: "80%", margin: "0 auto", padding: "20px" }}>
           <RemindersBanner />

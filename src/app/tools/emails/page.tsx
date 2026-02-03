@@ -15,8 +15,7 @@ const FOLDER_CONFIG: Record<EmailFolder, { label: string; icon: typeof Inbox; qu
   drafts: { label: "Drafts", icon: FileEdit, query: "in:drafts" },
 };
 import { formatEmailSender, getSuperhumanUrl } from "@/lib/google-services";
-import { TopNav } from "@/components/navigation/TopNav";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { EmailDetailModal } from "@/components/EmailDetailModal";
 import { ComposeEmailModal } from "@/components/ComposeEmailModal";
@@ -43,10 +42,6 @@ interface AccountInfo {
 // Wrapper component to handle Suspense for useSearchParams
 export default function EmailsPage() {
   return (
-    <>
-      <TopNav />
-      <BottomNav />
-      
     <Suspense fallback={
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
         <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
@@ -454,7 +449,7 @@ function EmailsPageContent() {
       </div>
     )}
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)" }}>
-      
+      <Header />
       <main style={{ flex: 1, width: "100%", paddingTop: isMobile ? "56px" : "64px" }}>
         <div style={{ maxWidth: isMobile ? "100%" : "1200px", width: isMobile ? "100%" : "80%", margin: "0 auto", padding: isMobile ? "12px 16px" : "20px" }}>
           <RemindersBanner />

@@ -16,8 +16,7 @@ import {
   Tag,
   Rss,
 } from "lucide-react";
-import { TopNav } from "@/components/navigation/TopNav";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { OpenSourceButton } from "@/components/OpenSourceButton";
 
@@ -65,11 +64,7 @@ export default function ReadingPage() {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
-    return (
-    <>
-      <TopNav />
-      <BottomNav />
-      ) => window.removeEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   useEffect(() => {
@@ -181,7 +176,7 @@ export default function ReadingPage() {
 
   return (
     <div style={{ minHeight: "100vh", padding: "24px" }}>
-      
+      <Header />
       <div style={{ maxWidth: "1200px", margin: "0 auto", paddingTop: "64px" }}>
         <RemindersBanner />
         <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingTop: "24px" }}>
