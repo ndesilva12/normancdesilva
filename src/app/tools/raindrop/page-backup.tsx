@@ -212,7 +212,7 @@ export default function RaindropPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a1a1a 0%, #1a2e2e 50%, #16262e 100%)", padding: "24px" }}>
+    <div style={{ minHeight: "100vh", padding: "24px" }}>
       <Header />
       <div style={{ maxWidth: "1200px", margin: "0 auto", paddingTop: "64px" }}>
         <RemindersBanner />
