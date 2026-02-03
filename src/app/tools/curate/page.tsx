@@ -30,11 +30,6 @@ export default function CuratePage() {
   }, []);
 
   const handleCurate = async () => {
-    if (!topic.trim() && source === "all") {
-      setError("Please enter a topic or select a specific source");
-      return;
-    }
-    
     setLoading(true);
     setError("");
     
@@ -45,7 +40,10 @@ export default function CuratePage() {
         body: JSON.stringify({ topic: topic.trim() || "general", source }),
       });
       
-      if (!response.ok) throw new Error("Failed to curate content");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to curate content");
+      }
       
       const data = await response.json();
       setResults(data.items || []);

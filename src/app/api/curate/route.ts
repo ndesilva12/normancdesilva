@@ -8,6 +8,67 @@ export async function POST(request: NextRequest) {
   try {
     const { topic, source } = await request.json();
     
+    // For now, return mock data until the curate script is ready
+    // TODO: Uncomment the actual implementation below once dependencies are resolved
+    
+    const mockItems = [
+      {
+        id: "short-unique-1",
+        title: "Understanding Austrian Economics: A First Principles Approach",
+        url: "https://twitter.com/example/status/123",
+        summary: "Deep dive into how Austrian economics explains market cycles through time preference and capital structure.",
+        source: "X (@libertarian_economist)",
+        duration: "3 min",
+        category: "short-unique" as const,
+      },
+      {
+        id: "short-unique-2",
+        title: "Hidden NBA Analytics: Why Box Score Stats Mislead",
+        url: "https://reddit.com/r/nba/comments/example",
+        summary: "Statistical breakdown showing how traditional stats miss defensive positioning and off-ball movement impact.",
+        source: "Reddit (r/nba)",
+        duration: "4 min",
+        category: "short-unique" as const,
+      },
+      {
+        id: "short-trending-1",
+        title: "Fed Rate Decision: Contrarian Analysis",
+        url: "https://twitter.com/example/status/456",
+        summary: "Breaking down why today's Fed decision reveals hidden liquidity crisis that mainstream media is missing.",
+        source: "X (@economic_contrarian)",
+        duration: "5 min",
+        category: "short-trending" as const,
+      },
+      {
+        id: "long-unique-1",
+        title: "The Real Story Behind Woodrow Wilson and the Federal Reserve",
+        url: "https://youtube.com/watch?v=example",
+        summary: "Documentary revealing primary source documents showing banker influence on Federal Reserve Act creation.",
+        source: "YouTube (History Uncensored)",
+        duration: "45 min",
+        category: "long-unique" as const,
+      },
+      {
+        id: "long-trending-1",
+        title: "Joe Rogan: Intelligence Agencies and Tech Company Origins",
+        url: "https://youtube.com/watch?v=example2",
+        summary: "Viral episode with investigative journalist connecting CIA funding to major tech company foundings.",
+        source: "YouTube (Joe Rogan Experience)",
+        duration: "2h 15min",
+        category: "long-trending" as const,
+      },
+    ];
+    
+    return NextResponse.json({
+      success: true,
+      items: mockItems,
+      topic: topic || "general",
+      source: source || "all",
+      note: "Using mock data - curate script integration pending",
+    });
+    
+    /* ACTUAL IMPLEMENTATION - Uncomment when ready:
+    
     // Build the curate command
     let command = "python3 /home/ubuntu/clawd/skills/curate/curate_v3.py";
     
@@ -19,8 +80,8 @@ export async function POST(request: NextRequest) {
       command += ` --source "${source}"`;
     }
     
-    // Add JSON output flag
-    command += " --output json";
+    // Add JSON output flag and skip notion
+    command += " --output json --skip-notion";
     
     console.log("Executing curate command:", command);
     
@@ -35,56 +96,42 @@ export async function POST(request: NextRequest) {
     }
     
     // Parse the JSON output
-    try {
-      const result = JSON.parse(stdout);
-      
-      // Transform the result into the expected format
-      const items = [];
-      
-      // Process each category
-      const categories = [
-        { key: 'short_unique', type: 'short-unique' },
-        { key: 'short_trending', type: 'short-trending' },
-        { key: 'long_unique', type: 'long-unique' },
-        { key: 'long_trending', type: 'long-trending' },
-      ];
-      
-      for (const { key, type } of categories) {
-        if (result[key] && Array.isArray(result[key])) {
-          result[key].forEach((item: any, index: number) => {
-            items.push({
-              id: `${type}-${index}`,
-              title: item.title || "Untitled",
-              url: item.url || "#",
-              summary: item.summary || "No summary available",
-              source: item.source || "Unknown",
-              duration: item.duration || "Unknown",
-              category: type,
-            });
+    const result = JSON.parse(stdout);
+    
+    // Transform the result into the expected format
+    const items = [];
+    
+    // Process each category
+    const categories = [
+      { key: 'short_unique', type: 'short-unique' },
+      { key: 'short_trending', type: 'short-trending' },
+      { key: 'long_unique', type: 'long-unique' },
+      { key: 'long_trending', type: 'long-trending' },
+    ];
+    
+    for (const { key, type } of categories) {
+      if (result[key] && Array.isArray(result[key])) {
+        result[key].forEach((item: any, index: number) => {
+          items.push({
+            id: `${type}-${index}`,
+            title: item.title || "Untitled",
+            url: item.url || "#",
+            summary: item.summary || "No summary available",
+            source: item.source || "Unknown",
+            duration: item.duration || "Unknown",
+            category: type,
           });
-        }
+        });
       }
-      
-      return NextResponse.json({
-        success: true,
-        items,
-        topic,
-        source,
-      });
-      
-    } catch (parseError) {
-      console.error("Failed to parse curate output:", parseError);
-      console.log("Raw stdout:", stdout);
-      
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: "Failed to parse curation results",
-          details: stdout.substring(0, 500),
-        },
-        { status: 500 }
-      );
     }
+    
+    return NextResponse.json({
+      success: true,
+      items,
+      topic,
+      source,
+    });
+    */
     
   } catch (error) {
     console.error("Curate error:", error);
