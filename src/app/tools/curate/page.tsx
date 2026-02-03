@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, Search, Filter, RefreshCw, ExternalLink, Clock, TrendingUp, Zap, BookOpen } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { ArrowLeft, Sparkles, Search, Filter, RefreshCw, ExternalLink, Clock, TrendingUp, Zap, BookOpen, History } from "lucide-react";
 
 interface CuratedItem {
   id: string;
@@ -14,13 +15,26 @@ interface CuratedItem {
   category: 'short-unique' | 'short-trending' | 'long-unique' | 'long-trending';
 }
 
+interface CurationHistory {
+  id: string;
+  topic: string;
+  source: string;
+  timestamp: string;
+  itemCount: number;
+  items: CuratedItem[];
+}
+
 export default function CuratePage() {
+  const { user } = useAuth();
   const [topic, setTopic] = useState("");
   const [source, setSource] = useState("all");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<CuratedItem[]>([]);
   const [error, setError] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<CurationHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -29,14 +43,41 @@ export default function CuratePage() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      loadHistory();
+    }
+  }, [user]);
+
+  const loadHistory = async () => {
+    if (!user) return;
+    setLoadingHistory(true);
+    try {
+      const response = await fetch("/api/curate", {
+        headers: { "x-user-id": user.uid },
+      });
+      const data = await response.json();
+      setHistory(data.curations || []);
+    } catch (err) {
+      console.error("Failed to load history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   const handleCurate = async () => {
     setLoading(true);
     setError("");
     
     try {
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (user) {
+        headers["x-user-id"] = user.uid;
+      }
+      
       const response = await fetch("/api/curate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ topic: topic.trim() || "general", source }),
       });
       
@@ -47,11 +88,19 @@ export default function CuratePage() {
       
       const data = await response.json();
       setResults(data.items || []);
+      loadHistory(); // Refresh history after new curation
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadHistoryItem = (item: CurationHistory) => {
+    setResults(item.items);
+    setTopic(item.topic === "general" ? "" : item.topic);
+    setSource(item.source);
+    setShowHistory(false);
   };
 
   const getCategoryIcon = (category: string) => {

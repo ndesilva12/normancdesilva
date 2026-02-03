@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, query, orderBy, limit, where, Timestamp } from "firebase/firestore";
 
 const execAsync = promisify(exec);
 
@@ -74,6 +76,25 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Save to Firestore
+    const userId = request.headers.get("x-user-id");
+    if (userId) {
+      try {
+        const curationsRef = collection(db, "curations");
+        await addDoc(curationsRef, {
+          userId,
+          topic: topic || "general",
+          source: source || "all",
+          items,
+          timestamp: Timestamp.now(),
+          itemCount: items.length,
+        });
+      } catch (firestoreError) {
+        console.error("Failed to save to Firestore:", firestoreError);
+        // Don't fail the request if Firestore save fails
+      }
+    }
+    
     return NextResponse.json({
       success: true,
       items,
@@ -95,15 +116,32 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  return NextResponse.json({
-    message: "Curate API - Use POST to curate content",
-    endpoints: {
-      POST: "/api/curate",
-    },
-    parameters: {
-      topic: "Topic to curate (optional, defaults to 'general')",
-      source: "Source filter: all, x, reddit, youtube, articles, podcasts (optional)",
-    },
-  });
+export async function GET(request: NextRequest) {
+  const userId = request.headers.get("x-user-id");
+  
+  if (!userId) {
+    return NextResponse.json({ curations: [] });
+  }
+  
+  try {
+    const curationsRef = collection(db, "curations");
+    const q = query(
+      curationsRef,
+      where("userId", "==", userId),
+      orderBy("timestamp", "desc"),
+      limit(50)
+    );
+    
+    const snapshot = await getDocs(q);
+    const curations = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      timestamp: doc.data().timestamp?.toDate().toISOString(),
+    }));
+    
+    return NextResponse.json({ curations });
+  } catch (error) {
+    console.error("Failed to fetch curations:", error);
+    return NextResponse.json({ curations: [], error: "Failed to fetch history" });
+  }
 }
