@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exec } from "child_process";
+import { promisify } from "util";
 
-// Use the HTTP relay instead of WebSocket
-const RELAY_URL = "https://ip-172-31-15-64.tailf5ae1d.ts.net:8443";
+const execPromise = promisify(exec);
 
+// Use Clawdbot agent command to communicate with Jimmy
 export async function POST(request: NextRequest) {
   try {
     const { query, userId } = await request.json();
@@ -14,23 +16,72 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Forward to the relay
-    const response = await fetch(RELAY_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, userId }),
-    });
+    // Escape single quotes in the message for shell
+    const escapedQuery = query.replace(/'/g, "'\\''");
+    
+    // Use clawdbot agent command with webchat session
+    // This creates a persistent session for the web interface
+    const command = `clawdbot agent --session-id "webchat-${userId || 'anonymous'}" --message '${escapedQuery}' --json --timeout 30`;
+    
+    console.log("[Jimmy API] Sending message to Clawdbot");
+    
+    try {
+      const { stdout, stderr } = await execPromise(command, {
+        timeout: 35000, // 35 second timeout (5s more than agent timeout)
+        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+      });
 
-    if (!response.ok) {
-      throw new Error(`Relay error: ${response.status}`);
+      if (stderr) {
+        console.error("[Jimmy API] Clawdbot stderr:", stderr);
+      }
+
+      // Parse the JSON response
+      try {
+        const response = JSON.parse(stdout.trim());
+        
+        // Check if the response was successful
+        if (response.status !== "ok") {
+          throw new Error(`Agent returned status: ${response.status}`);
+        }
+        
+        // Extract the text from the first payload
+        const content = response.result?.payloads?.[0]?.text || "No response from Jimmy";
+        
+        console.log("[Jimmy API] Response received:", content.substring(0, 100));
+        
+        return NextResponse.json({
+          content: content,
+          meta: response.result?.meta,
+        });
+      } catch (parseError) {
+        console.error("[Jimmy API] Failed to parse response:", parseError);
+        console.error("[Jimmy API] Raw output:", stdout);
+        
+        return NextResponse.json(
+          { error: "Received invalid response from Jimmy" },
+          { status: 500 }
+        );
+      }
+    } catch (execError: any) {
+      console.error("[Jimmy API] Clawdbot exec error:", execError);
+      
+      // Check if it's a timeout
+      if (execError.killed && execError.signal === 'SIGTERM') {
+        return NextResponse.json(
+          { error: "Request timed out. Jimmy is taking too long to respond." },
+          { status: 504 }
+        );
+      }
+      
+      return NextResponse.json(
+        { error: `Error communicating with Jimmy: ${execError.message}` },
+        { status: 500 }
+      );
     }
-
-    const data = await response.json();
-    return NextResponse.json(data);
   } catch (error) {
-    console.error("Jimmy API error:", error);
+    console.error("[Jimmy API] Unexpected error:", error);
     return NextResponse.json(
-      { error: "Failed to communicate with Jimmy" },
+      { error: error instanceof Error ? error.message : "Failed to communicate with Jimmy" },
       { status: 500 }
     );
   }
