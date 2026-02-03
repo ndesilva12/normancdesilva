@@ -173,13 +173,13 @@ body {
   background-clip: text;
 }
 
-/* Subtle grid background */
-.bg-grid {
+/* Subtle grid background - REMOVED per user request 2026-02-03 */
+/* .bg-grid {
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 50px 50px;
-}
+} */
 
 /* Radial gradient overlay */
 .bg-radial {
