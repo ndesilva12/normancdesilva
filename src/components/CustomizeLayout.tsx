@@ -82,10 +82,25 @@ export function CustomizeLayout() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
+        
+        // Merge with defaults to ensure all items have colors
+        const mergeWithDefaults = (items: LayoutItem[], defaults: LayoutItem[]) => {
+          return defaults.map(defaultItem => {
+            const savedItem = items?.find(i => i.id === defaultItem.id);
+            return savedItem ? { ...defaultItem, ...savedItem } : defaultItem;
+          });
+        };
+        
         setConfig({
-          searchSources: parsed.searchSources || DEFAULT_SEARCH_SOURCES,
-          intelTools: parsed.intelTools || DEFAULT_INTEL_TOOLS,
-          quickAccessTools: parsed.quickAccessTools || DEFAULT_QUICK_ACCESS,
+          searchSources: parsed.searchSources 
+            ? mergeWithDefaults(parsed.searchSources, DEFAULT_SEARCH_SOURCES)
+            : DEFAULT_SEARCH_SOURCES,
+          intelTools: parsed.intelTools 
+            ? mergeWithDefaults(parsed.intelTools, DEFAULT_INTEL_TOOLS)
+            : DEFAULT_INTEL_TOOLS,
+          quickAccessTools: parsed.quickAccessTools 
+            ? mergeWithDefaults(parsed.quickAccessTools, DEFAULT_QUICK_ACCESS)
+            : DEFAULT_QUICK_ACCESS,
         });
       } catch (e) {
         console.error("Failed to parse layout config:", e);

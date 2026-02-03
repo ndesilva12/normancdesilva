@@ -94,8 +94,7 @@ function TradingViewPreviewWidget() {
       className="tradingview-widget-container"
       style={{
         width: "100%",
-        height: "100%",
-        minHeight: "500px",
+        height: "750px",
       }}
     />
   );
@@ -107,7 +106,7 @@ export function StocksPreview() {
   const router = useRouter();
 
   return (
-    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", position: "relative", minHeight: "600px", display: "flex", flexDirection: "column" }}>
+    <div className="glass" style={{ borderRadius: "12px", overflow: "hidden", position: "relative", height: "800px", display: "flex", flexDirection: "column" }}>
       {/* Header - clickable to navigate to market page */}
       <div
         style={{
@@ -158,7 +157,7 @@ export function StocksPreview() {
       </div>
 
       {/* TradingView Widget Content */}
-      <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+      <div style={{ flex: 1, minHeight: "750px", overflow: "hidden" }}>
         <MemoizedTradingViewWidget />
       </div>
     </div>
