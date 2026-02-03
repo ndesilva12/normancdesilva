@@ -1,0 +1,96 @@
+/* Dashboard Styles */
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to bottom right, #1a1a2e, #16213e);
+    color: #ffffff;
+    min-height: 100vh;
+}
+
+.site-header {
+    padding: 1rem 2rem;
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    text-align: center;
+}
+
+.site-header h1 {
+    margin: 0;
+    font-size: 2rem;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.tools-section h2 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+}
+
+.tool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.tool-block {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.tool-block:hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.tool-block h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.tool-block.large {
+    grid-column: span 2;
+    grid-row: span 2;
+    font-size: 1.5rem;
+}
+
+.preview-section {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1rem 2rem;
+    min-height: 300px;
+}
+
+.preview-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+#preview-content {
+    margin-bottom: 1rem;
+}
+
+#view-full-tool {
+    background: #4a90e2;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+#view-full-tool:hover {
+    background: #357abd;
+}
