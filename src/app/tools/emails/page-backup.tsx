@@ -448,7 +448,7 @@ function EmailsPageContent() {
         </div>
       </div>
     )}
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
       <main style={{ flex: 1, width: "100%", paddingTop: isMobile ? "56px" : "64px" }}>
         <div style={{ maxWidth: isMobile ? "100%" : "1200px", width: isMobile ? "100%" : "80%", margin: "0 auto", padding: isMobile ? "12px 16px" : "20px" }}>
@@ -478,15 +478,8 @@ function EmailsPageContent() {
           <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? "12px" : "16px", marginBottom: isMobile ? "16px" : "24px" }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Mail style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "#3b82f6" }} />
-                <h1 style={{ 
-                  fontSize: isMobile ? "20px" : "24px", 
-                  fontWeight: 700, 
-                  background: "linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text"
-                }}>Emails</h1>
+                <Mail style={{ width: isMobile ? "20px" : "24px", height: isMobile ? "20px" : "24px", color: "var(--accent)" }} />
+                <h1 style={{ fontSize: isMobile ? "20px" : "24px", fontWeight: 600, color: "var(--foreground)" }}>Emails</h1>
               </div>
               {!isMobile && (
                 <p style={{ fontSize: "14px", color: "var(--foreground-muted)", marginTop: "4px" }}>

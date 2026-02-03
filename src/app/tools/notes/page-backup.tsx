@@ -13,7 +13,7 @@ export default function NotesPage() {
   }, [router]);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
       <div style={{ textAlign: "center" }}>
         <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
         <p style={{ color: "var(--foreground-muted)" }}>Redirecting to Notion workspace...</p>

@@ -744,7 +744,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
@@ -795,19 +795,15 @@ export default function CalendarPage() {
                   style={{
                     fontSize: "28px",
                     fontWeight: 700,
+                    color: "var(--foreground)",
                     marginBottom: "8px",
                     display: "flex",
                     alignItems: "center",
                     gap: "12px",
                   }}
                 >
-                  <Calendar style={{ width: "28px", height: "28px", color: "#10b981" }} />
-                  <span style={{
-                    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text"
-                  }}>Calendar</span>
+                  <Calendar style={{ width: "28px", height: "28px", color: "var(--accent)" }} />
+                  Calendar
                 </h1>
                 <p style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>
                   View and manage your Google Calendar events
