@@ -90,13 +90,49 @@ body {
 }
 
 body {
-  background: var(--background);
+  background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   min-height: 100vh;
 }
 
-/* Glassmorphism utility classes */
+/* Card System - Dark cards with top-edge highlight */
+.card-dark {
+  background: rgba(18, 18, 26, 0.95);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 2px solid var(--accent);
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.card-dark:hover {
+  border-top-color: var(--accent-light);
+  box-shadow: 0 6px 24px rgba(0, 212, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Gradient backgrounds for sections */
+.section-gradient {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, rgba(0, 212, 255, 0.01) 100%);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.section-gradient-purple {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.01) 100%);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.section-gradient-green {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.01) 100%);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+/* Glassmorphism utility classes (legacy support) */
 .glass {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);

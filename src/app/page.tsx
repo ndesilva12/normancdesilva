@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
+import Card from "@/components/ui/Card";
+import Section from "@/components/ui/Section";
 import { FilesPreview } from "@/components/FilesPreview";
 import { EmailsPreview } from "@/components/EmailsPreview";
 import { ContactsPreview } from "@/components/ContactsPreview";
@@ -163,16 +165,9 @@ export default function Home() {
     if (!meta || !widget.visible) return null;
 
     return (
-      <div
-        key={widget.id}
-        className="glass"
-        style={{
-          borderRadius: "12px",
-          overflow: "hidden",
-        }}
-      >
+      <Card key={widget.id} accentColor="cyan" className="overflow-hidden p-0">
         {renderWidgetContent(widget.id)}
-      </div>
+      </Card>
     );
   };
 
@@ -189,21 +184,21 @@ export default function Home() {
         {isMobile && <MobileDateTimeBanner />}
 
         {/* Search Bar */}
-        <div style={{ marginBottom: "24px" }}>
+        <Section gradientColor="cyan" className="mb-6">
           <MultiSourceSearch />
-        </div>
+        </Section>
 
         {/* Layout Editor */}
         {isEditMode && <LayoutEditor />}
 
         {/* Widget Navigation Bar - Permanent, Icons Link to Tool Pages */}
+        <Section gradientColor="purple" className="mb-4">
         <div
           style={{
             display: "flex",
             justifyContent: "center",
             gap: isMobile ? "8px" : "12px",
             flexWrap: "wrap",
-            marginBottom: "16px",
           }}
         >
           {/* Curate Button - Special Featured Tool */}
@@ -356,6 +351,7 @@ export default function Home() {
             );
           })}
         </div>
+        </Section>
 
         {/* Widgets Grid */}
         {widgetsVisible && (
@@ -379,16 +375,9 @@ export default function Home() {
                 const meta = WIDGET_META[widget.id];
                 if (!meta) return null;
                 return (
-                  <div
-                    key={widget.id}
-                    className="glass"
-                    style={{
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                    }}
-                  >
+                  <Card key={widget.id} accentColor="cyan" className="overflow-hidden p-0">
                     {renderWidgetContent(widget.id)}
-                  </div>
+                  </Card>
                 );
               })
             )}
