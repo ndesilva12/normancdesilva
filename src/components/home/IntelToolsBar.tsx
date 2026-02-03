@@ -59,7 +59,7 @@ export function IntelToolsBar() {
             color: "var(--muted)",
           }}
         >
-          Intelligence Tools
+          Tools
         </h2>
       </div>
 

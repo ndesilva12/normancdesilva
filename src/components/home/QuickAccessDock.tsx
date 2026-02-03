@@ -100,24 +100,6 @@ export function QuickAccessDock() {
     <div>
       <div
         style={{
-          marginBottom: "12px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "14px",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            color: "var(--muted)",
-          }}
-        >
-          Quick Access
-        </h2>
-      </div>
-
-      <div
-        style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
           gap: "8px",
