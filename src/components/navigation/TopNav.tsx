@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, Zap, Briefcase, MessageSquare, Settings } from "lucide-react";
+import { Search, MessageSquare, Settings } from "lucide-react";
 
 export function TopNav() {
   const pathname = usePathname();
@@ -61,10 +61,8 @@ export function TopNav() {
           }}
         >
           <NavLink href="/" icon={Search} label="Home" active={isActive("/")} />
-          <NavLink href="/intel" icon={Zap} label="Intel" active={isActive("/intel")} />
-          <NavLink href="/productivity" icon={Briefcase} label="Productivity" active={isActive("/productivity")} />
           <NavLink href="/jimmy" icon={MessageSquare} label="Jimmy" active={isActive("/jimmy")} />
-          <NavLink href="/settings" icon={Settings} label="Settings" active={isActive("/settings")} isSettings />
+          <NavLink href="/settings" icon={Settings} label="Settings" active={isActive("/settings")} />
         </div>
       </div>
     </nav>
@@ -76,13 +74,11 @@ function NavLink({
   icon: Icon,
   label,
   active,
-  isSettings = false,
 }: {
   href: string;
   icon: any;
   label: string;
   active: boolean;
-  isSettings?: boolean;
 }) {
   return (
     <Link
@@ -100,7 +96,6 @@ function NavLink({
         border: active ? "1px solid var(--glass-border)" : "1px solid transparent",
         textDecoration: "none",
         transition: "all 0.2s",
-        opacity: isSettings ? 0.6 : 1,
       }}
       onMouseEnter={(e) => {
         if (!active) {

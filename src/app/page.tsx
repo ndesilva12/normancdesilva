@@ -4,7 +4,6 @@ import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { IntelToolsBar } from "@/components/home/IntelToolsBar";
-import { GlanceBox } from "@/components/home/GlanceBox";
 import { QuickAccessDock } from "@/components/home/QuickAccessDock";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { useEffect, useState } from "react";
@@ -52,9 +51,6 @@ export default function Home() {
 
           {/* Intel Tools Bar */}
           <IntelToolsBar />
-
-          {/* Glance Box */}
-          <GlanceBox />
 
           {/* Quick Access Dock */}
           <QuickAccessDock />

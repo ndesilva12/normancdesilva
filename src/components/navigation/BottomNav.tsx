@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, Zap, Briefcase, MessageSquare } from "lucide-react";
+import { Search, Settings, MessageSquare } from "lucide-react";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -32,16 +32,15 @@ export function BottomNav() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: "repeat(3, 1fr)",
           height: "100%",
           maxWidth: "600px",
           margin: "0 auto",
         }}
       >
         <NavItem href="/" icon={Search} label="Home" active={isActive("/")} />
-        <NavItem href="/intel" icon={Zap} label="Intel" active={isActive("/intel")} />
-        <NavItem href="/productivity" icon={Briefcase} label="Tools" active={isActive("/productivity")} />
         <NavItem href="/jimmy" icon={MessageSquare} label="Jimmy" active={isActive("/jimmy")} />
+        <NavItem href="/settings" icon={Settings} label="Settings" active={isActive("/settings")} />
       </div>
 
       <style jsx>{`

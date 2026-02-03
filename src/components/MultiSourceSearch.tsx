@@ -1781,24 +1781,43 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "6px",
+              justifyContent: "center",
+              gap: "8px",
               flexShrink: 0,
-              borderRadius: "8px",
-              backgroundColor: "var(--accent)",
-              padding: "10px 18px",
-              fontSize: "14px",
-              fontWeight: 500,
-              color: "var(--background)",
+              borderRadius: "10px",
+              background: isSearching ? "rgba(255, 255, 255, 0.1)" : "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+              padding: "12px 32px",
+              fontSize: "15px",
+              fontWeight: 600,
+              color: "#ffffff",
               border: "none",
               cursor: isSearching ? "not-allowed" : "pointer",
-              opacity: isSearching ? 0.5 : 1,
+              opacity: isSearching ? 0.7 : 1,
               marginTop: "2px",
+              minWidth: "140px",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              if (!isSearching) {
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(245, 158, 11, 0.4)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "none";
             }}
           >
             {isSearching ? (
-              <Loader2 style={{ width: "16px", height: "16px", animation: "spin 1s linear infinite" }} />
+              <>
+                <Loader2 style={{ width: "18px", height: "18px", animation: "spin 1s linear infinite" }} />
+                <span>Searching...</span>
+              </>
             ) : (
-              <span>Search</span>
+              <>
+                <Search style={{ width: "18px", height: "18px" }} />
+                <span>Search</span>
+              </>
             )}
           </button>
         </div>

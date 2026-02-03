@@ -20,6 +20,7 @@ import {
   BarChart3,
   UserSearch,
   Globe,
+  TrendingUp,
 } from "lucide-react";
 
 const PRODUCTIVITY_TOOLS = [
@@ -35,11 +36,12 @@ const PRODUCTIVITY_TOOLS = [
   { id: "market", name: "Market", icon: DollarSign, href: "/tools/market", color: "#ef4444", category: "Data" },
   { id: "raindrop", name: "Bookmarks", icon: Droplets, href: "/tools/raindrop", color: "#06b6d4", category: "Data" },
   { id: "inoreader", name: "RSS Reader", icon: BookOpen, href: "/tools/inoreader", color: "#10b981", category: "Data" },
+  { id: "trending", name: "Trending", icon: TrendingUp, href: "/tools/trending", color: "#f59e0b", category: "Data" },
   
   // Business Tools
   { id: "business-info", name: "Business Info", icon: Building2, href: "/tools/business-info", color: "#8b5cf6", category: "Business" },
   { id: "visual-rosters", name: "Visual Rosters", icon: BarChart3, href: "/tools/visual-rosters", color: "#3b82f6", category: "Business" },
-  { id: "company-politics", name: "Company Politics", icon: Briefcase, href: "/tools/company-politics", color: "#10b981", category: "Business" },
+  { id: "corporate-info", name: "Corporate Info", icon: Briefcase, href: "/tools/company-politics", color: "#10b981", category: "Business" },
   { id: "contact-finder", name: "Contact Finder", icon: UserSearch, href: "/tools/contact-finder", color: "#f59e0b", category: "Business" },
   { id: "image-lookup", name: "Image Lookup", icon: Image, href: "/tools/image-lookup", color: "#ec4899", category: "Business" },
   
