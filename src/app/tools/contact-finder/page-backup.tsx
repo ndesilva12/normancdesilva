@@ -658,7 +658,7 @@ export default function ContactFinderPage() {
 
   if (!user) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a1a 0%, #1a2e2e 50%, #16262e 100%)", width: "100%" }}>
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
         <Header />
         <main style={{ flex: 1, width: "100%", paddingTop: "64px", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div className="glass" style={{ padding: "40px", borderRadius: "16px", textAlign: "center", maxWidth: "400px" }}>
@@ -676,7 +676,7 @@ export default function ContactFinderPage() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a1a1a 0%, #1a2e2e 50%, #16262e 100%)", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px" }}>

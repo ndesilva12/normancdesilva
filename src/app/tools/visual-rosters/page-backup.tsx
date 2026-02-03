@@ -806,7 +806,7 @@ export default function VisualRostersPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>

@@ -942,7 +942,7 @@ function NotionBrowserContent() {
   const displayTree = searchQuery ? searchResults : tree;
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <Header />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingTop: isMobile ? "56px" : "64px" }}>
         {/* Back Link */}
@@ -1477,7 +1477,7 @@ function NotionBrowserContent() {
 // Loading fallback for Suspense
 function NotionBrowserLoading() {
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <Loader2 style={{ width: "32px", height: "32px", color: "var(--accent)", animation: "spin 1s linear infinite" }} />
       <style jsx global>{`
         @keyframes spin {

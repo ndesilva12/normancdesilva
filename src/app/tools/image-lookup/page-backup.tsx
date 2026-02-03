@@ -146,7 +146,7 @@ export default function ImageLookupPage() {
   const canSearch = (imageUrl.trim() !== "") || (uploadedImage !== null);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "linear-gradient(135deg, #1a0a1a 0%, #2a1a2e 50%, #261e2e 100%)", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       <Header />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>

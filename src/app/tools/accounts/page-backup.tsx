@@ -451,7 +451,7 @@ export default function AccountsPage() {
 
   if (!user) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)", padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
+      <div style={{ minHeight: "100vh", padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ marginBottom: "24px" }}>
           <Link
             href="/"
@@ -480,7 +480,7 @@ export default function AccountsPage() {
 
   if (!pinVerified) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)", padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
+      <div style={{ minHeight: "100vh", padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ marginBottom: "24px" }}>
           <Link
             href="/"
@@ -506,7 +506,7 @@ export default function AccountsPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)", padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
+    <div style={{ minHeight: "100vh", padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
       {/* Back Link */}
       <div style={{ marginBottom: "24px" }}>
         <Link
