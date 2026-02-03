@@ -116,24 +116,28 @@ export function TopNav() {
           <div
             style={{
               position: "fixed",
-              top: "64px",
+              top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              backgroundColor: "rgba(0, 0, 0, 0.75)",
+              backdropFilter: "blur(8px)",
               zIndex: 999,
               display: "flex",
-              alignItems: "flex-start",
+              alignItems: "center",
               justifyContent: "center",
-              paddingTop: "40px",
+              padding: "20px",
             }}
             onClick={() => setShowReminders(false)}
           >
             <div
               onClick={(e) => e.stopPropagation()}
               style={{
-                width: "90%",
-                maxWidth: "600px",
+                width: "100%",
+                maxWidth: "700px",
+                maxHeight: "85vh",
+                overflowY: "auto",
+                position: "relative",
               }}
             >
               <Reminders defaultCollapsed={false} compact={false} />

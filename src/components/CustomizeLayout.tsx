@@ -41,30 +41,30 @@ const DEFAULT_SEARCH_SOURCES: LayoutItem[] = [
 ];
 
 const DEFAULT_INTEL_TOOLS: LayoutItem[] = [
-  { id: "curate", name: "Curate", visible: true, order: 0 },
-  { id: "l3d", name: "Last 30 Days", visible: true, order: 1 },
-  { id: "deep-search", name: "Deep Search", visible: true, order: 2 },
-  { id: "dark-search", name: "Dark Search", visible: true, order: 3 },
+  { id: "curate", name: "Curate", visible: true, order: 0, color: "#8b5cf6" },
+  { id: "l3d", name: "Last 30 Days", visible: true, order: 1, color: "#10b981" },
+  { id: "deep-search", name: "Deep Search", visible: true, order: 2, color: "#3b82f6" },
+  { id: "dark-search", name: "Dark Search", visible: true, order: 3, color: "#ef4444" },
 ];
 
 const DEFAULT_QUICK_ACCESS: LayoutItem[] = [
-  { id: "emails", name: "Emails", visible: true, order: 0 },
-  { id: "calendar", name: "Calendar", visible: true, order: 1 },
-  { id: "contacts", name: "Contacts", visible: true, order: 2 },
-  { id: "files", name: "Files", visible: true, order: 3 },
-  { id: "notes", name: "Notes", visible: true, order: 4 },
-  { id: "raindrop", name: "Bookmarks", visible: true, order: 5 },
-  { id: "spotify", name: "Spotify", visible: true, order: 6 },
-  { id: "news", name: "News", visible: true, order: 7 },
-  { id: "market", name: "Market", visible: true, order: 8 },
-  { id: "inoreader", name: "RSS", visible: true, order: 9 },
-  { id: "trending", name: "Trending", visible: true, order: 10 },
-  { id: "business-info", name: "Business Info", visible: true, order: 11 },
-  { id: "visual-rosters", name: "Rosters", visible: true, order: 12 },
-  { id: "corporate-info", name: "Corporate", visible: true, order: 13 },
-  { id: "contact-finder", name: "Contact Finder", visible: true, order: 14 },
-  { id: "image-lookup", name: "Image Lookup", visible: true, order: 15 },
-  { id: "accounts", name: "Accounts", visible: true, order: 16 },
+  { id: "emails", name: "Emails", visible: true, order: 0, color: "#3b82f6" },
+  { id: "calendar", name: "Calendar", visible: true, order: 1, color: "#10b981" },
+  { id: "contacts", name: "Contacts", visible: true, order: 2, color: "#f59e0b" },
+  { id: "files", name: "Files", visible: true, order: 3, color: "#8b5cf6" },
+  { id: "notes", name: "Notes", visible: true, order: 4, color: "#ec4899" },
+  { id: "raindrop", name: "Bookmarks", visible: true, order: 5, color: "#06b6d4" },
+  { id: "spotify", name: "Spotify", visible: true, order: 6, color: "#10b981" },
+  { id: "news", name: "News", visible: true, order: 7, color: "#f59e0b" },
+  { id: "market", name: "Market", visible: true, order: 8, color: "#ef4444" },
+  { id: "inoreader", name: "RSS", visible: true, order: 9, color: "#10b981" },
+  { id: "trending", name: "Trending", visible: true, order: 10, color: "#f59e0b" },
+  { id: "business-info", name: "Business Info", visible: true, order: 11, color: "#8b5cf6" },
+  { id: "visual-rosters", name: "Rosters", visible: true, order: 12, color: "#3b82f6" },
+  { id: "corporate-info", name: "Corporate", visible: true, order: 13, color: "#10b981" },
+  { id: "contact-finder", name: "Contact Finder", visible: true, order: 14, color: "#f59e0b" },
+  { id: "image-lookup", name: "Image Lookup", visible: true, order: 15, color: "#ec4899" },
+  { id: "accounts", name: "Accounts", visible: true, order: 16, color: "#64748b" },
 ];
 
 export function CustomizeLayout() {

@@ -1,7 +1,17 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { Sparkles, TrendingUp, Search, Lock } from "lucide-react";
+
+interface LayoutItem {
+  id: string;
+  name: string;
+  visible: boolean;
+  order: number;
+  color?: string;
+}
 
 const INTEL_TOOLS = [
   {
@@ -39,7 +49,37 @@ const INTEL_TOOLS = [
 ];
 
 export function IntelToolsBar({ onToolClick }: { onToolClick?: (toolId: string, toolUrl: string, toolColor: string, toolName: string) => void }) {
+  const { user } = useAuth();
   const router = useRouter();
+  const [tools, setTools] = useState(INTEL_TOOLS);
+
+  // Load layout config from localStorage
+  useEffect(() => {
+    if (!user) return;
+    const stored = localStorage.getItem(`layout-config-${user.uid}`);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const intelConfig = parsed.intelTools as LayoutItem[] | undefined;
+        if (intelConfig) {
+          // Merge config with default tools
+          const mergedTools = INTEL_TOOLS.map(tool => {
+            const config = intelConfig.find(c => c.id === tool.id);
+            return {
+              ...tool,
+              visible: config?.visible ?? true,
+              order: config?.order ?? INTEL_TOOLS.indexOf(tool),
+              color: config?.color || tool.color,
+            };
+          }).filter(tool => tool.visible)
+            .sort((a, b) => a.order - b.order);
+          setTools(mergedTools);
+        }
+      } catch (e) {
+        console.error("Failed to parse layout config:", e);
+      }
+    }
+  }, [user]);
 
   return (
     <div
@@ -72,7 +112,7 @@ export function IntelToolsBar({ onToolClick }: { onToolClick?: (toolId: string, 
           gap: "12px",
         }}
       >
-        {INTEL_TOOLS.map((tool) => (
+        {tools.map((tool) => (
           <IntelToolCard key={tool.id} tool={tool} router={router} />
         ))}
       </div>

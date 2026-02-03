@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   StickyNote,
   Mail,
@@ -27,6 +28,14 @@ interface GlanceData {
   loading: boolean;
 }
 
+interface LayoutItem {
+  id: string;
+  name: string;
+  visible: boolean;
+  order: number;
+  color?: string;
+}
+
 const QUICK_TOOLS = [
   // Row 1: Communication & Organization (7 tools)
   { id: "emails", name: "Emails", icon: Mail, href: "/tools/emails", color: "#3b82f6" },
@@ -51,11 +60,41 @@ const QUICK_TOOLS = [
 ];
 
 export function QuickAccessDock({ onToolClick }: { onToolClick?: (toolId: string, toolUrl: string, toolColor: string, toolName: string) => void }) {
+  const { user } = useAuth();
+  const [tools, setTools] = useState(QUICK_TOOLS);
   const [glanceData, setGlanceData] = useState<GlanceData>({
     emailCount: 0,
     todayEventCount: 0,
     loading: true,
   });
+
+  // Load layout config from localStorage
+  useEffect(() => {
+    if (!user) return;
+    const stored = localStorage.getItem(`layout-config-${user.uid}`);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const quickAccessConfig = parsed.quickAccessTools as LayoutItem[] | undefined;
+        if (quickAccessConfig) {
+          // Merge config with default tools
+          const mergedTools = QUICK_TOOLS.map(tool => {
+            const config = quickAccessConfig.find(c => c.id === tool.id);
+            return {
+              ...tool,
+              visible: config?.visible ?? true,
+              order: config?.order ?? tool.id === "emails" ? 0 : QUICK_TOOLS.indexOf(tool),
+              color: config?.color || tool.color,
+            };
+          }).filter(tool => tool.visible)
+            .sort((a, b) => a.order - b.order);
+          setTools(mergedTools);
+        }
+      } catch (e) {
+        console.error("Failed to parse layout config:", e);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     // Load email count
@@ -103,7 +142,7 @@ export function QuickAccessDock({ onToolClick }: { onToolClick?: (toolId: string
           gap: "8px",
         }}
       >
-        {QUICK_TOOLS.map((tool) => (
+        {tools.map((tool) => (
           <QuickToolButton 
             key={tool.id} 
             tool={tool} 
