@@ -11,8 +11,10 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Use the Python research script
-    const command = `cd /home/ubuntu/clawd/skills/last30days-lite && python3 research.py --query "${query.replace(/"/g, '\\"')}" --output json`;
+    // Use the Python research script from project root
+    const projectRoot = process.cwd();
+    const scriptPath = `${projectRoot}/scripts/l3d-research.py`;
+    const command = `python3 ${scriptPath} --query "${query.replace(/"/g, '\\"')}" --output json`;
     
     console.log("Executing L3D research command:", command);
     
@@ -26,6 +28,7 @@ export async function POST(request: NextRequest) {
       env: {
         ...process.env,
         PYTHONUNBUFFERED: "1",
+        BRAVE_API_KEY: process.env.BRAVE_API_KEY || "BSAN41sbCIBbhckWBTYmYAk_44Kug7g",
       },
     });
     
