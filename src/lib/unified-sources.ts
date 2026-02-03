@@ -18,10 +18,8 @@ export type UnifiedSourceId =
   | "dark-search"
   | "corporate-info"
   | "business-info"
-  | "contacts"
   | "contact-finder"
   | "image-lookup"
-  | "visuals"
   | "rosters"
   | "spotify"
   // AI sources (last)
@@ -211,17 +209,6 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     exampleSearches: ["Joe's Coffee Shop, Brooklyn", "Main Street Bakery, Austin TX"],
   },
   {
-    id: "contacts",
-    name: "Contacts",
-    description: "Search Google Contacts",
-    longDescription: "Search and manage your Google Contacts directly from the dashboard.",
-    type: "tool",
-    apiEndpoint: "/api/contacts",
-    usesSearchInput: true,
-    toolHref: "/tools/contacts",
-    exampleSearches: ["John Smith", "email contains @gmail", "phone 555"],
-  },
-  {
     id: "contact-finder",
     name: "Contact Finder",
     description: "AI-powered OSINT research",
@@ -315,39 +302,6 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     ],
     // Special handling for image upload - no text input needed
     exampleSearches: [],
-  },
-  {
-    id: "visuals",
-    name: "Visuals",
-    description: "AI image search & generation",
-    longDescription: "AI-powered image search and generation. Find existing images or create new ones with data visualizations or imagination.",
-    type: "tool",
-    apiEndpoint: "/api/visuals",
-    usesSearchInput: true,
-    toolHref: "/tools/visuals",
-    toolOptions: [
-      {
-        id: "action",
-        type: "toggle",
-        label: "Action",
-        options: [
-          { value: "search", label: "Find Existing Images" },
-          { value: "generate", label: "Generate with AI" },
-        ],
-        defaultValue: "search",
-      },
-      {
-        id: "generateMode",
-        type: "toggle",
-        label: "Generate Mode",
-        options: [
-          { value: "data", label: "Data", description: "Charts, infographics, visualizations" },
-          { value: "imagine", label: "Imagine", description: "Creative AI-generated images" },
-        ],
-        defaultValue: "data",
-      },
-    ],
-    exampleSearches: ["Sunset over mountains", "Data visualization pie chart", "Abstract art blue and gold"],
   },
   {
     id: "rosters",

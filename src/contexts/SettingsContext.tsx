@@ -74,12 +74,12 @@ export interface RecentSearchesSettings {
   maxRecentItems: number; // Max number of recent items to show per tool
 }
 
-// Tool IDs for recent searches
+// Tool IDs for recent searches and per-tool settings
 export const TOOL_IDS = [
-  "search", "notes", "emails", "calendar", "contacts", "files",
-  "market", "news", "trending", "visuals", "business-info",
+  "search", "notes", "emails", "calendar", "files",
+  "market", "news", "trending", "business-info",
   "deep-search", "dark-search", "contact-finder", "company-politics",
-  "spotify", "image-lookup", "visual-rosters"
+  "spotify", "image-lookup", "visual-rosters", "curate", "l3d"
 ] as const;
 
 export type ToolId = typeof TOOL_IDS[number];
@@ -92,13 +92,14 @@ export interface UserSettings {
   connectedEmails: string[];
   searchSources: SearchSourceSettings;
   recentSearches: RecentSearchesSettings;
+  toolColors?: Record<string, string>; // Per-tool color overrides
 }
 
 // All available search sources for default settings
 const ALL_SEARCH_SOURCES = [
   "ai", "web", "google", "images", "news", "trends", "duck", "wikipedia", "grokipedia",
-  "deep-search", "dark-search", "corporate-info", "business-info", "contacts", "contact-finder",
-  "x", "youtube", "rumble", "amazon", "image-lookup", "visuals", "rosters",
+  "deep-search", "dark-search", "corporate-info", "business-info", "contact-finder",
+  "x", "youtube", "rumble", "amazon", "image-lookup", "rosters",
   "spotify", "grok", "gemini", "claude", "chatgpt"
 ];
 
@@ -122,6 +123,8 @@ const DEFAULT_SETTINGS: UserSettings = {
 interface SettingsContextValue {
   settings: UserSettings;
   updateSettings: (updates: Partial<UserSettings>) => void;
+  getToolColor: (toolId: string) => string;
+  updateToolColor: (toolId: string, color: string) => void;
   isSettingsOpen: boolean;
   openSettings: () => void;
   closeSettings: () => void;
@@ -244,6 +247,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [user, settings]);
 
+  const getToolColor = useCallback((toolId: string): string => {
+    return settings.toolColors?.[toolId] || settings.themeColor;
+  }, [settings.toolColors, settings.themeColor]);
+
+  const updateToolColor = useCallback(async (toolId: string, color: string) => {
+    const newToolColors = { ...settings.toolColors, [toolId]: color };
+    await updateSettings({ toolColors: newToolColors });
+  }, [settings.toolColors, updateSettings]);
+
   const getTimezone = useCallback(() => {
     if (settings.timezone === "auto") {
       return Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -275,6 +287,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       value={{
         settings,
         updateSettings,
+        getToolColor,
+        updateToolColor,
         isSettingsOpen,
         openSettings,
         closeSettings,
