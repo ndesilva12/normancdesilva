@@ -584,3 +584,6 @@ export async function sendEmail(
   const data = await response.json();
   return { id: data.id, threadId: data.threadId };
 }
+
+// Note: Email search and calendar events are handled directly in API routes
+// to avoid module resolution issues with token management
