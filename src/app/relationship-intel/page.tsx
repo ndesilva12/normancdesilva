@@ -425,7 +425,7 @@ export default function RelationshipIntel() {
             </div>
             <div>
               <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Cold (>30d)
+                Cold (&gt;30d)
               </div>
               <div style={{ fontSize: '28px', fontWeight: '700', color: '#6b7280' }}>
                 {coldCount}
