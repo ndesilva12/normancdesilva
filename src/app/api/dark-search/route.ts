@@ -271,14 +271,18 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
 
     const data = await response.json();
 
+    // Log the full response for debugging
+    console.log("Dark Search Gemini Response:", JSON.stringify(data, null, 2));
+
     // Extract content and grounding metadata
     const candidate = data.candidates?.[0];
     let content = candidate?.content?.parts?.[0]?.text || "";
     const groundingMetadata: GroundingMetadata = candidate?.groundingMetadata || {};
 
     if (!content) {
+      console.error("No content in Gemini response. Full response:", JSON.stringify(data, null, 2));
       return NextResponse.json(
-        { error: "No response from AI" },
+        { error: "No response from AI. The model may have blocked the request due to safety filters. Try a different query or mode." },
         { status: 500 }
       );
     }

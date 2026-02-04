@@ -13,33 +13,32 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Use the Python research script from project root
-    const projectRoot = process.cwd();
-    const scriptPath = `${projectRoot}/scripts/l3d-research.py`;
-    const command = `python3 ${scriptPath} --query "${query.replace(/"/g, '\\"')}" --output json`;
+    // Use external Python API server instead of exec
+    const apiUrl = process.env.PYTHON_API_URL || "https://api.normancdesilva.com";
     
-    console.log("Executing L3D research command:", command);
+    console.log(`Calling Python API: ${apiUrl}/l3d-research`);
     
-    const { exec } = require("child_process");
-    const { promisify } = require("util");
-    const execAsync = promisify(exec);
-    
-    const { stdout, stderr } = await execAsync(command, {
-      timeout: 60000, // 1 minute timeout
-      maxBuffer: 5 * 1024 * 1024, // 5MB buffer
-      env: {
-        ...process.env,
-        PYTHONUNBUFFERED: "1",
-        BRAVE_API_KEY: process.env.BRAVE_API_KEY || "BSAN41sbCIBbhckWBTYmYAk_44Kug7g",
+    const response = await fetch(`${apiUrl}/l3d-research`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({ query }),
     });
     
-    if (stderr) {
-      console.error("L3D stderr:", stderr);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: "Unknown error" }));
+      console.error("Python API error:", errorData);
+      throw new Error(errorData.detail || "Python API request failed");
     }
     
-    // Parse the JSON output
-    const result = JSON.parse(stdout);
+    const apiResult = await response.json();
+    
+    if (!apiResult.success || !apiResult.result) {
+      throw new Error("Invalid response from Python API");
+    }
+    
+    const result = apiResult.result;
     
     // Save to Firestore
     const userId = request.headers.get("x-user-id");

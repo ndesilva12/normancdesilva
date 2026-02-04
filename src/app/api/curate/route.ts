@@ -10,44 +10,35 @@ export async function POST(request: NextRequest) {
   try {
     const { topic, source } = await request.json();
     
-    // Build the curate command using script from project root
-    const projectRoot = process.cwd();
-    const scriptPath = `${projectRoot}/scripts/curate_v3.py`;
+    // Use external Python API server instead of exec
+    const apiUrl = process.env.PYTHON_API_URL || "https://api.normancdesilva.com";
     
-    let command = `python3 ${scriptPath}`;
+    console.log(`Calling Python API: ${apiUrl}/curate`);
     
-    if (topic && topic !== "general") {
-      command += ` --topic "${topic.replace(/"/g, '\\"')}"`;
-    }
-    
-    if (source && source !== "all") {
-      command += ` --source "${source}"`;
-    }
-    
-    // Add JSON output flag and skip notion
-    command += " --output json --skip-notion";
-    
-    console.log("Executing curate command:", command);
-    
-    // Execute the curate script
-    const { stdout, stderr } = await execAsync(command, {
-      timeout: 120000, // 2 minute timeout
-      maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-      env: {
-        ...process.env,
-        PYTHONUNBUFFERED: "1",
-        XAI_API_KEY: process.env.XAI_API_KEY || "",
-        OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
-        BRAVE_API_KEY: process.env.BRAVE_API_KEY || "",
+    const response = await fetch(`${apiUrl}/curate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        topic: topic || "general",
+        source: source || "all",
+      }),
     });
     
-    if (stderr) {
-      console.error("Curate stderr:", stderr);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: "Unknown error" }));
+      console.error("Python API error:", errorData);
+      throw new Error(errorData.detail || "Python API request failed");
     }
     
-    // Parse the JSON output
-    const result = JSON.parse(stdout);
+    const apiResult = await response.json();
+    
+    if (!apiResult.success || !apiResult.data) {
+      throw new Error("Invalid response from Python API");
+    }
+    
+    const result = apiResult.data;
     
     // Transform the result into the expected format
     const items = [];

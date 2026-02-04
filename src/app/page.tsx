@@ -32,6 +32,7 @@ export default function Home() {
     name: string;
   } | null>(null);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+  const [hasSearchResults, setHasSearchResults] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -154,17 +155,19 @@ export default function Home() {
 
           {/* Search */}
           <div style={{ marginBottom: "32px" }}>
-            <MultiSourceSearch />
+            <MultiSourceSearch 
+              onResultsChange={setHasSearchResults}
+            />
           </div>
 
-          {/* Intel Tools Bar */}
-          <IntelToolsBar onToolClick={handleToolClick} />
+          {/* Intel Tools Bar - hidden when search results present */}
+          {!hasSearchResults && <IntelToolsBar onToolClick={handleToolClick} />}
 
-          {/* Quick Access Dock */}
-          <QuickAccessDock onToolClick={handleToolClick} />
+          {/* Quick Access Dock - hidden when search results present */}
+          {!hasSearchResults && <QuickAccessDock onToolClick={handleToolClick} />}
 
-          {/* Preview Section */}
-          <div
+          {/* Preview Section - hidden when search results present */}
+          {!hasSearchResults && <div
             style={{
               marginTop: "32px",
               background: "rgba(255, 255, 255, 0.03)",
@@ -240,7 +243,7 @@ export default function Home() {
             <div style={{ padding: "24px", minHeight: "400px" }}>
               {renderPreview()}
             </div>
-          </div>
+          </div>}
         </div>
       </div>
     </>
