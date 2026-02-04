@@ -5,6 +5,7 @@ import { BottomNav } from "@/components/navigation/BottomNav";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { IntelToolsBar } from "@/components/home/IntelToolsBar";
 import { QuickAccessDock } from "@/components/home/QuickAccessDock";
+import { DashboardQuickLinks } from "@/components/home/DashboardQuickLinks";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -157,6 +158,9 @@ export default function Home() {
           <div style={{ marginBottom: "32px" }}>
             <MultiSourceSearch />
           </div>
+
+          {/* Dashboard Quick Links */}
+          <DashboardQuickLinks />
 
           {/* Intel Tools Bar */}
           <IntelToolsBar onToolClick={handleToolClick} />

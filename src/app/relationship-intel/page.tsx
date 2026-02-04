@@ -1,29 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { 
-  Search, 
-  Mail, 
-  Calendar, 
-  Tag, 
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Search,
+  Mail,
+  Calendar,
+  Tag,
   RefreshCw,
-  Plus,
-  ExternalLink,
-  Clock,
-  User,
-  Building,
-  MessageSquare,
   X,
   ArrowLeft,
   Users,
   Zap,
   TrendingUp,
-  Filter,
+  Clock,
   ChevronDown,
-  Send,
-  StickyNote,
-  Phone
+  ChevronUp,
+  Sparkles,
+  MessageSquare,
+  Phone,
+  Building,
+  Star,
+  StarOff,
+  ExternalLink,
+  Filter,
+  SortAsc
 } from 'lucide-react';
 
 interface Contact {
@@ -37,6 +39,7 @@ interface Contact {
   interaction_count: number;
   company?: string;
   position?: string;
+  interestLevel?: number;
 }
 
 interface Interaction {
@@ -49,7 +52,45 @@ interface Interaction {
   body?: string;
   from_email?: string;
   from_name?: string;
-  participants?: Array<{ email: string; name: string; role: string }>;
+  direction?: 'inbound' | 'outbound';
+}
+
+interface EmailData {
+  id: string;
+  threadId: string;
+  subject: string;
+  from: string;
+  to?: string;
+  snippet: string;
+  body?: string;
+  date: string;
+  direction: 'inbound' | 'outbound';
+}
+
+interface CalendarEventData {
+  id: string;
+  summary: string;
+  description?: string;
+  start: string;
+  end: string;
+  location?: string;
+  attendees?: string[];
+}
+
+interface ContactDetailData {
+  contact: Contact;
+  emails: EmailData[];
+  calendarEvents: CalendarEventData[];
+  summary: {
+    fullHistorySummary: string;
+    recentSummary: string;
+    lastUpdated: number;
+  } | null;
+  stats: {
+    emailCount: number;
+    meetingCount: number;
+    totalInteractions: number;
+  };
 }
 
 interface Project {
@@ -60,35 +101,36 @@ interface Project {
   last_sync: number;
 }
 
+type SortOption = 'recent' | 'name' | 'interactions' | 'interest';
+
 export default function RelationshipIntel() {
   const [project, setProject] = useState<Project | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [contactInteractions, setContactInteractions] = useState<Interaction[]>([]);
-  const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
-  
+  const [contactDetail, setContactDetail] = useState<ContactDetailData | null>(null);
+  const [selectedEmail, setSelectedEmail] = useState<EmailData | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'interactions'>('recent');
-  
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  // Section collapse states
+  const [aiSummaryExpanded, setAiSummaryExpanded] = useState(true);
+  const [recentSummaryExpanded, setRecentSummaryExpanded] = useState(true);
+  const [emailsExpanded, setEmailsExpanded] = useState(true);
+  const [meetingsExpanded, setMeetingsExpanded] = useState(true);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
-
       const [projectRes, contactsRes] = await Promise.all([
         fetch('/api/relationship-intel/projects/cinderella'),
         fetch('/api/relationship-intel/projects/cinderella/contacts')
@@ -104,26 +146,80 @@ export default function RelationshipIntel() {
       setProject(projectData);
       setContacts(contactsData);
       setFilteredContacts(contactsData);
+
+      // Extract all unique tags
+      const tags = new Set<string>();
+      contactsData.forEach((c: Contact) => {
+        c.tags?.forEach(t => tags.add(t));
+      });
+      setAllTags(Array.from(tags).sort());
+
       setLoading(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      console.error('Load error:', err);
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadContactInteractions = async (email: string) => {
+  const loadContactDetail = useCallback(async (contact: Contact) => {
+    setLoadingDetail(true);
     try {
       const res = await fetch(
-        `/api/relationship-intel/contacts/${encodeURIComponent(email)}/interactions?projectId=cinderella`
+        `/api/relationship-intel/contacts/${encodeURIComponent(contact.email)}/data`
       );
       if (res.ok) {
         const data = await res.json();
-        setContactInteractions(data);
+        setContactDetail(data);
       }
     } catch (err) {
-      console.error('Failed to load interactions:', err);
+      console.error('Failed to load contact detail:', err);
     }
-  };
+    setLoadingDetail(false);
+  }, []);
+
+  const generateSummary = useCallback(async () => {
+    if (!selectedContact || !contactDetail) return;
+
+    setGeneratingSummary(true);
+    try {
+      const res = await fetch(
+        `/api/relationship-intel/contacts/${encodeURIComponent(selectedContact.email)}/summary`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contactName: selectedContact.name,
+            emails: contactDetail.emails.map(e => ({
+              subject: e.subject,
+              snippet: e.snippet,
+              date: e.date,
+              direction: e.direction,
+            })),
+            meetings: contactDetail.calendarEvents.map(m => ({
+              summary: m.summary,
+              start: m.start,
+              attendees: m.attendees,
+            })),
+          }),
+        }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        setContactDetail(prev => prev ? {
+          ...prev,
+          summary: {
+            fullHistorySummary: data.summary.fullHistorySummary,
+            recentSummary: data.summary.recentSummary,
+            lastUpdated: Date.now(),
+          }
+        } : null);
+      }
+    } catch (err) {
+      console.error('Failed to generate summary:', err);
+    }
+    setGeneratingSummary(false);
+  }, [selectedContact, contactDetail]);
 
   const triggerSync = async () => {
     setSyncing(true);
@@ -133,24 +229,25 @@ export default function RelationshipIntel() {
         loadData();
         setSyncing(false);
       }, 10000);
-    } catch (err) {
+    } catch {
       setSyncing(false);
     }
   };
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   useEffect(() => {
     let filtered = [...contacts];
 
     if (searchQuery) {
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(c =>
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.notes && c.notes.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (c.tags && c.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())))
+        c.name.toLowerCase().includes(query) ||
+        c.email.toLowerCase().includes(query) ||
+        c.notes?.toLowerCase().includes(query) ||
+        c.tags?.some(t => t.toLowerCase().includes(query))
       );
     }
 
@@ -158,54 +255,58 @@ export default function RelationshipIntel() {
       filtered = filtered.filter(c => getStatus(c.last_seen).type === statusFilter);
     }
 
-    if (sortBy === 'recent') {
-      filtered.sort((a, b) => b.last_seen - a.last_seen);
-    } else if (sortBy === 'name') {
-      filtered.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortBy === 'interactions') {
-      filtered.sort((a, b) => b.interaction_count - a.interaction_count);
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(c =>
+        selectedTags.some(tag => c.tags?.includes(tag))
+      );
+    }
+
+    switch (sortBy) {
+      case 'recent':
+        filtered.sort((a, b) => (b.last_seen || 0) - (a.last_seen || 0));
+        break;
+      case 'name':
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'interactions':
+        filtered.sort((a, b) => (b.interaction_count || 0) - (a.interaction_count || 0));
+        break;
+      case 'interest':
+        filtered.sort((a, b) => (b.interestLevel || 0) - (a.interestLevel || 0));
+        break;
     }
 
     setFilteredContacts(filtered);
-  }, [searchQuery, statusFilter, sortBy, contacts]);
+  }, [searchQuery, statusFilter, sortBy, contacts, selectedTags]);
 
   const getStatus = (lastSeen: number) => {
     const daysSince = (Date.now() - lastSeen * 1000) / 86400000;
-    if (daysSince < 7) return { 
-      type: 'active', 
-      label: 'Active', 
-      color: '#10b981',
-      bgColor: 'rgba(16, 185, 129, 0.1)'
-    };
-    if (daysSince < 30) return { 
-      type: 'warm', 
-      label: 'Warm', 
-      color: '#f59e0b',
-      bgColor: 'rgba(245, 158, 11, 0.1)'
-    };
-    return { 
-      type: 'cold', 
-      label: 'Cold', 
-      color: '#6b7280',
-      bgColor: 'rgba(107, 114, 128, 0.1)'
-    };
+    if (daysSince < 7) return { type: 'active', label: 'Active', color: '#10b981' };
+    if (daysSince < 30) return { type: 'warm', label: 'Warm', color: '#f59e0b' };
+    return { type: 'cold', label: 'Cold', color: '#6b7280' };
   };
 
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp * 1000);
+  const formatDate = (timestamp: number | string) => {
+    const date = typeof timestamp === 'string' ? new Date(parseInt(timestamp)) : new Date(timestamp * 1000);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / 86400000);
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
   };
 
   const openContactDetail = (contact: Contact) => {
     setSelectedContact(contact);
-    loadContactInteractions(contact.email);
+    setContactDetail(null);
+    loadContactDetail(contact);
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
   };
 
   const activeCount = contacts.filter(c => getStatus(c.last_seen).type === 'active').length;
@@ -214,281 +315,93 @@ export default function RelationshipIntel() {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#ffffff'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ color: '#9ca3af' }}>Loading your network...</p>
+      <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw size={32} className="animate-spin mx-auto mb-4 text-cyan-400" />
+          <p className="text-gray-400">Loading your network...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)',
-      color: '#ffffff',
-      padding: isMobile ? '16px' : '32px',
-    }}>
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
       {/* Header */}
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-        marginBottom: '48px',
-      }}>
-        <Link 
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        <Link
           href="/"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: '#9ca3af',
-            textDecoration: 'none',
-            fontSize: '14px',
-            marginBottom: '24px',
-            transition: 'color 0.2s',
-          }}
-          onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.color = '#ffffff'}
-          onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.color = '#9ca3af'}
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm mb-6"
         >
           <ArrowLeft size={16} />
           Back to Dashboard
         </Link>
 
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          marginBottom: '12px',
-        }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
+        <div className="flex items-center gap-4 mb-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
             <Users size={24} />
           </div>
-          <h1 style={{
-            fontSize: isMobile ? '32px' : '48px',
-            fontWeight: '800',
-            margin: 0,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
             Relationship Intel
           </h1>
         </div>
-        
-        <p style={{
-          fontSize: isMobile ? '14px' : '18px',
-          color: '#9ca3af',
-          margin: 0,
-          lineHeight: '1.6',
-        }}>
-          Track and manage your professional relationships for the Cinderella project.
-          <br />
-          <span style={{ fontSize: '14px', color: '#6b7280' }}>
-            {project?.contact_count || 0} contacts • {project?.interaction_count || 0} interactions • Last synced {project?.last_sync ? formatDate(project.last_sync) : 'never'}
-          </span>
+
+        <p className="text-gray-400 text-lg">
+          Your professional network intelligence dashboard
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto 32px',
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
-        gap: '16px',
-      }}>
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '16px',
-          padding: '24px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <Users size={20} />
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Total Contacts
+      <div className="max-w-6xl mx-auto px-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Total Contacts', value: project?.contact_count || 0, icon: Users, gradient: 'from-purple-500 to-indigo-600' },
+            { label: 'Active (7d)', value: activeCount, icon: Zap, color: '#10b981' },
+            { label: 'Warm (30d)', value: warmCount, icon: TrendingUp, color: '#f59e0b' },
+            { label: 'Cold (>30d)', value: coldCount, icon: Clock, color: '#6b7280' },
+          ].map((stat, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="backdrop-blur-xl rounded-2xl p-5 border"
+              style={{
+                background: stat.color ? `rgba(${stat.color === '#10b981' ? '16,185,129' : stat.color === '#f59e0b' ? '245,158,11' : '107,114,128'}, 0.1)` : 'rgba(255,255,255,0.05)',
+                borderColor: stat.color ? `${stat.color}33` : 'rgba(255,255,255,0.1)',
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{
+                    background: stat.gradient ? `linear-gradient(135deg, var(--tw-gradient-stops))` : `${stat.color}33`,
+                  }}
+                >
+                  <stat.icon size={20} style={{ color: stat.color || '#fff' }} />
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400 uppercase tracking-wide">{stat.label}</div>
+                  <div className="text-2xl font-bold" style={{ color: stat.color || '#fff' }}>{stat.value}</div>
+                </div>
               </div>
-              <div style={{ fontSize: '28px', fontWeight: '700' }}>
-                {project?.contact_count || 0}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.1)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(16, 185, 129, 0.2)',
-          borderRadius: '16px',
-          padding: '24px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'rgba(16, 185, 129, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <Zap size={20} style={{ color: '#10b981' }} />
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Active (7d)
-              </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#10b981' }}>
-                {activeCount}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{
-          background: 'rgba(245, 158, 11, 0.1)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(245, 158, 11, 0.2)',
-          borderRadius: '16px',
-          padding: '24px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'rgba(245, 158, 11, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <TrendingUp size={20} style={{ color: '#f59e0b' }} />
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Warm (30d)
-              </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#f59e0b' }}>
-                {warmCount}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{
-          background: 'rgba(107, 114, 128, 0.1)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(107, 114, 128, 0.2)',
-          borderRadius: '16px',
-          padding: '24px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'rgba(107, 114, 128, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <Clock size={20} style={{ color: '#6b7280' }} />
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Cold (&gt;30d)
-              </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#6b7280' }}>
-                {coldCount}
-              </div>
-            </div>
-          </div>
+            </motion.div>
+          ))}
         </div>
       </div>
 
-      {/* Search & Controls */}
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto 24px',
-      }}>
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '16px',
-          padding: isMobile ? '20px' : '24px',
-        }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '1fr auto auto auto',
-            gap: '12px',
-            alignItems: 'center',
-          }}>
+      {/* Search & Filters */}
+      <div className="max-w-6xl mx-auto px-6 mb-6">
+        <div className="backdrop-blur-xl bg-white/5 rounded-2xl p-5 border border-white/10">
+          <div className="flex flex-col lg:flex-row gap-4">
             {/* Search */}
-            <div style={{ position: 'relative' }}>
-              <Search 
-                size={20} 
-                style={{
-                  position: 'absolute',
-                  left: '16px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#6b7280',
-                }}
-              />
+            <div className="flex-1 relative">
+              <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search contacts, tags, notes..."
-                style={{
-                  width: '100%',
-                  padding: '12px 16px 12px 48px',
-                  fontSize: '15px',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  color: '#ffffff',
-                  outline: 'none',
-                  transition: 'all 0.2s',
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#667eea';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                  e.target.style.boxShadow = 'none';
-                }}
+                placeholder="Search contacts..."
+                className="w-full pl-12 pr-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
               />
             </div>
 
@@ -496,16 +409,7 @@ export default function RelationshipIntel() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                padding: '12px 16px',
-                fontSize: '14px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                color: '#ffffff',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
+              className="px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500 cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -516,521 +420,417 @@ export default function RelationshipIntel() {
             {/* Sort */}
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              style={{
-                padding: '12px 16px',
-                fontSize: '14px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                color: '#ffffff',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500 cursor-pointer"
             >
               <option value="recent">Most Recent</option>
               <option value="name">Name A-Z</option>
               <option value="interactions">Most Active</option>
+              <option value="interest">Interest Level</option>
             </select>
 
             {/* Sync Button */}
             <button
               onClick={triggerSync}
               disabled={syncing}
-              style={{
-                padding: '12px 24px',
-                fontSize: '14px',
-                fontWeight: '600',
-                background: syncing ? 'rgba(102, 126, 234, 0.5)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                borderRadius: '12px',
-                color: '#ffffff',
-                cursor: syncing ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                if (!syncing) {
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(102, 126, 234, 0.3)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-              }}
+              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
             >
-              <RefreshCw size={16} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
+              <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
               {syncing ? 'Syncing...' : 'Sync'}
             </button>
           </div>
+
+          {/* Tag Filters */}
+          {allTags.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="text-gray-500 text-sm flex items-center gap-1">
+                <Filter size={14} />
+                Tags:
+              </span>
+              {allTags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => toggleTag(tag)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                    selectedTags.includes(tag)
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Contacts Grid */}
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-      }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(380px, 1fr))',
-          gap: '16px',
-        }}>
-          {filteredContacts.map((contact) => {
-            const status = getStatus(contact.last_seen);
-            return (
-              <div
-                key={contact.email}
-                onClick={() => openContactDetail(contact)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.3)';
-                  (e.currentTarget as HTMLElement).style.borderColor = status.color;
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'start', gap: '16px', marginBottom: '16px' }}>
-                  <div style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '14px',
-                    background: `linear-gradient(135deg, ${status.color} 0%, ${status.color}CC 100%)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '24px',
-                    fontWeight: '700',
-                    flexShrink: 0,
-                  }}>
-                    {contact.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{
-                      fontSize: '18px',
-                      fontWeight: '600',
-                      margin: '0 0 4px 0',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {contact.name}
-                    </h3>
-                    <p style={{
-                      fontSize: '13px',
-                      color: '#9ca3af',
-                      margin: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {contact.email}
-                    </p>
-                  </div>
-                  <div style={{
-                    padding: '4px 10px',
-                    borderRadius: '8px',
-                    background: status.bgColor,
-                    border: `1px solid ${status.color}40`,
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    color: status.color,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                  }}>
-                    {status.label}
-                  </div>
-                </div>
+      {/* Contact List */}
+      <div className="max-w-6xl mx-auto px-6 pb-12">
+        <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+          <div className="divide-y divide-white/5">
+            {filteredContacts.map((contact, i) => {
+              const status = getStatus(contact.last_seen);
+              return (
+                <motion.div
+                  key={contact.email}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.02 }}
+                  onClick={() => openContactDetail(contact)}
+                  className="p-5 hover:bg-white/5 cursor-pointer transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-semibold text-lg truncate group-hover:text-purple-400 transition-colors">
+                            {contact.name}
+                          </h3>
+                          <span
+                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{
+                              background: `${status.color}20`,
+                              color: status.color,
+                            }}
+                          >
+                            {status.label}
+                          </span>
+                        </div>
+                        <p className="text-gray-400 text-sm truncate">{contact.email}</p>
+                        {contact.company && (
+                          <p className="text-gray-500 text-xs flex items-center gap-1 mt-1">
+                            <Building size={12} />
+                            {contact.position && `${contact.position} at `}{contact.company}
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '12px',
-                  marginBottom: '12px',
-                }}>
-                  <div style={{
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    borderRadius: '10px',
-                    padding: '12px',
-                  }}>
-                    <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>Last Contact</div>
-                    <div style={{ fontSize: '14px', fontWeight: '600' }}>{formatDate(contact.last_seen)}</div>
-                  </div>
-                  <div style={{
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    borderRadius: '10px',
-                    padding: '12px',
-                  }}>
-                    <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>Interactions</div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Mail size={14} style={{ color: '#667eea' }} />
-                      {contact.interaction_count}
+                    <div className="flex items-center gap-6 text-gray-400 text-sm">
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-white">{contact.interaction_count}</div>
+                        <div className="text-xs">interactions</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm">{formatDate(contact.last_seen)}</div>
+                        <div className="text-xs">last contact</div>
+                      </div>
+                      {contact.tags && contact.tags.length > 0 && (
+                        <div className="hidden md:flex gap-1">
+                          {contact.tags.slice(0, 2).map(tag => (
+                            <span key={tag} className="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-
-                {contact.notes && (
-                  <div style={{
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    borderRadius: '10px',
-                    padding: '12px',
-                    marginBottom: '12px',
-                  }}>
-                    <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <StickyNote size={12} />
-                      Note
-                    </div>
-                    <div style={{
-                      fontSize: '13px',
-                      color: '#e5e7eb',
-                      lineHeight: '1.5',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}>
-                      {contact.notes}
-                    </div>
-                  </div>
-                )}
-
-                {contact.tags && contact.tags.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {contact.tags.slice(0, 3).map(tag => (
-                      <span
-                        key={tag}
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: '8px',
-                          background: 'rgba(102, 126, 234, 0.15)',
-                          border: '1px solid rgba(102, 126, 234, 0.3)',
-                          fontSize: '11px',
-                          fontWeight: '500',
-                          color: '#a78bfa',
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Contact Detail Modal */}
-      {selectedContact && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: '24px',
-          }}
-          onClick={() => setSelectedContact(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '24px',
-              maxWidth: '900px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
+      <AnimatePresence>
+        {selectedContact && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedContact(null)}
           >
-            {/* Modal Header */}
-            <div style={{
-              padding: '32px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-              background: 'rgba(255, 255, 255, 0.02)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  <div style={{
-                    width: '72px',
-                    height: '72px',
-                    borderRadius: '18px',
-                    background: `linear-gradient(135deg, ${getStatus(selectedContact.last_seen).color} 0%, ${getStatus(selectedContact.last_seen).color}CC 100%)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '32px',
-                    fontWeight: '700',
-                  }}>
-                    {selectedContact.name.charAt(0).toUpperCase()}
-                  </div>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-white/10 flex flex-col"
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-white/10 bg-white/5">
+                <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h2 style={{ fontSize: '28px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      {selectedContact.name}
-                    </h2>
-                    <p style={{ fontSize: '15px', color: '#9ca3af', margin: 0 }}>{selectedContact.email}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedContact(null)}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.15)'}
-                  onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.1)'}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Quick Actions */}
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <button style={{
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}>
-                  <Mail size={16} />
-                  Send Email
-                </button>
-                <button style={{
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}>
-                  <MessageSquare size={16} />
-                  Add Note
-                </button>
-                <button style={{
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}>
-                  <Tag size={16} />
-                  Add Tag
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Content */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '32px',
-            }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Clock size={18} style={{ color: '#667eea' }} />
-                Interaction History ({contactInteractions.length})
-              </h3>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {contactInteractions.map((interaction, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setSelectedInteraction(interaction)}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.08)';
-                      (e.currentTarget as HTMLElement).style.borderColor = '#667eea';
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.05)';
-                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-                        {interaction.type === 'email' ? (
-                          <Mail size={18} style={{ color: '#667eea', flexShrink: 0 }} />
-                        ) : (
-                          <Calendar size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
-                        )}
-                        <span style={{ fontSize: '15px', fontWeight: '600' }}>
-                          {interaction.subject || interaction.title}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '12px', color: '#9ca3af', flexShrink: 0, marginLeft: '12px' }}>
-                        {formatDate(interaction.date)}
-                      </span>
-                    </div>
-                    {interaction.snippet && (
-                      <p style={{
-                        fontSize: '13px',
-                        color: '#9ca3af',
-                        margin: 0,
-                        lineHeight: '1.5',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                      }}>
-                        {interaction.snippet}
+                    <h2 className="text-2xl font-bold">{selectedContact.name}</h2>
+                    <p className="text-gray-400">{selectedContact.email}</p>
+                    {selectedContact.company && (
+                      <p className="text-gray-500 text-sm flex items-center gap-1 mt-1">
+                        <Building size={14} />
+                        {selectedContact.position && `${selectedContact.position} at `}{selectedContact.company}
                       </p>
                     )}
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Interaction Detail Modal */}
-      {selectedInteraction && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.9)',
-            backdropFilter: 'blur(12px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 60,
-            padding: '24px',
-          }}
-          onClick={() => setSelectedInteraction(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '24px',
-              maxWidth: '800px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            {/* Email Header */}
-            <div style={{
-              padding: '24px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-              background: 'rgba(255, 255, 255, 0.02)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ fontSize: '20px', fontWeight: '600', margin: '0 0 8px 0' }}>
-                    {selectedInteraction.subject || selectedInteraction.title}
-                  </h3>
-                  <div style={{ fontSize: '13px', color: '#9ca3af' }}>
-                    From: {selectedInteraction.from_name || selectedInteraction.from_email}
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#9ca3af' }}>
-                    {formatDate(selectedInteraction.date)}
-                  </div>
+                  <button
+                    onClick={() => setSelectedContact(null)}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setSelectedInteraction(null)}
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
 
-            {/* Email Body */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '24px',
-            }}>
-              <div style={{
-                fontSize: '14px',
-                lineHeight: '1.7',
-                color: '#e5e7eb',
-                whiteSpace: 'pre-wrap',
-              }}>
-                {selectedInteraction.body || selectedInteraction.snippet || 'No content available'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+                {/* Quick Actions */}
+                <div className="flex gap-2 flex-wrap">
+                  <a
+                    href={`mailto:${selectedContact.email}`}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg text-sm font-medium flex items-center gap-2 hover:shadow-lg hover:shadow-purple-500/20 transition-all"
+                  >
+                    <Mail size={16} />
+                    Send Email
+                  </a>
+                  {selectedContact.tags?.map(tag => (
+                    <span key={tag} className="px-3 py-2 bg-purple-500/20 text-purple-300 rounded-lg text-sm flex items-center gap-1">
+                      <Tag size={14} />
+                      {tag}
+                    </span>
+                  ))}
+                </div>
 
-      <style jsx>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+                {/* Stats Row */}
+                {contactDetail && (
+                  <div className="grid grid-cols-3 gap-4 mt-4">
+                    <div className="bg-black/20 rounded-xl p-3 text-center">
+                      <div className="text-2xl font-bold text-purple-400">{contactDetail.stats.emailCount}</div>
+                      <div className="text-xs text-gray-400">Emails</div>
+                    </div>
+                    <div className="bg-black/20 rounded-xl p-3 text-center">
+                      <div className="text-2xl font-bold text-indigo-400">{contactDetail.stats.meetingCount}</div>
+                      <div className="text-xs text-gray-400">Meetings</div>
+                    </div>
+                    <div className="bg-black/20 rounded-xl p-3 text-center">
+                      <div className="text-2xl font-bold text-cyan-400">{contactDetail.stats.totalInteractions}</div>
+                      <div className="text-xs text-gray-400">Total</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {loadingDetail ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw size={24} className="animate-spin text-purple-400" />
+                  </div>
+                ) : contactDetail ? (
+                  <>
+                    {/* AI Relationship Summary */}
+                    <div className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 rounded-2xl border border-purple-500/20 overflow-hidden">
+                      <button
+                        onClick={() => setAiSummaryExpanded(!aiSummaryExpanded)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Sparkles size={20} className="text-purple-400" />
+                          <span className="font-semibold">AI Relationship Summary</span>
+                        </div>
+                        {aiSummaryExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </button>
+                      {aiSummaryExpanded && (
+                        <div className="px-4 pb-4">
+                          {contactDetail.summary ? (
+                            <div className="prose prose-invert prose-sm max-w-none">
+                              <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                                {contactDetail.summary.fullHistorySummary}
+                              </p>
+                              <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+                                <span>Last updated: {formatDate(contactDetail.summary.lastUpdated / 1000)}</span>
+                                <button
+                                  onClick={generateSummary}
+                                  disabled={generatingSummary}
+                                  className="flex items-center gap-1 text-purple-400 hover:text-purple-300"
+                                >
+                                  <RefreshCw size={12} className={generatingSummary ? 'animate-spin' : ''} />
+                                  Regenerate
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-4">
+                              <p className="text-gray-400 mb-3">No summary generated yet</p>
+                              <button
+                                onClick={generateSummary}
+                                disabled={generatingSummary}
+                                className="px-4 py-2 bg-purple-500 rounded-lg text-sm font-medium flex items-center gap-2 mx-auto hover:bg-purple-600 transition-colors"
+                              >
+                                <Sparkles size={16} className={generatingSummary ? 'animate-pulse' : ''} />
+                                {generatingSummary ? 'Generating...' : 'Generate Summary'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Recent Summary */}
+                    {contactDetail.summary?.recentSummary && (
+                      <div className="bg-indigo-500/10 rounded-2xl border border-indigo-500/20 overflow-hidden">
+                        <button
+                          onClick={() => setRecentSummaryExpanded(!recentSummaryExpanded)}
+                          className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Clock size={20} className="text-indigo-400" />
+                            <span className="font-semibold">Recent Activity Summary (Last 3 Months)</span>
+                          </div>
+                          {recentSummaryExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </button>
+                        {recentSummaryExpanded && (
+                          <div className="px-4 pb-4">
+                            <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                              {contactDetail.summary.recentSummary}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Email History */}
+                    <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+                      <button
+                        onClick={() => setEmailsExpanded(!emailsExpanded)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Mail size={20} className="text-cyan-400" />
+                          <span className="font-semibold">Email History ({contactDetail.emails.length})</span>
+                        </div>
+                        {emailsExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </button>
+                      {emailsExpanded && (
+                        <div className="divide-y divide-white/5">
+                          {contactDetail.emails.length > 0 ? contactDetail.emails.slice(0, 20).map((email) => (
+                            <div
+                              key={email.id}
+                              onClick={() => setSelectedEmail(email)}
+                              className="p-4 hover:bg-white/5 cursor-pointer transition-colors"
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={`text-xs px-2 py-0.5 rounded ${
+                                      email.direction === 'inbound'
+                                        ? 'bg-cyan-500/20 text-cyan-400'
+                                        : 'bg-purple-500/20 text-purple-400'
+                                    }`}>
+                                      {email.direction === 'inbound' ? 'Received' : 'Sent'}
+                                    </span>
+                                    <span className="text-xs text-gray-500">{formatDate(email.date)}</span>
+                                  </div>
+                                  <h4 className="font-medium truncate">{email.subject}</h4>
+                                  <p className="text-gray-400 text-sm truncate">{email.snippet}</p>
+                                </div>
+                                <ExternalLink size={16} className="text-gray-500 flex-shrink-0" />
+                              </div>
+                            </div>
+                          )) : (
+                            <div className="p-8 text-center text-gray-400">
+                              No emails found with this contact
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Meetings & Events */}
+                    <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+                      <button
+                        onClick={() => setMeetingsExpanded(!meetingsExpanded)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Calendar size={20} className="text-amber-400" />
+                          <span className="font-semibold">Meetings & Events ({contactDetail.calendarEvents.length})</span>
+                        </div>
+                        {meetingsExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </button>
+                      {meetingsExpanded && (
+                        <div className="divide-y divide-white/5">
+                          {contactDetail.calendarEvents.length > 0 ? contactDetail.calendarEvents.map((event) => (
+                            <div key={event.id} className="p-4">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs text-amber-400 mb-1">
+                                    {new Date(event.start).toLocaleDateString('en-US', {
+                                      weekday: 'short',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric',
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                    })}
+                                  </div>
+                                  <h4 className="font-medium">{event.summary}</h4>
+                                  {event.location && (
+                                    <p className="text-gray-400 text-sm">{event.location}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )) : (
+                            <div className="p-8 text-center text-gray-400">
+                              No meetings found with this contact
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Email Detail Modal */}
+      <AnimatePresence>
+        {selectedEmail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => setSelectedEmail(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-3xl max-w-3xl w-full max-h-[80vh] overflow-hidden border border-white/10 flex flex-col"
+            >
+              <div className="p-6 border-b border-white/10 bg-white/5">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1 min-w-0 pr-4">
+                    <h3 className="text-xl font-bold mb-2">{selectedEmail.subject}</h3>
+                    <div className="text-sm text-gray-400">
+                      <p>From: {selectedEmail.from}</p>
+                      {selectedEmail.to && <p>To: {selectedEmail.to}</p>}
+                      <p className="text-gray-500">{formatDate(selectedEmail.date)}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedEmail(null)}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="prose prose-invert prose-sm max-w-none">
+                  <pre className="whitespace-pre-wrap font-sans text-gray-300 leading-relaxed">
+                    {selectedEmail.body || selectedEmail.snippet}
+                  </pre>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
