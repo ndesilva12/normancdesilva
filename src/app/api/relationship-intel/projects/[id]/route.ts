@@ -8,13 +8,17 @@ export async function GET(
   try {
     const { id } = await params;
     const db = getDb();
-    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
     
-    if (!project) {
+    const projectDoc = await db
+      .collection('relationship_intel_projects')
+      .doc(id)
+      .get();
+    
+    if (!projectDoc.exists) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    return NextResponse.json(project);
+    return NextResponse.json({ id: projectDoc.id, ...projectDoc.data() });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
