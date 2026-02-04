@@ -18,10 +18,8 @@ import {
   RefreshCw,
   Pipette,
   Search,
-  Eye,
 } from "lucide-react";
 import { useSettings, THEME_COLORS, TIMEZONES, ThemeMode, TimeFormat, TOOL_IDS, ToolId } from "@/contexts/SettingsContext";
-import { useLayout } from "@/contexts/LayoutContext";
 import { SEARCH_SOURCES, SearchSource } from "@/lib/search-service";
 import { UNIFIED_SOURCES, UnifiedSourceId, DEFAULT_SOURCE } from "@/lib/unified-sources";
 
@@ -717,75 +715,6 @@ export function SettingsPopup() {
                           </option>
                         ))}
                       </select>
-                    </div>
-                  </div>
-
-                  {/* Search Source Display Mode */}
-                  <div>
-                    <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "var(--foreground)", marginBottom: "8px" }}>
-                      <Eye style={{ width: "16px", height: "16px", display: "inline", marginRight: "8px", verticalAlign: "middle" }} />
-                      Search Source Display
-                    </label>
-                    <p style={{ fontSize: "13px", color: "var(--foreground-muted)", marginBottom: "16px" }}>
-                      Choose how search sources appear in the search bar.
-                    </p>
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                      <button
-                        onClick={() => setSearchSourceMode("alwaysShowing")}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "12px",
-                          padding: "14px 16px",
-                          borderRadius: "10px",
-                          backgroundColor: layout.searchSourceMode === "alwaysShowing" ? "rgba(var(--accent-rgb), 0.15)" : "rgba(255, 255, 255, 0.03)",
-                          border: layout.searchSourceMode === "alwaysShowing" ? "2px solid var(--accent)" : "2px solid transparent",
-                          cursor: "pointer",
-                          textAlign: "left",
-                          transition: "all 0.15s",
-                        }}
-                      >
-                        <div style={{ flex: 1 }}>
-                          <span style={{ fontSize: "14px", fontWeight: 500, color: layout.searchSourceMode === "alwaysShowing" ? "var(--accent)" : "var(--foreground)" }}>
-                            Always Show All Sources
-                          </span>
-                          <p style={{ fontSize: "12px", color: "var(--foreground-muted)", margin: "4px 0 0 0" }}>
-                            All search sources visible, selection highlighted
-                          </p>
-                        </div>
-                        {layout.searchSourceMode === "alwaysShowing" && (
-                          <Check style={{ width: "18px", height: "18px", color: "var(--accent)", flexShrink: 0 }} />
-                        )}
-                      </button>
-
-                      <button
-                        onClick={() => setSearchSourceMode("onlySelection")}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "12px",
-                          padding: "14px 16px",
-                          borderRadius: "10px",
-                          backgroundColor: layout.searchSourceMode === "onlySelection" ? "rgba(var(--accent-rgb), 0.15)" : "rgba(255, 255, 255, 0.03)",
-                          border: layout.searchSourceMode === "onlySelection" ? "2px solid var(--accent)" : "2px solid transparent",
-                          cursor: "pointer",
-                          textAlign: "left",
-                          transition: "all 0.15s",
-                        }}
-                      >
-                        <div style={{ flex: 1 }}>
-                          <span style={{ fontSize: "14px", fontWeight: 500, color: layout.searchSourceMode === "onlySelection" ? "var(--accent)" : "var(--foreground)" }}>
-                            Show Only Selected Source
-                          </span>
-                          <p style={{ fontSize: "12px", color: "var(--foreground-muted)", margin: "4px 0 0 0" }}>
-                            Only the selected source is visible
-                          </p>
-                        </div>
-                        {layout.searchSourceMode === "onlySelection" && (
-                          <Check style={{ width: "18px", height: "18px", color: "var(--accent)", flexShrink: 0 }} />
-                        )}
-                      </button>
                     </div>
                   </div>
                 </div>
