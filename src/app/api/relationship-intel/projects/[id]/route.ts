@@ -18,8 +18,20 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ id: projectDoc.id, ...projectDoc.data() });
+    const data = projectDoc.data();
+    
+    return NextResponse.json({
+      id: projectDoc.id,
+      name: data?.name,
+      description: data?.description,
+      keywords: Array.isArray(data?.keywords) ? data.keywords.join(',') : '',
+      last_sync: data?.last_sync,
+      contact_count: data?.contact_count || 0,
+      interaction_count: data?.interaction_count || 0,
+      created_at: data?.created_at
+    });
   } catch (error: any) {
+    console.error('Project API error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
