@@ -1,23 +1,29 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { 
   Search, 
-  Filter, 
   Mail, 
   Calendar, 
   Tag, 
-  MoreVertical,
   RefreshCw,
   Plus,
-  ChevronDown,
   ExternalLink,
   Clock,
   User,
-  Phone,
   Building,
   MessageSquare,
-  X
+  X,
+  ArrowLeft,
+  Users,
+  Zap,
+  TrendingUp,
+  Filter,
+  ChevronDown,
+  Send,
+  StickyNote,
+  Phone
 } from 'lucide-react';
 
 interface Contact {
@@ -40,6 +46,7 @@ interface Interaction {
   subject?: string;
   title?: string;
   snippet?: string;
+  body?: string;
   from_email?: string;
   from_name?: string;
   participants?: Array<{ email: string; name: string; role: string }>;
@@ -59,15 +66,23 @@ export default function RelationshipIntel() {
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [contactInteractions, setContactInteractions] = useState<Interaction[]>([]);
+  const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'name' | 'interactions'>('recent');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -130,7 +145,6 @@ export default function RelationshipIntel() {
   useEffect(() => {
     let filtered = [...contacts];
 
-    // Search
     if (searchQuery) {
       filtered = filtered.filter(c =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -140,12 +154,10 @@ export default function RelationshipIntel() {
       );
     }
 
-    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(c => getStatus(c.last_seen).type === statusFilter);
     }
 
-    // Sort
     if (sortBy === 'recent') {
       filtered.sort((a, b) => b.last_seen - a.last_seen);
     } else if (sortBy === 'name') {
@@ -159,9 +171,24 @@ export default function RelationshipIntel() {
 
   const getStatus = (lastSeen: number) => {
     const daysSince = (Date.now() - lastSeen * 1000) / 86400000;
-    if (daysSince < 7) return { type: 'active', label: 'Active', class: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
-    if (daysSince < 30) return { type: 'warm', label: 'Warm', class: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
-    return { type: 'cold', label: 'Cold', class: 'bg-gray-500/10 text-gray-400 border-gray-500/20' };
+    if (daysSince < 7) return { 
+      type: 'active', 
+      label: 'Active', 
+      color: '#10b981',
+      bgColor: 'rgba(16, 185, 129, 0.1)'
+    };
+    if (daysSince < 30) return { 
+      type: 'warm', 
+      label: 'Warm', 
+      color: '#f59e0b',
+      bgColor: 'rgba(245, 158, 11, 0.1)'
+    };
+    return { 
+      type: 'cold', 
+      label: 'Cold', 
+      color: '#6b7280',
+      bgColor: 'rgba(107, 114, 128, 0.1)'
+    };
   };
 
   const formatDate = (timestamp: number) => {
@@ -181,91 +208,304 @@ export default function RelationshipIntel() {
     loadContactInteractions(contact.email);
   };
 
+  const activeCount = contacts.filter(c => getStatus(c.last_seen).type === 'active').length;
+  const warmCount = contacts.filter(c => getStatus(c.last_seen).type === 'warm').length;
+  const coldCount = contacts.filter(c => getStatus(c.last_seen).type === 'cold').length;
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-        <div className="text-gray-400">Loading...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-        <div className="text-red-400">Error: {error}</div>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#ffffff'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ color: '#9ca3af' }}>Loading your network...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-gray-100">
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)',
+      color: '#ffffff',
+      padding: isMobile ? '16px' : '32px',
+    }}>
       {/* Header */}
-      <div className="border-b border-gray-800 bg-[#0f0f14]">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-semibold">Relationship Intel</h1>
-              <p className="text-sm text-gray-400 mt-1">Cinderella Project</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={triggerSync}
-                disabled={syncing}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'Syncing...' : 'Sync Emails'}
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm font-medium transition">
-                <Plus className="w-4 h-4" />
-                Add Contact
-              </button>
-            </div>
-          </div>
+      <div style={{
+        maxWidth: '1400px',
+        margin: '0 auto',
+        marginBottom: '48px',
+      }}>
+        <Link 
+          href="/"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: '#9ca3af',
+            textDecoration: 'none',
+            fontSize: '14px',
+            marginBottom: '24px',
+            transition: 'color 0.2s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.color = '#ffffff'}
+          onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.color = '#9ca3af'}
+        >
+          <ArrowLeft size={16} />
+          Back to Dashboard
+        </Link>
 
-          {/* Stats */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-gray-900/30 border border-gray-800 rounded-lg p-4">
-              <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Total Contacts</div>
-              <div className="text-2xl font-semibold">{project?.contact_count || 0}</div>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          marginBottom: '12px',
+        }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Users size={24} />
+          </div>
+          <h1 style={{
+            fontSize: isMobile ? '32px' : '48px',
+            fontWeight: '800',
+            margin: 0,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}>
+            Relationship Intel
+          </h1>
+        </div>
+        
+        <p style={{
+          fontSize: isMobile ? '14px' : '18px',
+          color: '#9ca3af',
+          margin: 0,
+          lineHeight: '1.6',
+        }}>
+          Track and manage your professional relationships for the Cinderella project.
+          <br />
+          <span style={{ fontSize: '14px', color: '#6b7280' }}>
+            {project?.contact_count || 0} contacts • {project?.interaction_count || 0} interactions • Last synced {project?.last_sync ? formatDate(project.last_sync) : 'never'}
+          </span>
+        </p>
+      </div>
+
+      {/* Stats Grid */}
+      <div style={{
+        maxWidth: '1400px',
+        margin: '0 auto 32px',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
+        gap: '16px',
+      }}>
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '16px',
+          padding: '24px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Users size={20} />
             </div>
-            <div className="bg-gray-900/30 border border-gray-800 rounded-lg p-4">
-              <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Interactions</div>
-              <div className="text-2xl font-semibold">{project?.interaction_count || 0}</div>
-            </div>
-            <div className="bg-gray-900/30 border border-gray-800 rounded-lg p-4">
-              <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Active (7d)</div>
-              <div className="text-2xl font-semibold text-emerald-400">
-                {contacts.filter(c => getStatus(c.last_seen).type === 'active').length}
+            <div>
+              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Total Contacts
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: '700' }}>
+                {project?.contact_count || 0}
               </div>
             </div>
-            <div className="bg-gray-900/30 border border-gray-800 rounded-lg p-4">
-              <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Last Sync</div>
-              <div className="text-sm font-medium">{project?.last_sync ? formatDate(project.last_sync) : '-'}</div>
+          </div>
+        </div>
+
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.1)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(16, 185, 129, 0.2)',
+          borderRadius: '16px',
+          padding: '24px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'rgba(16, 185, 129, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Zap size={20} style={{ color: '#10b981' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Active (7d)
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: '700', color: '#10b981' }}>
+                {activeCount}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          background: 'rgba(245, 158, 11, 0.1)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(245, 158, 11, 0.2)',
+          borderRadius: '16px',
+          padding: '24px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'rgba(245, 158, 11, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <TrendingUp size={20} style={{ color: '#f59e0b' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Warm (30d)
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: '700', color: '#f59e0b' }}>
+                {warmCount}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          background: 'rgba(107, 114, 128, 0.1)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(107, 114, 128, 0.2)',
+          borderRadius: '16px',
+          padding: '24px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'rgba(107, 114, 128, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Clock size={20} style={{ color: '#6b7280' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Cold (&gt;30d)
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: '700', color: '#6b7280' }}>
+                {coldCount}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="border-b border-gray-800 bg-[#0f0f14]">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+      {/* Search & Controls */}
+      <div style={{
+        maxWidth: '1400px',
+        margin: '0 auto 24px',
+      }}>
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '16px',
+          padding: isMobile ? '20px' : '24px',
+        }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr auto auto auto',
+            gap: '12px',
+            alignItems: 'center',
+          }}>
+            {/* Search */}
+            <div style={{ position: 'relative' }}>
+              <Search 
+                size={20} 
+                style={{
+                  position: 'absolute',
+                  left: '16px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#6b7280',
+                }}
+              />
               <input
                 type="text"
-                placeholder="Search contacts, tags, notes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-gray-800 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                placeholder="Search contacts, tags, notes..."
+                style={{
+                  width: '100%',
+                  padding: '12px 16px 12px 48px',
+                  fontSize: '15px',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  color: '#ffffff',
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#667eea';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
             </div>
-            
+
+            {/* Status Filter */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 bg-gray-900/50 border border-gray-800 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              style={{
+                padding: '12px 16px',
+                fontSize: '14px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                color: '#ffffff',
+                outline: 'none',
+                cursor: 'pointer',
+              }}
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -273,190 +513,524 @@ export default function RelationshipIntel() {
               <option value="cold">Cold</option>
             </select>
 
+            {/* Sort */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-2 bg-gray-900/50 border border-gray-800 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              style={{
+                padding: '12px 16px',
+                fontSize: '14px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                color: '#ffffff',
+                outline: 'none',
+                cursor: 'pointer',
+              }}
             >
               <option value="recent">Most Recent</option>
               <option value="name">Name A-Z</option>
               <option value="interactions">Most Active</option>
             </select>
+
+            {/* Sync Button */}
+            <button
+              onClick={triggerSync}
+              disabled={syncing}
+              style={{
+                padding: '12px 24px',
+                fontSize: '14px',
+                fontWeight: '600',
+                background: syncing ? 'rgba(102, 126, 234, 0.5)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                border: 'none',
+                borderRadius: '12px',
+                color: '#ffffff',
+                cursor: syncing ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                if (!syncing) {
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(102, 126, 234, 0.3)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+              }}
+            >
+              <RefreshCw size={16} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
+              {syncing ? 'Syncing...' : 'Sync'}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Contacts Table */}
-      <div className="max-w-[1600px] mx-auto px-6 py-6">
-        <div className="bg-[#0f0f14] border border-gray-800 rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="border-b border-gray-800">
-              <tr className="text-left text-xs text-gray-400 uppercase tracking-wide">
-                <th className="px-6 py-4 font-medium">Contact</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium">Last Contact</th>
-                <th className="px-6 py-4 font-medium">Interactions</th>
-                <th className="px-6 py-4 font-medium">Tags</th>
-                <th className="px-6 py-4 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800">
-              {filteredContacts.map((contact) => {
-                const status = getStatus(contact.last_seen);
-                return (
-                  <tr
-                    key={contact.email}
-                    onClick={() => openContactDetail(contact)}
-                    className="hover:bg-gray-900/30 cursor-pointer transition"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm font-semibold">
-                          {contact.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-medium">{contact.name}</div>
-                          <div className="text-sm text-gray-500">{contact.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${status.class}`}>
-                        {status.label}
+      {/* Contacts Grid */}
+      <div style={{
+        maxWidth: '1400px',
+        margin: '0 auto',
+      }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(380px, 1fr))',
+          gap: '16px',
+        }}>
+          {filteredContacts.map((contact) => {
+            const status = getStatus(contact.last_seen);
+            return (
+              <div
+                key={contact.email}
+                onClick={() => openContactDetail(contact)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.3)';
+                  (e.currentTarget as HTMLElement).style.borderColor = status.color;
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'start', gap: '16px', marginBottom: '16px' }}>
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '14px',
+                    background: `linear-gradient(135deg, ${status.color} 0%, ${status.color}CC 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    flexShrink: 0,
+                  }}>
+                    {contact.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{
+                      fontSize: '18px',
+                      fontWeight: '600',
+                      margin: '0 0 4px 0',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {contact.name}
+                    </h3>
+                    <p style={{
+                      fontSize: '13px',
+                      color: '#9ca3af',
+                      margin: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {contact.email}
+                    </p>
+                  </div>
+                  <div style={{
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    background: status.bgColor,
+                    border: `1px solid ${status.color}40`,
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    color: status.color,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                  }}>
+                    {status.label}
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '12px',
+                  marginBottom: '12px',
+                }}>
+                  <div style={{
+                    background: 'rgba(0, 0, 0, 0.2)',
+                    borderRadius: '10px',
+                    padding: '12px',
+                  }}>
+                    <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>Last Contact</div>
+                    <div style={{ fontSize: '14px', fontWeight: '600' }}>{formatDate(contact.last_seen)}</div>
+                  </div>
+                  <div style={{
+                    background: 'rgba(0, 0, 0, 0.2)',
+                    borderRadius: '10px',
+                    padding: '12px',
+                  }}>
+                    <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>Interactions</div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Mail size={14} style={{ color: '#667eea' }} />
+                      {contact.interaction_count}
+                    </div>
+                  </div>
+                </div>
+
+                {contact.notes && (
+                  <div style={{
+                    background: 'rgba(0, 0, 0, 0.2)',
+                    borderRadius: '10px',
+                    padding: '12px',
+                    marginBottom: '12px',
+                  }}>
+                    <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <StickyNote size={12} />
+                      Note
+                    </div>
+                    <div style={{
+                      fontSize: '13px',
+                      color: '#e5e7eb',
+                      lineHeight: '1.5',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                    }}>
+                      {contact.notes}
+                    </div>
+                  </div>
+                )}
+
+                {contact.tags && contact.tags.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {contact.tags.slice(0, 3).map(tag => (
+                      <span
+                        key={tag}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '8px',
+                          background: 'rgba(102, 126, 234, 0.15)',
+                          border: '1px solid rgba(102, 126, 234, 0.3)',
+                          fontSize: '11px',
+                          fontWeight: '500',
+                          color: '#a78bfa',
+                        }}
+                      >
+                        {tag}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-400">
-                      {formatDate(contact.last_seen)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3 text-sm">
-                        <div className="flex items-center gap-1 text-gray-400">
-                          <Mail className="w-4 h-4" />
-                          <span>{contact.interaction_count}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-1.5">
-                        {contact.tags && contact.tags.slice(0, 3).map(tag => (
-                          <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <button className="p-1.5 hover:bg-gray-800 rounded transition">
-                        <MoreVertical className="w-4 h-4 text-gray-400" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* Contact Detail Modal */}
       {selectedContact && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6">
-          <div className="bg-[#0f0f14] border border-gray-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+            padding: '24px',
+          }}
+          onClick={() => setSelectedContact(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '24px',
+              maxWidth: '900px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-lg font-semibold">
-                  {selectedContact.name.charAt(0).toUpperCase()}
+            <div style={{
+              padding: '32px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              background: 'rgba(255, 255, 255, 0.02)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{
+                    width: '72px',
+                    height: '72px',
+                    borderRadius: '18px',
+                    background: `linear-gradient(135deg, ${getStatus(selectedContact.last_seen).color} 0%, ${getStatus(selectedContact.last_seen).color}CC 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '32px',
+                    fontWeight: '700',
+                  }}>
+                    {selectedContact.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: '28px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                      {selectedContact.name}
+                    </h2>
+                    <p style={{ fontSize: '15px', color: '#9ca3af', margin: 0 }}>{selectedContact.email}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold">{selectedContact.name}</h2>
-                  <p className="text-sm text-gray-400">{selectedContact.email}</p>
-                </div>
+                <button
+                  onClick={() => setSelectedContact(null)}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.15)'}
+                  onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.1)'}
+                >
+                  <X size={20} />
+                </button>
               </div>
-              <button
-                onClick={() => setSelectedContact(null)}
-                className="p-2 hover:bg-gray-800 rounded-lg transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
+
+              {/* Quick Actions */}
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <button style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <Mail size={16} />
+                  Send Email
+                </button>
+                <button style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <MessageSquare size={16} />
+                  Add Note
+                </button>
+                <button style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <Tag size={16} />
+                  Add Tag
+                </button>
+              </div>
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-6">
-                {/* Quick Stats */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-gray-900/30 border border-gray-800 rounded-lg p-4">
-                    <div className="text-gray-400 text-xs mb-1">Total Interactions</div>
-                    <div className="text-2xl font-semibold">{selectedContact.interaction_count}</div>
-                  </div>
-                  <div className="bg-gray-900/30 border border-gray-800 rounded-lg p-4">
-                    <div className="text-gray-400 text-xs mb-1">Last Contact</div>
-                    <div className="text-sm font-medium">{formatDate(selectedContact.last_seen)}</div>
-                  </div>
-                  <div className="bg-gray-900/30 border border-gray-800 rounded-lg p-4">
-                    <div className="text-gray-400 text-xs mb-1">Status</div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatus(selectedContact.last_seen).class}`}>
-                      {getStatus(selectedContact.last_seen).label}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                {selectedContact.notes && (
-                  <div className="bg-gray-900/30 border border-gray-800 rounded-lg p-4">
-                    <div className="text-sm font-medium mb-2">Notes</div>
-                    <div className="text-sm text-gray-400">{selectedContact.notes}</div>
-                  </div>
-                )}
-
-                {/* Interaction History */}
-                <div>
-                  <h3 className="text-sm font-semibold mb-3">Interaction History</h3>
-                  <div className="space-y-3">
-                    {contactInteractions.map((interaction, idx) => (
-                      <div key={idx} className="bg-gray-900/30 border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {interaction.type === 'email' ? (
-                              <Mail className="w-4 h-4 text-blue-400" />
-                            ) : (
-                              <Calendar className="w-4 h-4 text-purple-400" />
-                            )}
-                            <span className="text-sm font-medium">
-                              {interaction.subject || interaction.title}
-                            </span>
-                          </div>
-                          <span className="text-xs text-gray-500">{formatDate(interaction.date)}</span>
-                        </div>
-                        {interaction.snippet && (
-                          <p className="text-sm text-gray-400 line-clamp-2">{interaction.snippet}</p>
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '32px',
+            }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clock size={18} style={{ color: '#667eea' }} />
+                Interaction History ({contactInteractions.length})
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {contactInteractions.map((interaction, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedInteraction(interaction)}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.08)';
+                      (e.currentTarget as HTMLElement).style.borderColor = '#667eea';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.05)';
+                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                        {interaction.type === 'email' ? (
+                          <Mail size={18} style={{ color: '#667eea', flexShrink: 0 }} />
+                        ) : (
+                          <Calendar size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
                         )}
+                        <span style={{ fontSize: '15px', fontWeight: '600' }}>
+                          {interaction.subject || interaction.title}
+                        </span>
                       </div>
-                    ))}
+                      <span style={{ fontSize: '12px', color: '#9ca3af', flexShrink: 0, marginLeft: '12px' }}>
+                        {formatDate(interaction.date)}
+                      </span>
+                    </div>
+                    {interaction.snippet && (
+                      <p style={{
+                        fontSize: '13px',
+                        color: '#9ca3af',
+                        margin: 0,
+                        lineHeight: '1.5',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                      }}>
+                        {interaction.snippet}
+                      </p>
+                    )}
                   </div>
-                </div>
+                ))}
               </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-gray-800 flex gap-3">
-              <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition">
-                <Mail className="w-4 h-4" />
-                Send Email
-              </button>
-              <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium transition">
-                <MessageSquare className="w-4 h-4" />
-                Add Note
-              </button>
-              <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium transition">
-                <Tag className="w-4 h-4" />
-                Add Tag
-              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Interaction Detail Modal */}
+      {selectedInteraction && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.9)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 60,
+            padding: '24px',
+          }}
+          onClick={() => setSelectedInteraction(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '24px',
+              maxWidth: '800px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            {/* Email Header */}
+            <div style={{
+              padding: '24px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              background: 'rgba(255, 255, 255, 0.02)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: '20px', fontWeight: '600', margin: '0 0 8px 0' }}>
+                    {selectedInteraction.subject || selectedInteraction.title}
+                  </h3>
+                  <div style={{ fontSize: '13px', color: '#9ca3af' }}>
+                    From: {selectedInteraction.from_name || selectedInteraction.from_email}
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#9ca3af' }}>
+                    {formatDate(selectedInteraction.date)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedInteraction(null)}
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Email Body */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '24px',
+            }}>
+              <div style={{
+                fontSize: '14px',
+                lineHeight: '1.7',
+                color: '#e5e7eb',
+                whiteSpace: 'pre-wrap',
+              }}>
+                {selectedInteraction.body || selectedInteraction.snippet || 'No content available'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
