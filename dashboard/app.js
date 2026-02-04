@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 toolBlocks.forEach(b => b.classList.remove('active'));
                 // Highlight clicked block
                 block.classList.add('active');
+                // Scroll to preview section on mobile
+                const previewSection = document.getElementById('preview-area');
+                previewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         });
     });
