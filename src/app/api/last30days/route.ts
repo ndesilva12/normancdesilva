@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, query, orderBy, limit, where, Timestamp } from "firebase/firestore";
 
+// Increase timeout for L3D (requires Vercel Pro)
+export const maxDuration = 60; // 60 seconds
+
 export async function POST(request: NextRequest) {
   try {
     const { query } = await request.json();

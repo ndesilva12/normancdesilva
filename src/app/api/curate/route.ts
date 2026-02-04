@@ -6,6 +6,9 @@ import { collection, addDoc, getDocs, query, orderBy, limit, where, Timestamp } 
 
 const execAsync = promisify(exec);
 
+// Increase timeout for Curate (requires Vercel Pro)
+export const maxDuration = 60; // 60 seconds
+
 export async function POST(request: NextRequest) {
   try {
     const { topic, source } = await request.json();
@@ -13,7 +16,10 @@ export async function POST(request: NextRequest) {
     // Use external Python API server instead of exec
     const apiUrl = process.env.PYTHON_API_URL || "https://api.normancdesilva.com";
     
-    console.log(`Calling Python API: ${apiUrl}/curate`);
+    console.log(`Calling Python API: ${apiUrl}/curate with topic="${topic || "general"}", source="${source || "all"}"`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
     
     const response = await fetch(`${apiUrl}/curate`, {
       method: "POST",
@@ -24,7 +30,8 @@ export async function POST(request: NextRequest) {
         topic: topic || "general",
         source: source || "all",
       }),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ detail: "Unknown error" }));
