@@ -1,30 +1,35 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { 
-  Search, 
-  Mail, 
-  Calendar, 
-  Tag, 
+import {
+  Search,
+  Mail,
+  Calendar,
+  Tag,
   RefreshCw,
   Plus,
-  ExternalLink,
-  Clock,
-  User,
-  Building,
-  MessageSquare,
   X,
   ArrowLeft,
   Users,
-  Zap,
-  TrendingUp,
-  Filter,
+  Clock,
+  Phone,
+  Building2,
+  Settings,
+  ChevronRight,
   ChevronDown,
-  Send,
   StickyNote,
-  Phone
+  Trash2,
+  Check
 } from 'lucide-react';
+import {
+  getTagCategories,
+  saveRelationshipMetadata,
+  getRelationshipMetadata,
+  saveTagCategories,
+  TagCategory,
+  RelationshipMetadata
+} from '@/lib/relationships-db';
 
 interface Contact {
   email: string;
@@ -60,22 +65,64 @@ interface Project {
   last_sync: number;
 }
 
+// Color palette from DESIGN_SPEC.md
+const colors = {
+  bg: '#0a0a0a',
+  bgSecondary: '#0f0f0f',
+  card: '#1a1a1a',
+  borderPrimary: '#1a1a1a',
+  borderSecondary: '#2a2a2a',
+  textPrimary: '#ffffff',
+  textSecondary: '#888888',
+  textMuted: '#666666',
+  purple: '#8b5cf6',
+  blue: '#3b82f6',
+  green: '#10b981',
+  orange: '#f59e0b',
+  red: '#f87171',
+  primary: '#6366f1',
+  hover: '#151515',
+};
+
+const categoryColors: { [key: string]: string } = {
+  interest_level: '#10b981',
+  industry: '#3b82f6',
+  relationship_type: '#8b5cf6',
+  priority: '#f59e0b',
+};
+
 export default function RelationshipIntel() {
   const [project, setProject] = useState<Project | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [contactInteractions, setContactInteractions] = useState<Interaction[]>([]);
-  const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
-  
+  const [expandedInteraction, setExpandedInteraction] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'name' | 'interactions'>('recent');
-  
+
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Tag categories state
+  const [tagCategories, setTagCategories] = useState<TagCategory[]>([]);
+  const [contactMetadata, setContactMetadata] = useState<RelationshipMetadata | null>(null);
+  const [contactTags, setContactTags] = useState<{ [categoryId: string]: string }>({});
+  const [contactNotes, setContactNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Settings panel state
+  const [editingCategory, setEditingCategory] = useState<TagCategory | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryOptions, setNewCategoryOptions] = useState('');
+  const [newOptionInput, setNewOptionInput] = useState('');
+
+  // Auto-save debounce
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -84,10 +131,18 @@ export default function RelationshipIntel() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Load tag categories on mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      const categories = await getTagCategories();
+      setTagCategories(categories);
+    };
+    loadCategories();
+  }, []);
+
   const loadData = async () => {
     try {
       setLoading(true);
-      setError(null);
 
       const [projectRes, contactsRes] = await Promise.all([
         fetch('/api/relationship-intel/projects/cinderella'),
@@ -106,7 +161,6 @@ export default function RelationshipIntel() {
       setFilteredContacts(contactsData);
       setLoading(false);
     } catch (err: any) {
-      setError(err.message);
       setLoading(false);
     }
   };
@@ -122,6 +176,19 @@ export default function RelationshipIntel() {
       }
     } catch (err) {
       console.error('Failed to load interactions:', err);
+    }
+  };
+
+  const loadContactMetadata = async (contactId: string) => {
+    const metadata = await getRelationshipMetadata(contactId);
+    if (metadata) {
+      setContactMetadata(metadata);
+      setContactTags(metadata.tags || {});
+      setContactNotes(metadata.notes || '');
+    } else {
+      setContactMetadata(null);
+      setContactTags({});
+      setContactNotes('');
     }
   };
 
@@ -149,8 +216,7 @@ export default function RelationshipIntel() {
       filtered = filtered.filter(c =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.notes && c.notes.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (c.tags && c.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())))
+        (c.company && c.company.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
@@ -171,61 +237,151 @@ export default function RelationshipIntel() {
 
   const getStatus = (lastSeen: number) => {
     const daysSince = (Date.now() - lastSeen * 1000) / 86400000;
-    if (daysSince < 7) return { 
-      type: 'active', 
-      label: 'Active', 
-      color: '#10b981',
-      bgColor: 'rgba(16, 185, 129, 0.1)'
-    };
-    if (daysSince < 30) return { 
-      type: 'warm', 
-      label: 'Warm', 
-      color: '#f59e0b',
-      bgColor: 'rgba(245, 158, 11, 0.1)'
-    };
-    return { 
-      type: 'cold', 
-      label: 'Cold', 
-      color: '#6b7280',
-      bgColor: 'rgba(107, 114, 128, 0.1)'
-    };
+    if (daysSince < 7) return { type: 'active', label: 'Active', color: colors.green };
+    if (daysSince < 30) return { type: 'warm', label: 'Warm', color: colors.orange };
+    return { type: 'cold', label: 'Cold', color: colors.textMuted };
   };
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / 86400000);
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const openContactDetail = (contact: Contact) => {
+  const openContactDetail = async (contact: Contact) => {
     setSelectedContact(contact);
+    setExpandedInteraction(null);
     loadContactInteractions(contact.email);
+    await loadContactMetadata(contact.email.replace(/[^a-zA-Z0-9]/g, '_'));
   };
 
-  const activeCount = contacts.filter(c => getStatus(c.last_seen).type === 'active').length;
-  const warmCount = contacts.filter(c => getStatus(c.last_seen).type === 'warm').length;
-  const coldCount = contacts.filter(c => getStatus(c.last_seen).type === 'cold').length;
+  // Auto-save function
+  const autoSave = useCallback(async (tags: { [key: string]: string }, notes: string) => {
+    if (!selectedContact) return;
+
+    setSaving(true);
+    const contactId = selectedContact.email.replace(/[^a-zA-Z0-9]/g, '_');
+
+    await saveRelationshipMetadata({
+      contactId,
+      contactEmail: selectedContact.email,
+      contactName: selectedContact.name,
+      tags,
+      notes,
+      customFields: {},
+    });
+
+    setTimeout(() => setSaving(false), 500);
+  }, [selectedContact]);
+
+  // Handle tag change with auto-save
+  const handleTagChange = (categoryId: string, value: string) => {
+    const newTags = { ...contactTags, [categoryId]: value };
+    if (!value) {
+      delete newTags[categoryId];
+    }
+    setContactTags(newTags);
+
+    // Debounced auto-save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      autoSave(newTags, contactNotes);
+    }, 500);
+  };
+
+  // Handle notes change with auto-save
+  const handleNotesChange = (value: string) => {
+    setContactNotes(value);
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      autoSave(contactTags, value);
+    }, 1000);
+  };
+
+  // Settings panel functions
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+
+    const options = newCategoryOptions.split(',').map(o => o.trim()).filter(o => o);
+    const newCategory: TagCategory = {
+      id: newCategoryName.toLowerCase().replace(/\s+/g, '_'),
+      name: newCategoryName.trim(),
+      color: '#8b5cf6',
+      options: options.length > 0 ? options : ['Option 1', 'Option 2'],
+    };
+
+    const updated = [...tagCategories, newCategory];
+    await saveTagCategories(updated);
+    setTagCategories(updated);
+    setNewCategoryName('');
+    setNewCategoryOptions('');
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    const updated = tagCategories.filter(c => c.id !== categoryId);
+    await saveTagCategories(updated);
+    setTagCategories(updated);
+  };
+
+  const handleAddOption = async (categoryId: string) => {
+    if (!newOptionInput.trim()) return;
+
+    const updated = tagCategories.map(c => {
+      if (c.id === categoryId) {
+        return { ...c, options: [...c.options, newOptionInput.trim()] };
+      }
+      return c;
+    });
+
+    await saveTagCategories(updated);
+    setTagCategories(updated);
+    setNewOptionInput('');
+    setEditingCategory(null);
+  };
+
+  const handleRemoveOption = async (categoryId: string, option: string) => {
+    const updated = tagCategories.map(c => {
+      if (c.id === categoryId) {
+        return { ...c, options: c.options.filter(o => o !== option) };
+      }
+      return c;
+    });
+
+    await saveTagCategories(updated);
+    setTagCategories(updated);
+  };
 
   if (loading) {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)',
+        background: colors.bg,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#ffffff'
+        color: colors.textPrimary,
       }}>
         <div style={{ textAlign: 'center' }}>
-          <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ color: '#9ca3af' }}>Loading your network...</p>
+          <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+          <p style={{ color: colors.textSecondary, fontSize: '13px' }}>Loading contacts...</p>
         </div>
+        <style jsx>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -233,802 +389,865 @@ export default function RelationshipIntel() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)',
-      color: '#ffffff',
-      padding: isMobile ? '16px' : '32px',
+      background: colors.bg,
+      color: colors.textPrimary,
+      display: 'flex',
+      flexDirection: 'column',
     }}>
       {/* Header */}
       <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-        marginBottom: '48px',
+        padding: '16px 24px',
+        borderBottom: `1px solid ${colors.borderPrimary}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        background: colors.bg,
       }}>
-        <Link 
-          href="/"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: '#9ca3af',
-            textDecoration: 'none',
-            fontSize: '14px',
-            marginBottom: '24px',
-            transition: 'color 0.2s',
-          }}
-          onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.color = '#ffffff'}
-          onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.color = '#9ca3af'}
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          marginBottom: '12px',
-        }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <Users size={24} />
-          </div>
-          <h1 style={{
-            fontSize: isMobile ? '32px' : '48px',
-            fontWeight: '800',
-            margin: 0,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}>
-            Relationship Intel
-          </h1>
-        </div>
-        
-        <p style={{
-          fontSize: isMobile ? '14px' : '18px',
-          color: '#9ca3af',
-          margin: 0,
-          lineHeight: '1.6',
-        }}>
-          Track and manage your professional relationships for the Cinderella project.
-          <br />
-          <span style={{ fontSize: '14px', color: '#6b7280' }}>
-            {project?.contact_count || 0} contacts • {project?.interaction_count || 0} interactions • Last synced {project?.last_sync ? formatDate(project.last_sync) : 'never'}
-          </span>
-        </p>
-      </div>
-
-      {/* Stats Grid */}
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto 32px',
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
-        gap: '16px',
-      }}>
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '16px',
-          padding: '24px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <Users size={20} />
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Total Contacts
-              </div>
-              <div style={{ fontSize: '28px', fontWeight: '700' }}>
-                {project?.contact_count || 0}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.1)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(16, 185, 129, 0.2)',
-          borderRadius: '16px',
-          padding: '24px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'rgba(16, 185, 129, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <Zap size={20} style={{ color: '#10b981' }} />
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Active (7d)
-              </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#10b981' }}>
-                {activeCount}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{
-          background: 'rgba(245, 158, 11, 0.1)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(245, 158, 11, 0.2)',
-          borderRadius: '16px',
-          padding: '24px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'rgba(245, 158, 11, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <TrendingUp size={20} style={{ color: '#f59e0b' }} />
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Warm (30d)
-              </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#f59e0b' }}>
-                {warmCount}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{
-          background: 'rgba(107, 114, 128, 0.1)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(107, 114, 128, 0.2)',
-          borderRadius: '16px',
-          padding: '24px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'rgba(107, 114, 128, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <Clock size={20} style={{ color: '#6b7280' }} />
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Cold (&gt;30d)
-              </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#6b7280' }}>
-                {coldCount}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search & Controls */}
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto 24px',
-      }}>
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '16px',
-          padding: isMobile ? '20px' : '24px',
-        }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '1fr auto auto auto',
-            gap: '12px',
-            alignItems: 'center',
-          }}>
-            {/* Search */}
-            <div style={{ position: 'relative' }}>
-              <Search 
-                size={20} 
-                style={{
-                  position: 'absolute',
-                  left: '16px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#6b7280',
-                }}
-              />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search contacts, tags, notes..."
-                style={{
-                  width: '100%',
-                  padding: '12px 16px 12px 48px',
-                  fontSize: '15px',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  color: '#ffffff',
-                  outline: 'none',
-                  transition: 'all 0.2s',
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#667eea';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
-            </div>
-
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                padding: '12px 16px',
-                fontSize: '14px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                color: '#ffffff',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="warm">Warm</option>
-              <option value="cold">Cold</option>
-            </select>
-
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              style={{
-                padding: '12px 16px',
-                fontSize: '14px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                color: '#ffffff',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="recent">Most Recent</option>
-              <option value="name">Name A-Z</option>
-              <option value="interactions">Most Active</option>
-            </select>
-
-            {/* Sync Button */}
-            <button
-              onClick={triggerSync}
-              disabled={syncing}
-              style={{
-                padding: '12px 24px',
-                fontSize: '14px',
-                fontWeight: '600',
-                background: syncing ? 'rgba(102, 126, 234, 0.5)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                borderRadius: '12px',
-                color: '#ffffff',
-                cursor: syncing ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                if (!syncing) {
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = '0 10px 30px rgba(102, 126, 234, 0.3)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-              }}
-            >
-              <RefreshCw size={16} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
-              {syncing ? 'Syncing...' : 'Sync'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Contacts Grid */}
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-      }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(380px, 1fr))',
-          gap: '16px',
-        }}>
-          {filteredContacts.map((contact) => {
-            const status = getStatus(contact.last_seen);
-            return (
-              <div
-                key={contact.email}
-                onClick={() => openContactDetail(contact)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.3)';
-                  (e.currentTarget as HTMLElement).style.borderColor = status.color;
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'start', gap: '16px', marginBottom: '16px' }}>
-                  <div style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '14px',
-                    background: `linear-gradient(135deg, ${status.color} 0%, ${status.color}CC 100%)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '24px',
-                    fontWeight: '700',
-                    flexShrink: 0,
-                  }}>
-                    {contact.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{
-                      fontSize: '18px',
-                      fontWeight: '600',
-                      margin: '0 0 4px 0',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {contact.name}
-                    </h3>
-                    <p style={{
-                      fontSize: '13px',
-                      color: '#9ca3af',
-                      margin: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {contact.email}
-                    </p>
-                  </div>
-                  <div style={{
-                    padding: '4px 10px',
-                    borderRadius: '8px',
-                    background: status.bgColor,
-                    border: `1px solid ${status.color}40`,
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    color: status.color,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                  }}>
-                    {status.label}
-                  </div>
-                </div>
-
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '12px',
-                  marginBottom: '12px',
-                }}>
-                  <div style={{
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    borderRadius: '10px',
-                    padding: '12px',
-                  }}>
-                    <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>Last Contact</div>
-                    <div style={{ fontSize: '14px', fontWeight: '600' }}>{formatDate(contact.last_seen)}</div>
-                  </div>
-                  <div style={{
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    borderRadius: '10px',
-                    padding: '12px',
-                  }}>
-                    <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>Interactions</div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Mail size={14} style={{ color: '#667eea' }} />
-                      {contact.interaction_count}
-                    </div>
-                  </div>
-                </div>
-
-                {contact.notes && (
-                  <div style={{
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    borderRadius: '10px',
-                    padding: '12px',
-                    marginBottom: '12px',
-                  }}>
-                    <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <StickyNote size={12} />
-                      Note
-                    </div>
-                    <div style={{
-                      fontSize: '13px',
-                      color: '#e5e7eb',
-                      lineHeight: '1.5',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}>
-                      {contact.notes}
-                    </div>
-                  </div>
-                )}
-
-                {contact.tags && contact.tags.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {contact.tags.slice(0, 3).map(tag => (
-                      <span
-                        key={tag}
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: '8px',
-                          background: 'rgba(102, 126, 234, 0.15)',
-                          border: '1px solid rgba(102, 126, 234, 0.3)',
-                          fontSize: '11px',
-                          fontWeight: '500',
-                          color: '#a78bfa',
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Contact Detail Modal */}
-      {selectedContact && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: '24px',
-          }}
-          onClick={() => setSelectedContact(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <Link
+            href="/"
             style={{
-              background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '24px',
-              maxWidth: '900px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflow: 'hidden',
+              color: colors.textSecondary,
+              textDecoration: 'none',
               display: 'flex',
-              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '6px',
+              borderRadius: '6px',
+              transition: 'all 0.15s ease',
             }}
           >
-            {/* Modal Header */}
-            <div style={{
-              padding: '32px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-              background: 'rgba(255, 255, 255, 0.02)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  <div style={{
-                    width: '72px',
-                    height: '72px',
-                    borderRadius: '18px',
-                    background: `linear-gradient(135deg, ${getStatus(selectedContact.last_seen).color} 0%, ${getStatus(selectedContact.last_seen).color}CC 100%)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '32px',
-                    fontWeight: '700',
-                  }}>
-                    {selectedContact.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h2 style={{ fontSize: '28px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                      {selectedContact.name}
-                    </h2>
-                    <p style={{ fontSize: '15px', color: '#9ca3af', margin: 0 }}>{selectedContact.email}</p>
+            <ArrowLeft size={16} />
+          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Users size={20} style={{ color: colors.primary }} />
+            <h1 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>
+              Relationship Intel
+            </h1>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '12px', color: colors.textMuted }}>
+            {project?.contact_count || 0} contacts
+          </span>
+          <button
+            onClick={triggerSync}
+            disabled={syncing}
+            style={{
+              padding: '8px 14px',
+              fontSize: '13px',
+              fontWeight: '500',
+              background: colors.primary,
+              border: 'none',
+              borderRadius: '6px',
+              color: colors.textPrimary,
+              cursor: syncing ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              opacity: syncing ? 0.7 : 1,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <RefreshCw size={14} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
+            {syncing ? 'Syncing...' : 'Sync'}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content - Master Detail Layout */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        overflow: 'hidden',
+      }}>
+        {/* Left Panel - Contact List */}
+        <div style={{
+          width: isMobile && selectedContact ? '0' : '360px',
+          minWidth: isMobile && selectedContact ? '0' : '360px',
+          background: colors.bgSecondary,
+          borderRight: `1px solid ${colors.borderPrimary}`,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          transition: 'all 0.2s ease',
+        }}>
+          {/* Search and Settings */}
+          <div style={{
+            padding: '16px',
+            borderBottom: `1px solid ${colors.borderPrimary}`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                background: colors.card,
+                borderRadius: '8px',
+                padding: '10px 14px',
+                border: `1px solid ${colors.borderSecondary}`,
+              }}>
+                <Search size={16} style={{ color: colors.textMuted }} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search contacts..."
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: colors.textPrimary,
+                    fontSize: '13px',
+                  }}
+                />
+              </div>
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                style={{
+                  padding: '10px',
+                  borderRadius: '8px',
+                  background: showSettings ? colors.card : 'transparent',
+                  border: showSettings ? `1px solid ${colors.borderSecondary}` : 'none',
+                  cursor: 'pointer',
+                  color: showSettings ? colors.primary : colors.textSecondary,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Settings size={16} />
+              </button>
+            </div>
+
+            {/* Filters */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  fontSize: '13px',
+                  background: colors.card,
+                  border: `1px solid ${colors.borderSecondary}`,
+                  borderRadius: '6px',
+                  color: colors.textPrimary,
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="warm">Warm</option>
+                <option value="cold">Cold</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  fontSize: '13px',
+                  background: colors.card,
+                  border: `1px solid ${colors.borderSecondary}`,
+                  borderRadius: '6px',
+                  color: colors.textPrimary,
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="recent">Recent</option>
+                <option value="name">Name</option>
+                <option value="interactions">Activity</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Contact List */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {filteredContacts.map((contact) => {
+              const status = getStatus(contact.last_seen);
+              const isSelected = selectedContact?.email === contact.email;
+
+              return (
+                <div
+                  key={contact.email}
+                  onClick={() => openContactDetail(contact)}
+                  style={{
+                    padding: '14px 24px',
+                    borderBottom: `1px solid ${colors.borderPrimary}`,
+                    cursor: 'pointer',
+                    background: isSelected ? colors.card : 'transparent',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) (e.currentTarget as HTMLElement).style.background = colors.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: status.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      flexShrink: 0,
+                    }}>
+                      {contact.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: colors.textPrimary,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {contact.name}
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: colors.textSecondary,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {contact.company || contact.email}
+                      </div>
+                    </div>
+                    <ChevronRight size={16} style={{ color: colors.textMuted, flexShrink: 0 }} />
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Panel - Contact Detail or Settings */}
+        <div style={{
+          flex: 1,
+          background: colors.bg,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
+          {showSettings ? (
+            // Settings Panel
+            <div style={{ padding: '40px 48px', maxWidth: '900px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+                <h2 style={{ fontSize: '24px', fontWeight: '600', margin: 0 }}>
+                  Tag Categories Settings
+                </h2>
                 <button
-                  onClick={() => setSelectedContact(null)}
+                  onClick={() => setShowSettings(false)}
                   style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: 'none',
+                    padding: '8px 14px',
+                    borderRadius: '6px',
+                    background: colors.card,
+                    border: `1px solid ${colors.borderSecondary}`,
+                    color: colors.textPrimary,
+                    fontSize: '13px',
+                    fontWeight: '500',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
+                    gap: '6px',
                   }}
-                  onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.15)'}
-                  onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.1)'}
                 >
-                  <X size={20} />
+                  <X size={14} />
+                  Close
                 </button>
               </div>
 
-              {/* Quick Actions */}
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <button style={{
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}>
-                  <Mail size={16} />
-                  Send Email
-                </button>
-                <button style={{
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}>
-                  <MessageSquare size={16} />
-                  Add Note
-                </button>
-                <button style={{
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}>
-                  <Tag size={16} />
-                  Add Tag
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Content */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '32px',
-            }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Clock size={18} style={{ color: '#667eea' }} />
-                Interaction History ({contactInteractions.length})
-              </h3>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {contactInteractions.map((interaction, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setSelectedInteraction(interaction)}
+              {/* Add New Category */}
+              <div style={{
+                background: colors.bgSecondary,
+                border: `1px solid ${colors.borderPrimary}`,
+                borderRadius: '12px',
+                padding: '20px',
+                marginBottom: '24px',
+              }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '500', color: colors.textSecondary, margin: '0 0 16px 0' }}>
+                  Add New Category
+                </h3>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Category name"
                     style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '12px',
-                      padding: '16px',
+                      flex: 1,
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      background: colors.card,
+                      border: `1px solid ${colors.borderSecondary}`,
+                      color: colors.textPrimary,
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                  <input
+                    type="text"
+                    value={newCategoryOptions}
+                    onChange={(e) => setNewCategoryOptions(e.target.value)}
+                    placeholder="Options (comma-separated)"
+                    style={{
+                      flex: 2,
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      background: colors.card,
+                      border: `1px solid ${colors.borderSecondary}`,
+                      color: colors.textPrimary,
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    onClick={handleAddCategory}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '6px',
+                      background: colors.primary,
+                      border: 'none',
+                      color: colors.textPrimary,
+                      fontSize: '13px',
+                      fontWeight: '500',
                       cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.08)';
-                      (e.currentTarget as HTMLElement).style.borderColor = '#667eea';
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.05)';
-                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-                        {interaction.type === 'email' ? (
-                          <Mail size={18} style={{ color: '#667eea', flexShrink: 0 }} />
-                        ) : (
-                          <Calendar size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
-                        )}
-                        <span style={{ fontSize: '15px', fontWeight: '600' }}>
-                          {interaction.subject || interaction.title}
-                        </span>
+                    <Plus size={14} />
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing Categories */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {tagCategories.map((category) => (
+                  <div
+                    key={category.id}
+                    style={{
+                      background: colors.bgSecondary,
+                      border: `1px solid ${colors.borderPrimary}`,
+                      borderRadius: '12px',
+                      padding: '20px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '2px',
+                          background: categoryColors[category.id] || category.color,
+                        }} />
+                        <span style={{ fontSize: '14px', fontWeight: '500' }}>{category.name}</span>
                       </div>
-                      <span style={{ fontSize: '12px', color: '#9ca3af', flexShrink: 0, marginLeft: '12px' }}>
-                        {formatDate(interaction.date)}
-                      </span>
+                      <button
+                        onClick={() => handleDeleteCategory(category.id)}
+                        style={{
+                          padding: '6px',
+                          borderRadius: '6px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: colors.red,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                    {interaction.snippet && (
-                      <p style={{
-                        fontSize: '13px',
-                        color: '#9ca3af',
-                        margin: 0,
-                        lineHeight: '1.5',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                      }}>
-                        {interaction.snippet}
-                      </p>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                      {category.options.map((option) => (
+                        <div
+                          key={option}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            background: categoryColors[category.id] || category.color,
+                            fontSize: '12px',
+                            fontWeight: '500',
+                          }}
+                        >
+                          {option}
+                          <button
+                            onClick={() => handleRemoveOption(category.id, option)}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: colors.textPrimary,
+                              cursor: 'pointer',
+                              padding: 0,
+                              display: 'flex',
+                              opacity: 0.7,
+                            }}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {editingCategory?.id === category.id ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          value={newOptionInput}
+                          onChange={(e) => setNewOptionInput(e.target.value)}
+                          placeholder="New option"
+                          style={{
+                            flex: 1,
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            background: colors.card,
+                            border: `1px solid ${colors.borderSecondary}`,
+                            color: colors.textPrimary,
+                            fontSize: '13px',
+                            outline: 'none',
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddOption(category.id);
+                          }}
+                        />
+                        <button
+                          onClick={() => handleAddOption(category.id)}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '6px',
+                            background: colors.green,
+                            border: 'none',
+                            color: colors.textPrimary,
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={() => { setEditingCategory(null); setNewOptionInput(''); }}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '6px',
+                            background: colors.card,
+                            border: `1px solid ${colors.borderSecondary}`,
+                            color: colors.textPrimary,
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setEditingCategory(category)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          background: colors.card,
+                          border: `1px solid ${colors.borderSecondary}`,
+                          color: colors.textSecondary,
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <Plus size={12} />
+                        Add Option
+                      </button>
                     )}
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Interaction Detail Modal */}
-      {selectedInteraction && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.9)',
-            backdropFilter: 'blur(12px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 60,
-            padding: '24px',
-          }}
-          onClick={() => setSelectedInteraction(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '24px',
-              maxWidth: '800px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            {/* Email Header */}
-            <div style={{
-              padding: '24px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-              background: 'rgba(255, 255, 255, 0.02)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ fontSize: '20px', fontWeight: '600', margin: '0 0 8px 0' }}>
-                    {selectedInteraction.subject || selectedInteraction.title}
-                  </h3>
-                  <div style={{ fontSize: '13px', color: '#9ca3af' }}>
-                    From: {selectedInteraction.from_name || selectedInteraction.from_email}
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#9ca3af' }}>
-                    {formatDate(selectedInteraction.date)}
-                  </div>
-                </div>
+          ) : selectedContact ? (
+            // Contact Detail Panel
+            <div style={{ padding: isMobile ? '20px' : '40px 48px', maxWidth: '900px' }}>
+              {/* Back button for mobile */}
+              {isMobile && (
                 <button
-                  onClick={() => setSelectedInteraction(null)}
+                  onClick={() => setSelectedContact(null)}
                   style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    background: 'rgba(255, 255, 255, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 0',
+                    marginBottom: '16px',
+                    background: 'transparent',
                     border: 'none',
+                    color: colors.textSecondary,
+                    fontSize: '13px',
                     cursor: 'pointer',
+                  }}
+                >
+                  <ArrowLeft size={14} />
+                  Back to contacts
+                </button>
+              )}
+
+              {/* Header Section */}
+              <div style={{ marginBottom: '40px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginBottom: '20px' }}>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: getStatus(selectedContact.last_seen).color,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    fontSize: '32px',
+                    fontWeight: '600',
+                    flexShrink: 0,
+                  }}>
+                    {selectedContact.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px 0' }}>
+                      {selectedContact.name}
+                    </h2>
+                    {selectedContact.company && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: colors.textSecondary, fontSize: '14px' }}>
+                        <Building2 size={14} />
+                        {selectedContact.company}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <button style={{
+                    padding: '8px 14px',
+                    borderRadius: '6px',
+                    background: colors.primary,
+                    border: 'none',
+                    color: colors.textPrimary,
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}>
+                    <Mail size={14} />
+                    Email
+                  </button>
+                  <button style={{
+                    padding: '8px 14px',
+                    borderRadius: '6px',
+                    background: colors.card,
+                    border: `1px solid ${colors.borderSecondary}`,
+                    color: colors.textPrimary,
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}>
+                    <Phone size={14} />
+                    Call
+                  </button>
+                  <button style={{
+                    padding: '8px 14px',
+                    borderRadius: '6px',
+                    background: colors.card,
+                    border: `1px solid ${colors.borderSecondary}`,
+                    color: colors.textPrimary,
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}>
+                    <Calendar size={14} />
+                    Schedule
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats Cards */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '16px',
+                marginBottom: '40px',
+              }}>
+                <div style={{
+                  background: colors.bgSecondary,
+                  border: `1px solid ${colors.borderPrimary}`,
+                  borderRadius: '12px',
+                  padding: '20px',
+                }}>
+                  <div style={{ fontSize: '12px', color: colors.textSecondary, marginBottom: '6px' }}>Last Contact</div>
+                  <div style={{ fontSize: '16px', fontWeight: '500' }}>{formatDate(selectedContact.last_seen)}</div>
+                </div>
+                <div style={{
+                  background: colors.bgSecondary,
+                  border: `1px solid ${colors.borderPrimary}`,
+                  borderRadius: '12px',
+                  padding: '20px',
+                }}>
+                  <div style={{ fontSize: '12px', color: colors.textSecondary, marginBottom: '6px' }}>Interactions</div>
+                  <div style={{ fontSize: '16px', fontWeight: '500' }}>{selectedContact.interaction_count}</div>
+                </div>
+                <div style={{
+                  background: colors.bgSecondary,
+                  border: `1px solid ${colors.borderPrimary}`,
+                  borderRadius: '12px',
+                  padding: '20px',
+                }}>
+                  <div style={{ fontSize: '12px', color: colors.textSecondary, marginBottom: '6px' }}>Status</div>
+                  <div style={{
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    color: getStatus(selectedContact.last_seen).color
+                  }}>
+                    {getStatus(selectedContact.last_seen).label}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tag Categories */}
+              <div style={{ marginBottom: '40px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: '500', color: colors.textSecondary, margin: 0 }}>
+                    CLASSIFICATION
+                  </h3>
+                  {saving && (
+                    <span style={{ fontSize: '11px', color: colors.green, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Check size={12} />
+                      Saved
+                    </span>
+                  )}
+                </div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '16px',
+                }}>
+                  {tagCategories.map((category) => (
+                    <div
+                      key={category.id}
+                      style={{
+                        background: colors.bgSecondary,
+                        border: `1px solid ${colors.borderPrimary}`,
+                        borderRadius: '8px',
+                        padding: '16px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '2px',
+                          background: categoryColors[category.id] || category.color,
+                        }} />
+                        <span style={{ fontSize: '13px', fontWeight: '500', color: colors.textSecondary }}>
+                          {category.name}
+                        </span>
+                      </div>
+                      <select
+                        value={contactTags[category.id] || ''}
+                        onChange={(e) => handleTagChange(category.id, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          background: colors.card,
+                          border: `1px solid ${colors.borderSecondary}`,
+                          color: colors.textPrimary,
+                          fontSize: '13px',
+                          outline: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <option value="">Select...</option>
+                        {category.options.map((option) => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes Section */}
+              <div style={{ marginBottom: '40px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '500', color: colors.textSecondary, margin: '0 0 16px 0' }}>
+                  NOTES
+                </h3>
+                <textarea
+                  value={contactNotes}
+                  onChange={(e) => handleNotesChange(e.target.value)}
+                  placeholder="Add notes about this contact..."
+                  style={{
+                    width: '100%',
+                    minHeight: '120px',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    background: colors.bgSecondary,
+                    border: `1px solid ${colors.borderPrimary}`,
+                    color: colors.textPrimary,
+                    fontSize: '13px',
+                    lineHeight: '1.5',
+                    resize: 'vertical',
+                    outline: 'none',
+                    fontFamily: 'inherit',
                   }}
-                >
-                  <X size={18} />
-                </button>
+                />
+              </div>
+
+              {/* Email Timeline */}
+              <div>
+                <h3 style={{ fontSize: '14px', fontWeight: '500', color: colors.textSecondary, margin: '0 0 16px 0' }}>
+                  INTERACTION HISTORY ({contactInteractions.length})
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {contactInteractions.map((interaction) => {
+                    const isExpanded = expandedInteraction === interaction.id;
+
+                    return (
+                      <div
+                        key={interaction.id}
+                        onClick={() => setExpandedInteraction(isExpanded ? null : interaction.id)}
+                        style={{
+                          background: colors.bgSecondary,
+                          border: `1px solid ${colors.borderPrimary}`,
+                          borderRadius: '8px',
+                          padding: '16px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.background = colors.hover;
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.background = colors.bgSecondary;
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                            {interaction.type === 'email' ? (
+                              <Mail size={14} style={{ color: colors.blue, flexShrink: 0 }} />
+                            ) : (
+                              <Calendar size={14} style={{ color: colors.orange, flexShrink: 0 }} />
+                            )}
+                            <span style={{
+                              fontSize: '14px',
+                              fontWeight: '500',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: isExpanded ? 'normal' : 'nowrap',
+                            }}>
+                              {interaction.subject || interaction.title}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '12px', color: colors.textMuted, flexShrink: 0, marginLeft: '12px' }}>
+                            {formatDate(interaction.date)}
+                          </span>
+                        </div>
+
+                        {interaction.from_name && (
+                          <div style={{ fontSize: '12px', color: colors.textSecondary, marginBottom: '8px' }}>
+                            From: {interaction.from_name}
+                          </div>
+                        )}
+
+                        {interaction.snippet && (
+                          <p style={{
+                            fontSize: '13px',
+                            color: isExpanded ? '#aaaaaa' : colors.textMuted,
+                            margin: 0,
+                            lineHeight: '1.5',
+                            overflow: isExpanded ? 'visible' : 'hidden',
+                            textOverflow: isExpanded ? 'clip' : 'ellipsis',
+                            display: isExpanded ? 'block' : '-webkit-box',
+                            WebkitLineClamp: isExpanded ? 'unset' : 2,
+                            WebkitBoxOrient: 'vertical',
+                            whiteSpace: isExpanded ? 'pre-wrap' : 'normal',
+                          }}>
+                            {isExpanded ? (interaction.body || interaction.snippet) : interaction.snippet}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {contactInteractions.length === 0 && (
+                    <div style={{
+                      padding: '40px',
+                      textAlign: 'center',
+                      color: colors.textMuted,
+                      fontSize: '13px',
+                    }}>
+                      No interactions found
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-
-            {/* Email Body */}
+          ) : (
+            // Empty State
             <div style={{
               flex: 1,
-              overflowY: 'auto',
-              padding: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: colors.textMuted,
             }}>
-              <div style={{
-                fontSize: '14px',
-                lineHeight: '1.7',
-                color: '#e5e7eb',
-                whiteSpace: 'pre-wrap',
-              }}>
-                {selectedInteraction.body || selectedInteraction.snippet || 'No content available'}
+              <div style={{ textAlign: 'center' }}>
+                <Users size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                <p style={{ fontSize: '14px', margin: 0 }}>Select a contact to view details</p>
               </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       <style jsx>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+
+        *::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+
+        *::-webkit-scrollbar-track {
+          background: ${colors.bg};
+        }
+
+        *::-webkit-scrollbar-thumb {
+          background: ${colors.borderSecondary};
+          border-radius: 4px;
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+          background: #3a3a3a;
         }
       `}</style>
     </div>
