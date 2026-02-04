@@ -1,7 +1,17 @@
 import Database from 'better-sqlite3';
 import { join } from 'path';
+import { existsSync } from 'fs';
 
-const dbPath = join(process.cwd(), 'data', 'relationship-intel.db');
+// Try multiple possible paths
+const possiblePaths = [
+  join(process.cwd(), 'data', 'relationship-intel.db'),
+  '/home/ubuntu/normancdesilva/data/relationship-intel.db',
+  '/home/ubuntu/clawd/relationship-intel/data/relationship-intel.db',
+];
+
+const dbPath = possiblePaths.find(p => existsSync(p)) || possiblePaths[0];
+console.log('Using database at:', dbPath);
+
 let db: Database.Database | null = null;
 
 export function getDb() {

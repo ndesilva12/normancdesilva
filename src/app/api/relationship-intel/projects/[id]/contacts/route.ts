@@ -3,11 +3,11 @@ import { getDb } from '../../../lib/db';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: projectId } = await params;
     const db = getDb();
-    const projectId = params.id;
     
     const contacts = db.prepare(`
       SELECT 
