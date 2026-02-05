@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Search, Lock, RefreshCw, ExternalLink, Eye, FileSearch, Link2, History, Trash2, ChevronRight } from "lucide-react";
 
 export default function DarkSearchPage() {
   const [query, setQuery] = useState("");
