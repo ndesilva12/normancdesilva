@@ -29,13 +29,19 @@ export async function POST() {
     const tenMinutesAgo = Timestamp.fromDate(new Date(Date.now() - 10 * 60 * 1000));
     
     for (const collectionName of collections) {
+      // Get all running searches (no composite index needed)
       const snapshot = await db.collection(collectionName)
         .where('status', '==', 'running')
-        .where('timestamp', '<', tenMinutesAgo)
         .get();
       
+      // Filter in memory for old ones
+      const oldDocs = snapshot.docs.filter(doc => {
+        const timestamp = doc.data().timestamp;
+        return timestamp && timestamp.toMillis() < tenMinutesAgo.toMillis();
+      });
+      
       const batch = db.batch();
-      snapshot.docs.forEach(doc => {
+      oldDocs.forEach(doc => {
         batch.update(doc.ref, {
           status: 'failed',
           error: 'Search timed out (likely from previous deployment)',
@@ -43,11 +49,11 @@ export async function POST() {
         });
       });
       
-      if (snapshot.size > 0) {
+      if (oldDocs.length > 0) {
         await batch.commit();
       }
       
-      results[collectionName] = snapshot.size;
+      results[collectionName] = oldDocs.length;
     }
     
     return NextResponse.json({ 
