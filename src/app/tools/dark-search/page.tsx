@@ -3,20 +3,24 @@
 import { useState } from "react";
 import { Moon } from "lucide-react";
 import { IntelToolNav } from "@/components/IntelToolNav";
+import { IntelToolHistory } from "@/components/IntelToolHistory";
 
 export default function DarkSearchPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any>(null);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  const handleSearch = async (searchQuery?: string) => {
+    const q = searchQuery || query;
+    if (!q.trim()) return;
+    if (!searchQuery) setQuery(q);
     setLoading(true);
+    setResults(null);
     try {
       const res = await fetch('/api/dark-search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, mode: 'long' })
+        body: JSON.stringify({ query: q, mode: 'long' })
       });
       const data = await res.json();
       setResults(data);
@@ -25,6 +29,16 @@ export default function DarkSearchPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSelectHistory = (item: any) => {
+    setResults({ report: item.results });
+    setQuery(item.query);
+  };
+
+  const handleRefreshSearch = (searchQuery: string) => {
+    setQuery(searchQuery);
+    handleSearch(searchQuery);
   };
 
   return (
@@ -268,19 +282,15 @@ export default function DarkSearchPage() {
         )}
 
         {!results && !loading && (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '100px 20px',
-            background: 'rgba(255, 255, 255, 0.02)',
-            borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.06)'
-          }}>
-            <h3 style={{ fontSize: '24px', color: 'white', marginBottom: '12px' }}>
-              Ready to investigate
-            </h3>
-            <p style={{ color: '#94a3b8' }}>
-              Enter a query above for deep web research
-            </p>
+          <div>
+            <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'white', marginBottom: '24px' }}>
+              Recent Searches
+            </h2>
+            <IntelToolHistory
+              collection="dark"
+              onSelectResult={handleSelectHistory}
+              onRefreshSearch={handleRefreshSearch}
+            />
           </div>
         )}
       </div>

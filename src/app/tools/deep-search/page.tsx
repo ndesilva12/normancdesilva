@@ -3,20 +3,24 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { IntelToolNav } from "@/components/IntelToolNav";
+import { IntelToolHistory } from "@/components/IntelToolHistory";
 
 export default function DeepSearchPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any>(null);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  const handleSearch = async (searchQuery?: string) => {
+    const q = searchQuery || query;
+    if (!q.trim()) return;
+    if (!searchQuery) setQuery(q); // Only update input if it's a new search
     setLoading(true);
+    setResults(null); // Clear old results
     try {
       const res = await fetch('/api/deep-search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query })
+        body: JSON.stringify({ query: q })
       });
       const data = await res.json();
       setResults(data);
@@ -25,6 +29,16 @@ export default function DeepSearchPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSelectHistory = (item: any) => {
+    setResults({ report: item.results });
+    setQuery(item.query);
+  };
+
+  const handleRefreshSearch = (searchQuery: string) => {
+    setQuery(searchQuery);
+    handleSearch(searchQuery);
   };
 
   return (
@@ -288,19 +302,15 @@ export default function DeepSearchPage() {
         )}
 
         {!results && !loading && (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '100px 20px',
-            background: 'rgba(255, 255, 255, 0.02)',
-            borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.06)'
-          }}>
-            <h3 style={{ fontSize: '24px', color: 'white', marginBottom: '12px' }}>
-              Ready to search
-            </h3>
-            <p style={{ color: '#94a3b8' }}>
-              Enter a query above to start deep research
-            </p>
+          <div>
+            <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'white', marginBottom: '24px' }}>
+              Recent Searches
+            </h2>
+            <IntelToolHistory
+              collection="deep"
+              onSelectResult={handleSelectHistory}
+              onRefreshSearch={handleRefreshSearch}
+            />
           </div>
         )}
       </div>

@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+// Initialize Firebase Admin
+if (getApps().length === 0) {
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'the-dashboard-50be1';
+
+  initializeApp({
+    credential: cert({
+      projectId,
+      clientEmail,
+      privateKey,
+    }),
+  });
+}
+
+const db = getFirestore();
 
 export interface DeepSearchReport {
   topic: string;
@@ -308,6 +327,21 @@ Respond with valid JSON only. No markdown formatting around the JSON.`;
     };
 
     console.log(`Deep Search: Returning ${groundedLinks.length} verified links`);
+
+    // Save to Firebase history
+    try {
+      await db.collection('deep_search_history').add({
+        query: query.trim(),
+        status: 'completed',
+        timestamp: Timestamp.now(),
+        completed_at: Timestamp.now(),
+        results: fullReport,
+        error: null,
+      });
+    } catch (saveError) {
+      console.error('Failed to save to history:', saveError);
+      // Continue anyway - don't fail the request
+    }
 
     return NextResponse.json({ report: fullReport });
   } catch (error) {
