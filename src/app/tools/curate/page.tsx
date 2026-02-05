@@ -16,6 +16,7 @@ interface HistoryItem {
 
 export default function CuratePage() {
   const [topic, setTopic] = useState("");
+  const [source, setSource] = useState("all");
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedResult, setSelectedResult] = useState<HistoryItem | null>(null);
@@ -44,7 +45,7 @@ export default function CuratePage() {
       const res = await fetch('/api/curate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: topic }),
+        body: JSON.stringify({ query: topic, source }),
       });
       
       if (res.ok) {
@@ -93,44 +94,105 @@ export default function CuratePage() {
         </p>
 
         {/* Search Input */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '48px' }}>
-          <input
-            type="text"
-            placeholder="Enter topic or 'general' for discovery..."
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleCurate()}
-            style={{
-              flex: 1,
-              padding: '20px 24px',
-              fontSize: '16px',
-              background: 'rgba(30, 41, 59, 0.6)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(139, 92, 246, 0.3)',
-              borderRadius: '12px',
-              color: 'white',
-              outline: 'none',
-            }}
-          />
+        <div style={{ 
+          background: 'rgba(30, 41, 59, 0.6)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(139, 92, 246, 0.3)',
+          borderRadius: '16px',
+          padding: '24px',
+          marginBottom: '48px',
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '16px', marginBottom: '16px' }}>
+            <div>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#94a3b8', 
+                marginBottom: '8px' 
+              }}>
+                Topic
+              </label>
+              <input
+                type="text"
+                placeholder="Enter topic or 'general' for discovery..."
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleCurate()}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  fontSize: '16px',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  color: 'white',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ minWidth: '200px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#94a3b8', 
+                marginBottom: '8px' 
+              }}>
+                Source Filter
+              </label>
+              <select
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  fontSize: '16px',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  color: 'white',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%23ffffff\' d=\'M6 9L1 4h10z\'/%3E%3C/svg%3E")',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 12px center',
+                  paddingRight: '36px',
+                }}
+              >
+                <option value="all">All Sources</option>
+                <option value="x">X (Twitter)</option>
+                <option value="reddit">Reddit</option>
+                <option value="youtube">YouTube</option>
+                <option value="articles">Articles</option>
+                <option value="podcasts">Podcasts</option>
+              </select>
+            </div>
+          </div>
+
           <button 
             onClick={handleCurate}
             disabled={loading}
             style={{
-              padding: '20px 40px',
+              width: '100%',
+              padding: '16px',
               background: loading ? 'rgba(139, 92, 246, 0.5)' : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
               border: 'none',
               borderRadius: '12px',
               color: 'white',
               fontSize: '16px',
-              fontWeight: '600',
+              fontWeight: '700',
               cursor: loading ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              justifyContent: 'center',
+              gap: '12px',
             }}
           >
-            <Search size={18} />
-            {loading ? 'Curating...' : 'Curate'}
+            <Sparkles size={20} />
+            {loading ? 'Curating...' : 'Curate Content'}
           </button>
         </div>
 
