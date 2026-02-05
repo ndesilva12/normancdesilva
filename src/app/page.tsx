@@ -3,41 +3,106 @@
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
-import { IntelToolsBar } from "@/components/home/IntelToolsBar";
-import { QuickAccessDock } from "@/components/home/QuickAccessDock";
 import { DashboardQuickLinks } from "@/components/home/DashboardQuickLinks";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Sparkles,
+  TrendingUp,
+  Search,
+  Lock,
+  Mail,
+  Calendar,
+  Users,
+  FolderOpen,
+  StickyNote,
+  Droplets,
+  Music,
+  Newspaper,
+  DollarSign,
+  BookOpen,
+  Briefcase,
+  Building2,
+  Image,
+  BarChart3,
+  UserSearch,
+  Globe,
+  TrendingUp as TrendingIcon,
+} from "lucide-react";
 
-// Import all preview components
-import { EmailsPreview } from "@/components/EmailsPreview";
-import { CalendarPreview } from "@/components/CalendarPreview";
-import { ContactsPreview } from "@/components/ContactsPreview";
-import { FilesPreview } from "@/components/FilesPreview";
-import { NotesPreview } from "@/components/NotesPreview";
-import { RaindropPreview } from "@/components/RaindropPreview";
-import { NewsPreview } from "@/components/NewsPreview";
-import { InoreaderPreview } from "@/components/InoreaderPreview";
-import { TrendingPreview } from "@/components/TrendingPreview";
-import { StocksPreview } from "@/components/StocksPreview";
-import { SpotifyPreview } from "@/components/SpotifyPreview";
-import { AccountsPreview } from "@/components/AccountsPreview";
-import { BusinessInfoPreview } from "@/components/BusinessInfoPreview";
-import { VisualRostersPreview } from "@/components/VisualRostersPreview";
-import { CorporateInfoPreview } from "@/components/CorporateInfoPreview";
-import { ContactFinderPreview } from "@/components/ContactFinderPreview";
-import { ImageLookupPreview } from "@/components/ImageLookupPreview";
+const INTEL_TOOLS = [
+  {
+    id: "curate",
+    name: "Curate",
+    icon: Sparkles,
+    href: "/tools/curate",
+    color: "#8b5cf6",
+    description: "AI-curated content for your worldview",
+  },
+  {
+    id: "l3d",
+    name: "L3D",
+    icon: TrendingUp,
+    href: "/tools/l3d",
+    color: "#10b981",
+    description: "Last 30 days research & trends",
+  },
+  {
+    id: "deep",
+    name: "Deep Search",
+    icon: Search,
+    href: "/tools/deep-search",
+    color: "#6366f1",
+    description: "Multi-source deep research",
+  },
+  {
+    id: "dark",
+    name: "Dark Search",
+    icon: Lock,
+    href: "/tools/dark-search",
+    color: "#dc2626",
+    description: "Hidden content discovery",
+  },
+];
+
+const TOOL_CATEGORIES = [
+  {
+    name: "Communication",
+    tools: [
+      { id: "emails", name: "Emails", icon: Mail, href: "/tools/emails", color: "#3b82f6" },
+      { id: "calendar", name: "Calendar", icon: Calendar, href: "/tools/calendar", color: "#10b981" },
+      { id: "contacts", name: "Contacts", icon: Users, href: "/tools/contacts", color: "#8b5cf6" },
+    ],
+  },
+  {
+    name: "Content",
+    tools: [
+      { id: "files", name: "Files", icon: FolderOpen, href: "/tools/files", color: "#6366f1" },
+      { id: "notes", name: "Notes", icon: StickyNote, href: "/tools/notes", color: "#a78bfa" },
+      { id: "raindrop", name: "Bookmarks", icon: Droplets, href: "/tools/raindrop", color: "#06b6d4" },
+      { id: "news", name: "News", icon: Newspaper, href: "/tools/news", color: "#64748b" },
+      { id: "inoreader", name: "RSS", icon: BookOpen, href: "/tools/inoreader", color: "#10b981" },
+      { id: "spotify", name: "Spotify", icon: Music, href: "/tools/spotify", color: "#10b981" },
+    ],
+  },
+  {
+    name: "Business",
+    tools: [
+      { id: "accounts", name: "Accounts", icon: Globe, href: "/tools/accounts", color: "#64748b" },
+      { id: "market", name: "Market", icon: DollarSign, href: "/tools/market", color: "#3b82f6" },
+      { id: "trending", name: "Trending", icon: TrendingIcon, href: "/tools/trending", color: "#14b8a6" },
+      { id: "business-info", name: "Business Info", icon: Building2, href: "/tools/business-info", color: "#8b5cf6" },
+      { id: "visual-rosters", name: "Rosters", icon: BarChart3, href: "/tools/visual-rosters", color: "#3b82f6" },
+      { id: "corporate-info", name: "Corporate", icon: Briefcase, href: "/tools/company-politics", color: "#10b981" },
+      { id: "contact-finder", name: "Contact Finder", icon: UserSearch, href: "/tools/contact-finder", color: "#6366f1" },
+      { id: "image-lookup", name: "Image Lookup", icon: Image, href: "/tools/image-lookup", color: "#a78bfa" },
+    ],
+  },
+];
 
 export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
-  const [selectedTool, setSelectedTool] = useState<{
-    id: string;
-    url: string;
-    color: string;
-    name: string;
-  } | null>(null);
-  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
-  const [hasSearchResults, setHasSearchResults] = useState(false); // Track if search results are showing
+  const [hasSearchResults, setHasSearchResults] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -46,102 +111,6 @@ export default function Home() {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-
-  useEffect(() => {
-    // Check Google connection status
-    fetch("/api/auth/status")
-      .then((res) => res.json())
-      .then((data) => setIsGoogleConnected(data.isConnected))
-      .catch(() => setIsGoogleConnected(false));
-  }, []);
-
-  const handleToolClick = (toolId: string, toolUrl: string, toolColor: string, toolName: string) => {
-    setSelectedTool({ id: toolId, url: toolUrl, color: toolColor, name: toolName });
-  };
-
-  const handleConnectGoogle = () => {
-    window.location.href = "/api/auth/google";
-  };
-
-  const renderPreview = () => {
-    if (!selectedTool) {
-      return (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
-          <p style={{ fontSize: "15px" }}>Click a tool above to preview it here</p>
-        </div>
-      );
-    }
-
-    switch (selectedTool.id) {
-      case "emails":
-        return <EmailsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
-      case "calendar":
-        return <CalendarPreview />;
-      case "contacts":
-        return <ContactsPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
-      case "files":
-        return <FilesPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
-      case "notes":
-      case "notion-browser":
-        return <NotesPreview />;
-      case "raindrop":
-        return <RaindropPreview />;
-      case "news":
-        return <NewsPreview />;
-      case "inoreader":
-        return <InoreaderPreview />;
-      case "trending":
-        return <TrendingPreview />;
-      case "market":
-        return <StocksPreview />;
-      case "spotify":
-        return <SpotifyPreview />;
-      case "accounts":
-        return <AccountsPreview />;
-      case "business-info":
-        return <BusinessInfoPreview />;
-      case "visual-rosters":
-        return <VisualRostersPreview />;
-      case "corporate-info":
-        return <CorporateInfoPreview />;
-      case "contact-finder":
-        return <ContactFinderPreview />;
-      case "image-lookup":
-        return <ImageLookupPreview />;
-      default:
-        return (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
-            <p style={{ fontSize: "15px", marginBottom: "20px" }}>
-              Preview not available for this tool yet
-            </p>
-            <button
-              onClick={() => router.push(selectedTool.url)}
-              style={{
-                padding: "10px 24px",
-                background: selectedTool.color,
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            >
-              Open Full Tool
-            </button>
-          </div>
-        );
-    }
-  };
 
   return (
     <>
@@ -159,130 +128,225 @@ export default function Home() {
         <div
           className="container"
           style={{
-            maxWidth: "1200px",
+            maxWidth: "1400px",
             margin: "0 auto",
           }}
         >
-          {/* Date/Time (mobile only) */}
-          {isMobile && <MobileDateTimeBanner />}
-
           {/* Search */}
           <div style={{ marginBottom: "32px" }}>
             <MultiSourceSearch 
               onResultsChange={(hasResults) => {
                 setHasSearchResults(hasResults);
-                if (hasResults) {
-                  setSelectedTool(null); // Clear tool preview when search results show
-                }
               }}
             />
           </div>
 
-          {/* Hide dashboard widgets when search results are active */}
+          {/* Hide dashboard when search results are active */}
           {!hasSearchResults && (
             <>
               {/* Dashboard Quick Links */}
               <DashboardQuickLinks />
 
-              {/* 2-Column Layout: Intel Tools + Systems Tools */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                gap: '24px',
-                marginBottom: '32px'
-              }}>
-                {/* Left Column: Intel Tools */}
-                <div>
-                  <IntelToolsBar onToolClick={handleToolClick} />
-                </div>
-
-                {/* Right Column: Systems Tools */}
-                <div>
-                  <QuickAccessDock onToolClick={handleToolClick} />
+              {/* Intel Tools - Prominent Cards */}
+              <div style={{ marginBottom: "48px" }}>
+                <h2
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    color: "var(--muted)",
+                    marginBottom: "16px",
+                  }}
+                >
+                  INTEL
+                </h2>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))",
+                    gap: "16px",
+                  }}
+                >
+                  {INTEL_TOOLS.map((tool) => {
+                    const Icon = tool.icon;
+                    return (
+                      <div
+                        key={tool.id}
+                        className="card"
+                        style={{
+                          padding: "24px",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          position: "relative",
+                          overflow: "hidden",
+                        }}
+                        onClick={() => router.push(tool.href)}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateY(-4px)";
+                          e.currentTarget.style.borderColor = tool.color;
+                          const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
+                          if (overlay) overlay.style.opacity = "0.1";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.borderColor = "var(--glass-border)";
+                          const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
+                          if (overlay) overlay.style.opacity = "0";
+                        }}
+                      >
+                        <div
+                          className="tool-overlay"
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            background: tool.color,
+                            opacity: 0,
+                            transition: "opacity 0.2s",
+                            pointerEvents: "none",
+                          }}
+                        />
+                        <div style={{ position: "relative", zIndex: 1 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "12px",
+                              marginBottom: "12px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "48px",
+                                height: "48px",
+                                borderRadius: "12px",
+                                background: `${tool.color}20`,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <Icon style={{ width: "24px", height: "24px", color: tool.color }} />
+                            </div>
+                            <h3
+                              style={{
+                                fontSize: "18px",
+                                fontWeight: 700,
+                                color: "var(--foreground)",
+                              }}
+                            >
+                              {tool.name}
+                            </h3>
+                          </div>
+                          <p
+                            style={{
+                              fontSize: "13px",
+                              color: "var(--muted)",
+                              lineHeight: "1.5",
+                            }}
+                          >
+                            {tool.description}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </>
-          )}
 
-          {/* Preview Section - only show if tool selected AND no search results */}
-          {!hasSearchResults && selectedTool && (
-            <div
-              style={{
-                marginTop: "32px",
-                background: "rgba(255, 255, 255, 0.03)",
-                borderRadius: "12px",
-                overflow: "hidden",
-                border: "1px solid var(--glass-border)",
-                position: "relative",
-              }}
-            >
-            {/* Colored top border */}
-            <div
-              style={{
-                height: "3px",
-                background: selectedTool?.color || "var(--accent)",
-                transition: "background 0.3s",
-              }}
-            />
-
-            {/* Preview header */}
-            <div
-              style={{
-                padding: "20px 24px",
-                borderBottom: "1px solid var(--glass-border)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
+              {/* Systems Tools - Categorized */}
               <div>
                 <h2
                   style={{
-                    fontSize: "18px",
+                    fontSize: "14px",
                     fontWeight: 700,
-                    color: "var(--foreground)",
-                    marginBottom: "4px",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    color: "var(--muted)",
+                    marginBottom: "24px",
                   }}
                 >
-                  {selectedTool?.name || "Preview"}
+                  SYSTEMS
                 </h2>
-                <p style={{ fontSize: "13px", color: "var(--muted)" }}>
-                  {selectedTool ? "Quick glance at this tool" : "Select a tool to preview"}
-                </p>
-              </div>
-              {selectedTool && (
-                <button
-                  onClick={() => router.push(selectedTool.url)}
+
+                <div
                   style={{
-                    padding: "8px 16px",
-                    background: selectedTool.color,
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(320px, 1fr))",
+                    gap: "32px",
                   }}
                 >
-                  Open Full Tool →
-                </button>
-              )}
-            </div>
-
-            {/* Preview content */}
-            <div style={{ padding: "24px", minHeight: "400px" }}>
-              {renderPreview()}
-            </div>
-          </div>
+                  {TOOL_CATEGORIES.map((category) => (
+                    <div key={category.name}>
+                      <h3
+                        style={{
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.1em",
+                          color: "var(--muted)",
+                          marginBottom: "12px",
+                          opacity: 0.7,
+                        }}
+                      >
+                        {category.name}
+                      </h3>
+                      <div
+                        style={{
+                          display: "grid",
+                          gap: "8px",
+                        }}
+                      >
+                        {category.tools.map((tool) => {
+                          const Icon = tool.icon;
+                          return (
+                            <div
+                              key={tool.id}
+                              className="card"
+                              style={{
+                                padding: "14px 16px",
+                                cursor: "pointer",
+                                transition: "all 0.2s",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "12px",
+                              }}
+                              onClick={() => router.push(tool.href)}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = "translateX(4px)";
+                                e.currentTarget.style.borderColor = tool.color;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "translateX(0)";
+                                e.currentTarget.style.borderColor = "var(--glass-border)";
+                              }}
+                            >
+                              <Icon
+                                style={{
+                                  width: "20px",
+                                  height: "20px",
+                                  color: tool.color,
+                                  flexShrink: 0,
+                                }}
+                              />
+                              <span
+                                style={{
+                                  fontSize: "14px",
+                                  fontWeight: 600,
+                                  color: "var(--foreground)",
+                                }}
+                              >
+                                {tool.name}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -291,33 +355,41 @@ export default function Home() {
 }
 
 function MobileDateTimeBanner() {
-  const [dateTime, setDateTime] = useState<Date | null>(null);
+  const [dateTime, setDateTime] = useState({ date: "", time: "" });
 
   useEffect(() => {
-    setDateTime(new Date());
-    const interval = setInterval(() => setDateTime(new Date()), 1000);
+    const updateDateTime = () => {
+      const now = new Date();
+      setDateTime({
+        date: now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+        time: now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
+      });
+    };
+
+    updateDateTime();
+    const interval = setInterval(updateDateTime, 60000);
     return () => clearInterval(interval);
   }, []);
-
-  if (!dateTime) return null;
 
   return (
     <div
       style={{
-        marginBottom: "16px",
+        marginBottom: "20px",
         padding: "12px 16px",
-        background: "rgba(255, 255, 255, 0.03)",
-        borderRadius: "8px",
+        background: "var(--glass-bg)",
         border: "1px solid var(--glass-border)",
-        textAlign: "center",
+        borderRadius: "12px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
       }}
     >
-      <div style={{ fontSize: "20px", fontWeight: 700, color: "var(--foreground)", marginBottom: "4px" }}>
-        {dateTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
-      </div>
-      <div style={{ fontSize: "13px", color: "var(--muted)" }}>
-        {dateTime.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-      </div>
+      <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)" }}>
+        {dateTime.date}
+      </span>
+      <span style={{ fontSize: "14px", color: "var(--muted)" }}>
+        {dateTime.time}
+      </span>
     </div>
   );
 }
