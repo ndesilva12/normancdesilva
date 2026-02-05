@@ -106,7 +106,7 @@ export default function DeepSearchPage() {
         )}
 
         {/* History */}
-        <IntelToolHistory toolName="deep-search" />
+        <IntelToolHistory toolName="deep-search" collectionName="deep_search_history" />
       </div>
     </div>
   );

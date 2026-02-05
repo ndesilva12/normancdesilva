@@ -129,7 +129,7 @@ export default function CuratePage() {
         </div>
 
         {/* History */}
-        <IntelToolHistory toolName="curate" />
+        <IntelToolHistory toolName="curate" collectionName="curate_history" />
       </div>
     </div>
   );

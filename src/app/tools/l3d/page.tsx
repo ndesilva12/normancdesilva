@@ -99,7 +99,7 @@ export default function L3DPage() {
         </div>
 
         {/* History */}
-        <IntelToolHistory toolName="l3d" />
+        <IntelToolHistory toolName="l3d" collectionName="l3d_history" />
       </div>
     </div>
   );

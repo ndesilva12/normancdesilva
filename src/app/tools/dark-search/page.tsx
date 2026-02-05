@@ -106,7 +106,7 @@ export default function DarkSearchPage() {
         )}
 
         {/* History */}
-        <IntelToolHistory toolName="dark-search" />
+        <IntelToolHistory toolName="dark-search" collectionName="dark_search_history" />
       </div>
     </div>
   );
