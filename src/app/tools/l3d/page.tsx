@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Sparkles, Search, Clock, CheckCircle, XCircle } from "lucide-react";
+import { TrendingUp, Search, Clock, CheckCircle, XCircle } from "lucide-react";
 
 interface HistoryItem {
   id: string;
@@ -14,21 +14,21 @@ interface HistoryItem {
   error?: string;
 }
 
-export default function CuratePage() {
-  const [topic, setTopic] = useState("");
+export default function L3DPage() {
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedResult, setSelectedResult] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
     loadHistory();
-    const interval = setInterval(loadHistory, 5000); // Refresh every 5s
+    const interval = setInterval(loadHistory, 5000);
     return () => clearInterval(interval);
   }, []);
 
   const loadHistory = async () => {
     try {
-      const res = await fetch('/api/curate');
+      const res = await fetch('/api/l3d');
       const data = await res.json();
       setHistory(data.history || []);
     } catch (err) {
@@ -36,19 +36,19 @@ export default function CuratePage() {
     }
   };
 
-  const handleCurate = async () => {
-    if (!topic.trim()) return;
+  const handleSearch = async () => {
+    if (!query.trim()) return;
     setLoading(true);
     
     try {
-      const res = await fetch('/api/curate', {
+      const res = await fetch('/api/l3d', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: topic }),
+        body: JSON.stringify({ query }),
       });
       
       if (res.ok) {
-        setTopic('');
+        setQuery('');
         loadHistory();
       }
     } catch (err) {
@@ -61,7 +61,7 @@ export default function CuratePage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #8b5cf6 0%, #1e293b 50%, #0f172a 100%)',
+      background: 'linear-gradient(135deg, #10b981 0%, #1e293b 50%, #0f172a 100%)',
       padding: '40px 20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
@@ -77,47 +77,47 @@ export default function CuratePage() {
         </Link>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px', marginTop: '24px' }}>
-          <Sparkles size={48} style={{ color: '#a78bfa' }} />
+          <TrendingUp size={48} style={{ color: '#34d399' }} />
           <h1 style={{ 
             fontSize: '48px', 
             fontWeight: 'bold', 
             color: 'white',
             margin: 0,
           }}>
-            Curate
+            L3D (Last 30 Days)
           </h1>
         </div>
         
         <p style={{ fontSize: '18px', color: '#94a3b8', marginBottom: '40px' }}>
-          AI-powered content curation tailored to your worldview
+          Research recent trends & insights from the last 30 days
         </p>
 
         {/* Search Input */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '48px' }}>
           <input
             type="text"
-            placeholder="Enter topic or 'general' for discovery..."
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleCurate()}
+            placeholder="Enter topic to research recent trends..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             style={{
               flex: 1,
               padding: '20px 24px',
               fontSize: '16px',
               background: 'rgba(30, 41, 59, 0.6)',
               backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(139, 92, 246, 0.3)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
               borderRadius: '12px',
               color: 'white',
               outline: 'none',
             }}
           />
           <button 
-            onClick={handleCurate}
+            onClick={handleSearch}
             disabled={loading}
             style={{
               padding: '20px 40px',
-              background: loading ? 'rgba(139, 92, 246, 0.5)' : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+              background: loading ? 'rgba(16, 185, 129, 0.5)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               border: 'none',
               borderRadius: '12px',
               color: 'white',
@@ -130,7 +130,7 @@ export default function CuratePage() {
             }}
           >
             <Search size={18} />
-            {loading ? 'Curating...' : 'Curate'}
+            {loading ? 'Researching...' : 'Research'}
           </button>
         </div>
 
@@ -146,7 +146,7 @@ export default function CuratePage() {
             gap: '12px',
           }}>
             <Clock size={24} />
-            Curation History
+            Research History
           </h2>
 
           {history.length === 0 ? (
@@ -157,12 +157,12 @@ export default function CuratePage() {
               borderRadius: '16px',
               border: '1px solid rgba(148, 163, 184, 0.1)'
             }}>
-              <Sparkles size={48} style={{ color: '#64748b', margin: '0 auto 16px' }} />
+              <TrendingUp size={48} style={{ color: '#64748b', margin: '0 auto 16px' }} />
               <h3 style={{ fontSize: '20px', color: 'white', marginBottom: '8px' }}>
-                No curations yet
+                No research yet
               </h3>
               <p style={{ color: '#94a3b8' }}>
-                Enter a topic above to start discovering content
+                Enter a topic above to research recent trends
               </p>
             </div>
           ) : (
@@ -183,7 +183,7 @@ export default function CuratePage() {
                   onMouseEnter={(e) => {
                     if (item.status === 'completed') {
                       e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)';
-                      e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                      e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -198,8 +198,8 @@ export default function CuratePage() {
                           <div style={{
                             width: '20px',
                             height: '20px',
-                            border: '3px solid rgba(139, 92, 246, 0.3)',
-                            borderTopColor: '#8b5cf6',
+                            border: '3px solid rgba(16, 185, 129, 0.3)',
+                            borderTopColor: '#10b981',
                             borderRadius: '50%',
                             animation: 'spin 0.8s linear infinite',
                           }} />
@@ -273,7 +273,7 @@ export default function CuratePage() {
                 maxHeight: '80vh',
                 background: 'rgba(30, 41, 59, 0.98)',
                 borderRadius: '20px',
-                border: '1px solid rgba(139, 92, 246, 0.3)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
                 padding: '32px',
                 overflowY: 'auto',
               }}

@@ -3,7 +3,6 @@ import { spawn } from 'child_process';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin
 if (getApps().length === 0) {
   const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
@@ -28,8 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
-    // Create history entry first
-    const historyRef = await db.collection('curate_history').add({
+    const historyRef = await db.collection('l3d_history').add({
       query: query.trim(),
       status: 'running',
       timestamp: Timestamp.now(),
@@ -37,9 +35,8 @@ export async function POST(request: Request) {
       error: null,
     });
 
-    // Run curate script asynchronously
-    const scriptPath = '/home/ubuntu/clawd/skills/curate/curate_v3.py';
-    const workingDir = '/home/ubuntu/clawd/skills/curate';
+    const scriptPath = '/home/ubuntu/clawd/skills/last30days-lite/research.py';
+    const workingDir = '/home/ubuntu/clawd/skills/last30days-lite';
 
     const process = spawn('python3', [scriptPath, query], {
       cwd: workingDir,
@@ -60,14 +57,11 @@ export async function POST(request: Request) {
       stderr += data.toString();
     });
 
-    // Don't wait for completion - return immediately
     process.on('close', async (code) => {
       try {
         if (code === 0) {
-          // Parse results from stdout
           let results = null;
           try {
-            // Look for JSON output in stdout
             const jsonMatch = stdout.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
               results = JSON.parse(jsonMatch[0]);
@@ -76,13 +70,13 @@ export async function POST(request: Request) {
             console.error('Failed to parse results:', e);
           }
 
-          await db.collection('curate_history').doc(historyRef.id).update({
+          await db.collection('l3d_history').doc(historyRef.id).update({
             status: 'completed',
             results: results || { output: stdout },
             completed_at: Timestamp.now(),
           });
         } else {
-          await db.collection('curate_history').doc(historyRef.id).update({
+          await db.collection('l3d_history').doc(historyRef.id).update({
             status: 'failed',
             error: stderr || stdout || 'Unknown error',
             completed_at: Timestamp.now(),
@@ -96,18 +90,18 @@ export async function POST(request: Request) {
     return NextResponse.json({
       id: historyRef.id,
       status: 'running',
-      message: 'Curation started. Check history for results.',
+      message: 'L3D research started. Check history for results.',
     });
   } catch (error) {
-    console.error('Error starting curate:', error);
-    return NextResponse.json({ error: 'Failed to start curation' }, { status: 500 });
+    console.error('Error starting L3D:', error);
+    return NextResponse.json({ error: 'Failed to start L3D research' }, { status: 500 });
   }
 }
 
 export async function GET() {
   try {
     const snapshot = await db
-      .collection('curate_history')
+      .collection('l3d_history')
       .orderBy('timestamp', 'desc')
       .limit(50)
       .get();
@@ -121,7 +115,7 @@ export async function GET() {
 
     return NextResponse.json({ history });
   } catch (error) {
-    console.error('Error fetching curate history:', error);
+    console.error('Error fetching L3D history:', error);
     return NextResponse.json({ error: 'Failed to fetch history' }, { status: 500 });
   }
 }

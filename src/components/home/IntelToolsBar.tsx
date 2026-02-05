@@ -26,7 +26,7 @@ const INTEL_TOOLS = [
     id: "l3d",
     name: "L3D",
     icon: TrendingUp,
-    href: "/tools/last30days",
+    href: "/tools/l3d",
     color: "#10b981",
     description: "Last 30 days research",
   },
@@ -35,7 +35,7 @@ const INTEL_TOOLS = [
     name: "Deep Search",
     icon: Search,
     href: "/tools/deep-search",
-    color: "#3b82f6",
+    color: "#6366f1",
     description: "Multi-source deep research",
   },
   {
@@ -43,7 +43,7 @@ const INTEL_TOOLS = [
     name: "Dark Search",
     icon: Lock,
     href: "/tools/dark-search",
-    color: "#ef4444",
+    color: "#dc2626",
     description: "Hidden content discovery",
   },
 ];
@@ -101,7 +101,7 @@ export function IntelToolsBar({ onToolClick }: { onToolClick?: (toolId: string, 
             color: "var(--muted)",
           }}
         >
-          Tools
+          INTEL
         </h2>
       </div>
 

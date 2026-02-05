@@ -1,325 +1,153 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Search, Mail, Calendar, RefreshCw, ArrowLeft, Users, Clock, Building2, ChevronRight, ChevronDown, X } from 'lucide-react';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
 
-interface Contact {
-  email: string;
-  name: string;
-  first_seen: number;
-  last_seen: number;
-  interaction_count: number;
-  company?: string;
-}
-
-interface Interaction {
-  id: string;
-  type: 'email' | 'meeting';
-  date: number;
-  subject?: string;
-  title?: string;
-  snippet?: string;
-  body?: string;
-}
-
-export default function RelationshipIntel() {
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [contactInteractions, setContactInteractions] = useState<Interaction[]>([]);
-  const [expandedInteraction, setExpandedInteraction] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+export default function RelationshipIntelPage() {
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-
-  const getStatus = (lastSeen: number) => {
-    const daysSince = (Date.now() - lastSeen) / (1000 * 60 * 60 * 24);
-    if (daysSince < 7) return { label: 'Active', color: '#10b981' };
-    if (daysSince < 30) return { label: 'Warm', color: '#f59e0b' };
-    return { label: 'Cold', color: '#6b7280' };
-  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const res = await fetch('/api/relationship-intel/projects/cinderella/contacts');
-        if (res.ok) {
-          const data = await res.json();
-          setContacts(data.contacts || []);
-          setFilteredContacts(data.contacts || []);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-      setLoading(false);
-    };
-    loadData();
+    loadContacts();
   }, []);
 
-  useEffect(() => {
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      setFilteredContacts(contacts.filter(c =>
-        c.name.toLowerCase().includes(q) ||
-        c.email.toLowerCase().includes(q) ||
-        c.company?.toLowerCase().includes(q)
-      ));
-    } else {
-      setFilteredContacts(contacts);
-    }
-  }, [searchQuery, contacts]);
-
-  const openContactDetail = async (contact: Contact) => {
-    setSelectedContact(contact);
+  const loadContacts = async () => {
     try {
-      const res = await fetch(`/api/relationship-intel/projects/cinderella/contacts/${encodeURIComponent(contact.email)}/interactions`);
-      if (res.ok) {
-        const data = await res.json();
-        setContactInteractions(data.interactions || []);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const syncData = async () => {
-    setSyncing(true);
-    try {
-      await fetch('/api/relationship-intel/projects/cinderella/sync', { method: 'POST' });
       const res = await fetch('/api/relationship-intel/projects/cinderella/contacts');
-      if (res.ok) {
-        const data = await res.json();
-        setContacts(data.contacts || []);
-        setFilteredContacts(data.contacts || []);
-      }
+      const data = await res.json();
+      setContacts(data.contacts || []);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to load contacts:', err);
+    } finally {
+      setLoading(false);
     }
-    setSyncing(false);
   };
 
-  if (loading) {
-    return (
-      <div style={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#fff"
-      }}>
-        <div style={{ textAlign: "center" }}>
-          <RefreshCw size={40} style={{ animation: "spin 1s linear infinite", margin: "0 auto 20px", color: "#3b82f6" }} />
-          <p style={{ fontSize: "18px", color: "#9ca3af" }}>Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const filteredContacts = contacts.filter(c => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)",
-      color: "#ffffff",
-      padding: "40px",
-    }}>
-      <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+    <>
+      <TopNav />
+      <BottomNav />
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #1e293b 50%, #0f172a 100%)',
+        padding: '104px 20px 40px 20px',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}>
         {/* Header */}
-        <Link href="/" style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "8px",
-          color: "#9ca3af",
-          textDecoration: "none",
-          fontSize: "14px",
-          marginBottom: "32px",
+        <div style={{ maxWidth: '1200px', margin: '0 auto 40px auto' }}>
+          <Link href="/" style={{ 
+          color: '#94a3b8', 
+          textDecoration: 'none',
+          fontSize: '14px',
+          marginBottom: '24px',
+          display: 'inline-block'
         }}>
-          <ArrowLeft size={16} />
-          Back to Dashboard
+          ← Back to Dashboard
         </Link>
+        
+        <h1 style={{ 
+          fontSize: '48px', 
+          fontWeight: 'bold', 
+          color: 'white',
+          marginBottom: '12px'
+        }}>
+          Relationship Intel
+        </h1>
+        <p style={{ fontSize: '18px', color: '#94a3b8' }}>
+          {contacts.length} contacts tracked
+        </p>
+      </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "48px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-            <div style={{
-              width: "64px",
-              height: "64px",
-              borderRadius: "16px",
-              background: "linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}>
-              <Users size={32} />
-            </div>
-            <div>
-              <h1 style={{
-                fontSize: "48px",
-                fontWeight: "800",
-                margin: 0,
-                background: "linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}>
-                Relationship Intel
-              </h1>
-              <p style={{ fontSize: "18px", color: "#9ca3af", margin: "8px 0 0 0" }}>
-                {contacts.length} contacts • Cinderella Project
-              </p>
-            </div>
+      {/* Search */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto 40px auto' }}>
+        <input
+          type="text"
+          placeholder="Search contacts..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '20px 24px',
+            fontSize: '16px',
+            background: 'rgba(30, 41, 59, 0.9)',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            borderRadius: '12px',
+            color: 'white',
+            outline: 'none',
+          }}
+        />
+      </div>
+
+      {/* Content */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        {loading ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '100px 20px', 
+            color: '#94a3b8' 
+          }}>
+            Loading contacts...
           </div>
-
-          <button onClick={syncData} disabled={syncing} style={{
-            padding: "14px 28px",
-            background: "rgba(59, 130, 246, 0.2)",
-            border: "2px solid rgba(59, 130, 246, 0.3)",
-            borderRadius: "12px",
-            color: "#fff",
-            fontSize: "15px",
-            fontWeight: "600",
-            cursor: syncing ? "not-allowed" : "pointer",
-            opacity: syncing ? 0.6 : 1,
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
+        ) : filteredContacts.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '100px 20px',
+            background: 'rgba(30, 41, 59, 0.5)',
+            borderRadius: '16px',
+            border: '1px solid rgba(148, 163, 184, 0.1)'
           }}>
-            <RefreshCw size={18} style={{ animation: syncing ? "spin 1s linear infinite" : "none" }} />
-            {syncing ? 'Syncing...' : 'Sync Gmail'}
-          </button>
-        </div>
-
-        {/* Main Content */}
-        <div style={{ display: "grid", gridTemplateColumns: "420px 1fr", gap: "40px" }}>
-          {/* Left Panel */}
-          <div style={{
-            background: "rgba(255, 255, 255, 0.05)",
-            backdropFilter: "blur(20px)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-            borderRadius: "20px",
-            padding: "30px",
-            maxHeight: "800px",
-            display: "flex",
-            flexDirection: "column",
-          }}>
-            <div style={{ position: "relative", marginBottom: "24px" }}>
-              <Search size={20} style={{
-                position: "absolute",
-                left: "16px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#6b7280",
-              }} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search contacts..."
+            <h3 style={{ fontSize: '24px', color: 'white', marginBottom: '12px' }}>
+              No contacts found
+            </h3>
+            <p style={{ color: '#94a3b8' }}>
+              {searchQuery ? 'Try a different search' : 'Start building your network'}
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '20px' }}>
+            {filteredContacts.map((contact) => (
+              <div
+                key={contact.id}
                 style={{
-                  width: "100%",
-                  padding: "14px 16px 14px 48px",
-                  background: "rgba(0, 0, 0, 0.4)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: "12px",
-                  color: "#fff",
-                  fontSize: "15px",
-                  outline: "none",
+                  background: 'rgba(30, 41, 59, 0.8)',
+                  border: '1px solid rgba(148, 163, 184, 0.15)',
+                  borderRadius: '16px',
+                  padding: '32px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
                 }}
-              />
-            </div>
-
-            <div style={{ flex: 1, overflowY: "auto" }}>
-              {filteredContacts.map((contact) => {
-                const status = getStatus(contact.last_seen);
-                const isSelected = selectedContact?.email === contact.email;
-
-                return (
-                  <div
-                    key={contact.email}
-                    onClick={() => openContactDetail(contact)}
-                    style={{
-                      padding: "18px",
-                      marginBottom: "12px",
-                      borderRadius: "12px",
-                      background: isSelected ? "rgba(59, 130, 246, 0.15)" : "rgba(255, 255, 255, 0.03)",
-                      border: `1px solid ${isSelected ? "rgba(59, 130, 246, 0.3)" : "rgba(255, 255, 255, 0.05)"}`,
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                      <div style={{
-                        width: "48px",
-                        height: "48px",
-                        borderRadius: "12px",
-                        background: status.color,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "18px",
-                        fontWeight: "700",
-                      }}>
-                        {contact.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "15px", fontWeight: "600", marginBottom: "4px" }}>
-                          {contact.name}
-                        </div>
-                        <div style={{ fontSize: "13px", color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {contact.company || contact.email}
-                        </div>
-                      </div>
-                      <ChevronRight size={18} style={{ color: "#6b7280" }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Right Panel */}
-          <div>
-            {selectedContact ? (
-              <div style={{
-                background: "rgba(255, 255, 255, 0.05)",
-                backdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "20px",
-                padding: "40px",
-              }}>
-                <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", marginBottom: "32px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                    <div style={{
-                      width: "80px",
-                      height: "80px",
-                      borderRadius: "16px",
-                      background: getStatus(selectedContact.last_seen).color,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "32px",
-                      fontWeight: "700",
-                    }}>
-                      {selectedContact.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <h2 style={{ fontSize: "32px", fontWeight: "700", margin: "0 0 12px 0" }}>
-                        {selectedContact.name}
-                      </h2>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "15px" }}>
-                        <span style={{
-                          padding: "6px 14px",
-                          borderRadius: "8px",
-                          fontSize: "13px",
-                          fontWeight: "600",
-                          background: `${getStatus(selectedContact.last_seen).color}30`,
-                          color: getStatus(selectedContact.last_seen).color,
-                        }}>
-                          {getStatus(selectedContact.last_seen).label}
-                        </span>
-                        <span style={{ color: "#6b7280" }}>•</span>
-                        <span style={{ color: "#9ca3af" }}>{selectedContact.interaction_count} interactions</span>
-                      </div>
-                    </div>
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.95)';
+                  e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)';
+                  e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.15)';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
+                  {/* Avatar */}
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '28px',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    flexShrink: 0,
+                  }}>
+                    {contact.name.charAt(0).toUpperCase()}
                   </div>
                   <button onClick={() => setSelectedContact(null)} style={{
                     padding: "10px",
@@ -333,82 +161,82 @@ export default function RelationshipIntel() {
                   </button>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "40px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#9ca3af", fontSize: "15px" }}>
-                    <Mail size={18} />
-                    {selectedContact.email}
-                  </div>
-                  {selectedContact.company && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#9ca3af", fontSize: "15px" }}>
-                      <Building2 size={18} />
-                      {selectedContact.company}
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ 
+                      fontSize: '24px', 
+                      fontWeight: '600', 
+                      color: 'white',
+                      marginBottom: '8px'
+                    }}>
+                      {contact.name}
+                    </h3>
+                    <p style={{ 
+                      fontSize: '16px', 
+                      color: '#94a3b8',
+                      marginBottom: '16px'
+                    }}>
+                      {contact.email}
+                    </p>
+                    {contact.company && (
+                      <p style={{ 
+                        fontSize: '14px', 
+                        color: '#64748b',
+                        marginBottom: '16px'
+                      }}>
+                        {contact.company}
+                      </p>
+                    )}
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '24px',
+                      fontSize: '14px',
+                      color: '#64748b'
+                    }}>
+                      <span>
+                        💬 {contact.interaction_count || 0} interactions
+                      </span>
+                      <span>
+                        📧 Last: {contact.last_contact ? new Date(contact.last_contact).toLocaleDateString() : 'Never'}
+                      </span>
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                <h3 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "24px", display: "flex", alignItems: "center", gap: "10px" }}>
-                  <Clock size={20} />
-                  Interaction History
-                </h3>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {contactInteractions.map((interaction) => {
-                    const isExpanded = expandedInteraction === interaction.id;
-                    return (
-                      <div
-                        key={interaction.id}
-                        style={{
-                          background: "rgba(255, 255, 255, 0.05)",
-                          border: "1px solid rgba(255, 255, 255, 0.1)",
-                          borderRadius: "14px",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div
-                          onClick={() => setExpandedInteraction(isExpanded ? null : interaction.id)}
-                          style={{ padding: "20px", cursor: "pointer" }}
-                        >
-                          <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between" }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                                {interaction.type === 'email' ? <Mail size={16} style={{ color: "#3b82f6" }} /> : <Calendar size={16} style={{ color: "#10b981" }} />}
-                                <span style={{ fontWeight: "600", fontSize: "15px" }}>{interaction.subject || interaction.title}</span>
-                              </div>
-                              <div style={{ fontSize: "13px", color: "#9ca3af" }}>
-                                {new Date(interaction.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                              </div>
-                            </div>
-                            <ChevronDown size={18} style={{ color: "#6b7280", transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
-                          </div>
-                        </div>
-                        {isExpanded && (
-                          <div style={{ padding: "0 20px 20px", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "20px" }}>
-                            <div style={{ fontSize: "14px", color: "#d1d5db", lineHeight: "1.6" }}>
-                              {interaction.snippet || interaction.body || 'No content available'}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `mailto:${contact.email}`;
+                      }}
+                      style={{
+                        padding: '12px 24px',
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '8px',
+                        color: '#60a5fa',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.25)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)';
+                      }}
+                    >
+                      Email
+                    </button>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div style={{
-                background: "rgba(255, 255, 255, 0.05)",
-                backdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "20px",
-                padding: "120px 60px",
-                textAlign: "center",
-              }}>
-                <Users size={64} style={{ margin: "0 auto 20px", color: "#6b7280" }} />
-                <p style={{ fontSize: "20px", color: "#9ca3af" }}>Select a contact to view details</p>
-              </div>
-            )}
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </div>
+    </>
   );
 }

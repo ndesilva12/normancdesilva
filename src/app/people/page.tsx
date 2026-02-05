@@ -1,346 +1,268 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowLeft,
-  Users,
-  Plus,
-  Search,
-  RefreshCw,
-  Edit2,
-  Trash2,
-  X,
-  Mail,
-  Phone,
-  Building,
-  Tag,
-  Save,
-  CloudDownload
-} from 'lucide-react';
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
 
-interface Person {
-  id: string;
-  notionId?: string;
-  name: string;
-  relationship?: string;
-  tags?: string[];
-  notes?: string;
-  email?: string;
-  phone?: string;
-  company?: string;
-  lastSynced?: number;
-}
+import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function PeoplePage() {
-  const [people, setPeople] = useState<Person[]>([]);
-  const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
+  const [people, setPeople] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingPerson, setEditingPerson] = useState<Person | null>(null);
-
-  // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    relationship: '',
-    email: '',
-    phone: '',
-    company: '',
-    tags: '',
-    notes: '',
-  });
-
-  const loadPeople = useCallback(async () => {
-    try {
-      const res = await fetch('/api/people');
-      if (res.ok) {
-        const data = await res.json();
-        setPeople(data.people);
-        setFilteredPeople(data.people);
-      }
-    } catch (err) {
-      console.error('Failed to load people:', err);
-    }
-    setLoading(false);
-  }, []);
 
   useEffect(() => {
     loadPeople();
-  }, [loadPeople]);
+  }, []);
 
-  useEffect(() => {
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      setFilteredPeople(people.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.email?.toLowerCase().includes(q) ||
-        p.company?.toLowerCase().includes(q) ||
-        p.relationship?.toLowerCase().includes(q) ||
-        p.tags?.some(t => t.toLowerCase().includes(q))
-      ));
-    } else {
-      setFilteredPeople(people);
-    }
-  }, [searchQuery, people]);
-
-  const syncFromNotion = async () => {
-    setSyncing(true);
+  const loadPeople = async () => {
     try {
-      const res = await fetch('/api/people', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sync: true }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.people) {
-          loadPeople();
-        }
-      }
+      const res = await fetch('/api/people');
+      const data = await res.json();
+      setPeople(data.people || []);
     } catch (err) {
-      console.error('Sync failed:', err);
-    }
-    setSyncing(false);
-  };
-
-  const savePerson = async () => {
-    const { name, relationship, email, phone, company, tags, notes } = formData;
-
-    if (!name.trim()) return;
-
-    const personData = {
-      name: name.trim(),
-      relationship: relationship.trim() || undefined,
-      email: email.trim() || undefined,
-      phone: phone.trim() || undefined,
-      company: company.trim() || undefined,
-      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-      notes: notes.trim() || undefined,
-    };
-
-    try {
-      if (editingPerson) {
-        // Update
-        const res = await fetch('/api/people', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingPerson.id, ...personData }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setPeople(prev => prev.map(p => p.id === editingPerson.id ? data.person : p));
-        }
-      } else {
-        // Create
-        const res = await fetch('/api/people', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(personData),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setPeople(prev => [...prev, data.person]);
-        }
-      }
-    } catch (err) {
-      console.error('Save failed:', err);
-    }
-
-    closeModal();
-  };
-
-  const deletePerson = async (id: string) => {
-    try {
-      const res = await fetch(`/api/people?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setPeople(prev => prev.filter(p => p.id !== id));
-      }
-    } catch (err) {
-      console.error('Delete failed:', err);
+      console.error('Failed to load people:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const openEdit = (person: Person) => {
-    setEditingPerson(person);
-    setFormData({
-      name: person.name,
-      relationship: person.relationship || '',
-      email: person.email || '',
-      phone: person.phone || '',
-      company: person.company || '',
-      tags: person.tags?.join(', ') || '',
-      notes: person.notes || '',
-    });
-  };
-
-  const closeModal = () => {
-    setShowAddModal(false);
-    setEditingPerson(null);
-    setFormData({
-      name: '',
-      relationship: '',
-      email: '',
-      phone: '',
-      company: '',
-      tags: '',
-      notes: '',
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw size={32} className="animate-spin mx-auto mb-4 text-violet-400" />
-          <p className="text-gray-400">Loading people database...</p>
-        </div>
-      </div>
-    );
-  }
+  const filteredPeople = people.filter(p =>
+    p.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
+    <>
+      <TopNav />
+      <BottomNav />
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #065f46 0%, #1e293b 50%, #0f172a 100%)',
+      padding: '104px 20px 40px 20px',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    }}>
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-12 py-12">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 text-sm mb-8"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
+      <div style={{ maxWidth: '1400px', margin: '0 auto 40px auto' }}>
+        <Link href="/" style={{ 
+          color: '#94a3b8', 
+          textDecoration: 'none',
+          fontSize: '14px',
+          marginBottom: '24px',
+          display: 'inline-block'
+        }}>
+          ← Back to Dashboard
         </Link>
-
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
-              <Users size={28} />
-            </div>
-            <div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent mb-2">
-                People Database
-              </h1>
-              <p className="text-gray-400 text-lg">{people.length} people in your network</p>
-            </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '24px' }}>
+          <div>
+            <h1 style={{ 
+              fontSize: '48px', 
+              fontWeight: 'bold', 
+              color: 'white',
+              marginBottom: '8px'
+            }}>
+              People Database
+            </h1>
+            <p style={{ fontSize: '18px', color: '#94a3b8' }}>
+              {people.length} people in your network
+            </p>
           </div>
-
-          <div className="flex gap-4">
-            <button
-              onClick={syncFromNotion}
-              disabled={syncing}
-              className="px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 hover:border-white/20 transition-all duration-200 disabled:opacity-50"
-            >
-              <CloudDownload size={18} className={syncing ? 'animate-pulse' : ''} />
-              {syncing ? 'Syncing...' : 'Sync Notion'}
-            </button>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-violet-500/25 hover:scale-105 transition-all duration-200"
-            >
-              <Plus size={20} />
-              Add Person
-            </button>
-          </div>
+          <button style={{
+            padding: '16px 32px',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            border: 'none',
+            borderRadius: '12px',
+            color: 'white',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: 'pointer',
+          }}>
+            + Add Person
+          </button>
         </div>
       </div>
 
       {/* Search */}
-      <div className="max-w-7xl mx-auto px-12 mb-8">
-        <div className="relative max-w-lg">
-          <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search people..."
-            className="w-full pl-12 pr-4 py-4 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 focus:bg-white/10 transition-all duration-200"
-          />
-        </div>
+      <div style={{ maxWidth: '1400px', margin: '0 auto 40px auto' }}>
+        <input
+          type="text"
+          placeholder="Search people..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '20px 24px',
+            fontSize: '16px',
+            background: 'rgba(30, 41, 59, 0.9)',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            borderRadius: '12px',
+            color: 'white',
+            outline: 'none',
+          }}
+        />
       </div>
 
-      {/* Table */}
-      <div className="max-w-7xl mx-auto px-12 pb-16">
-        <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+      {/* Content */}
+      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        {loading ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '100px 20px', 
+            color: '#94a3b8' 
+          }}>
+            Loading people...
+          </div>
+        ) : filteredPeople.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '100px 20px',
+            background: 'rgba(30, 41, 59, 0.5)',
+            borderRadius: '16px',
+            border: '1px solid rgba(148, 163, 184, 0.1)'
+          }}>
+            <h3 style={{ fontSize: '24px', color: 'white', marginBottom: '12px' }}>
+              No people found
+            </h3>
+            <p style={{ color: '#94a3b8' }}>
+              {searchQuery ? 'Try a different search' : 'Start building your network'}
+            </p>
+          </div>
+        ) : (
+          <div style={{
+            background: 'rgba(30, 41, 59, 0.8)',
+            border: '1px solid rgba(148, 163, 184, 0.15)',
+            borderRadius: '16px',
+            overflow: 'hidden',
+          }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Name</th>
-                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Relationship</th>
-                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
-                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Company</th>
-                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Tags</th>
-                  <th className="text-right px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Actions</th>
+                <tr style={{ background: 'rgba(15, 23, 42, 0.5)', borderBottom: '1px solid rgba(148, 163, 184, 0.1)' }}>
+                  <th style={{ 
+                    textAlign: 'left', 
+                    padding: '16px 24px', 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: '#94a3b8',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
+                    Name
+                  </th>
+                  <th style={{ 
+                    textAlign: 'left', 
+                    padding: '16px 24px', 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: '#94a3b8',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
+                    Relationship
+                  </th>
+                  <th style={{ 
+                    textAlign: 'left', 
+                    padding: '16px 24px', 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: '#94a3b8',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
+                    Tags
+                  </th>
+                  <th style={{ 
+                    textAlign: 'left', 
+                    padding: '16px 24px', 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: '#94a3b8',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
+                    Contact
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {filteredPeople.map((person) => (
-                  <tr key={person.id} className="border-b border-white/5 hover:bg-white/10 transition-all duration-200 group">
-                    <td className="px-8 py-6">
-                      <div className="font-medium">{person.name}</div>
-                      {person.notes && (
-                        <div className="text-xs text-gray-500 truncate max-w-[200px]">{person.notes}</div>
-                      )}
-                    </td>
-                    <td className="px-8 py-6">
-                      {person.relationship && (
-                        <span className="px-3 py-1.5 bg-violet-500/20 text-violet-300 rounded-lg text-xs font-medium border border-violet-500/30">
-                          {person.relationship}
+                {filteredPeople.map((person, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.05)' }}>
+                    <td style={{ padding: '20px 24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '10px',
+                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                          color: 'white',
+                        }}>
+                          {person.name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <span style={{ fontSize: '16px', fontWeight: '500', color: 'white' }}>
+                          {person.name}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="space-y-1">
-                        {person.email && (
-                          <div className="flex items-center gap-1 text-sm text-gray-400">
-                            <Mail size={12} />
-                            <span className="truncate max-w-[150px]">{person.email}</span>
-                          </div>
-                        )}
-                        {person.phone && (
-                          <div className="flex items-center gap-1 text-sm text-gray-400">
-                            <Phone size={12} />
-                            <span>{person.phone}</span>
-                          </div>
-                        )}
                       </div>
                     </td>
-                    <td className="px-8 py-6">
-                      {person.company && (
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                          <Building size={14} />
-                          <span>{person.company}</span>
-                        </div>
-                      )}
+                    <td style={{ padding: '20px 24px', fontSize: '15px', color: '#94a3b8' }}>
+                      {person.relationship || '-'}
                     </td>
-                    <td className="px-8 py-6">
-                      <div className="flex flex-wrap gap-2">
-                        {person.tags?.slice(0, 3).map(tag => (
-                          <span key={tag} className="px-2 py-1 bg-white/10 text-gray-300 rounded-lg text-xs font-medium border border-white/20">
+                    <td style={{ padding: '20px 24px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {person.tags?.map((tag: string, i: number) => (
+                          <span key={i} style={{
+                            padding: '6px 12px',
+                            background: 'rgba(16, 185, 129, 0.15)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            fontWeight: '500',
+                            color: '#10b981'
+                          }}>
                             {tag}
                           </span>
                         ))}
-                        {person.tags && person.tags.length > 3 && (
-                          <span className="text-xs text-gray-500 font-medium">+{person.tags.length - 3}</span>
-                        )}
                       </div>
                     </td>
-                    <td className="px-8 py-6">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <button
-                          onClick={() => openEdit(person)}
-                          className="p-2.5 hover:bg-white/10 rounded-lg transition-all duration-200 hover:scale-110"
-                        >
-                          <Edit2 size={16} className="text-gray-400 hover:text-white" />
-                        </button>
-                        <button
-                          onClick={() => deletePerson(person.id)}
-                          className="p-2.5 hover:bg-red-500/20 rounded-lg transition-all duration-200 hover:scale-110"
-                        >
-                          <Trash2 size={16} className="text-red-400 hover:text-red-300" />
-                        </button>
+                    <td style={{ padding: '20px 24px' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {person.email && (
+                          <a 
+                            href={`mailto:${person.email}`} 
+                            style={{
+                              padding: '8px 16px',
+                              background: 'rgba(59, 130, 246, 0.15)',
+                              border: '1px solid rgba(59, 130, 246, 0.3)',
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              color: '#60a5fa',
+                              textDecoration: 'none',
+                              transition: 'all 0.2s ease',
+                            }}
+                          >
+                            📧 Email
+                          </a>
+                        )}
+                        {person.phone && (
+                          <a 
+                            href={`tel:${person.phone}`}
+                            style={{
+                              padding: '8px 16px',
+                              background: 'rgba(34, 197, 94, 0.15)',
+                              border: '1px solid rgba(34, 197, 94, 0.3)',
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              color: '#22c55e',
+                              textDecoration: 'none',
+                              transition: 'all 0.2s ease',
+                            }}
+                          >
+                            📞 Call
+                          </a>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -348,146 +270,9 @@ export default function PeoplePage() {
               </tbody>
             </table>
           </div>
-
-          {filteredPeople.length === 0 && (
-            <div className="p-16 text-center text-gray-400">
-              <Users size={48} className="mx-auto mb-4 text-gray-600" />
-              <p className="text-lg">{searchQuery ? 'No people found matching your search' : 'No people in the database yet'}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Add/Edit Modal */}
-      <AnimatePresence>
-        {(showAddModal || editingPerson) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={closeModal}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-3xl max-w-lg w-full border border-white/10"
-            >
-              <div className="p-6 border-b border-white/10">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold">
-                    {editingPerson ? 'Edit Person' : 'Add New Person'}
-                  </h2>
-                  <button onClick={closeModal} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                    <X size={20} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Name *</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Full name"
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Relationship</label>
-                    <input
-                      type="text"
-                      value={formData.relationship}
-                      onChange={(e) => setFormData(prev => ({ ...prev, relationship: e.target.value }))}
-                      placeholder="Friend, Colleague, etc."
-                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Company</label>
-                    <input
-                      type="text"
-                      value={formData.company}
-                      onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
-                      placeholder="Company name"
-                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      placeholder="email@example.com"
-                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Phone</label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="+1 555 000 0000"
-                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Tags (comma separated)</label>
-                  <input
-                    type="text"
-                    value={formData.tags}
-                    onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
-                    placeholder="investor, advisor, mentor"
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Notes</label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Any additional notes..."
-                    rows={3}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-white/10 flex justify-end gap-3">
-                <button
-                  onClick={closeModal}
-                  className="px-5 py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={savePerson}
-                  disabled={!formData.name.trim()}
-                  className="px-5 py-2 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl font-medium flex items-center gap-2 disabled:opacity-50"
-                >
-                  <Save size={18} />
-                  {editingPerson ? 'Save Changes' : 'Add Person'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
         )}
-      </AnimatePresence>
+      </div>
     </div>
+    </>
   );
 }

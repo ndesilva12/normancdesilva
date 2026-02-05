@@ -3,12 +3,10 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Search, MessageSquare, Settings, Bell } from "lucide-react";
-import { Reminders } from "@/components/Actions";
+import { Search, MessageSquare, Settings } from "lucide-react";
 
 export function TopNav() {
   const pathname = usePathname();
-  const [showReminders, setShowReminders] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -74,74 +72,7 @@ export function TopNav() {
           >
             <NavLink href="/" icon={Search} label="Home" active={isActive("/")} />
             <NavLink href="/jimmy" icon={MessageSquare} label="Jimmy" active={isActive("/jimmy")} />
-            <button
-              onClick={() => setShowReminders(!showReminders)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 16px",
-                borderRadius: "8px",
-                fontSize: "15px",
-                fontWeight: 600,
-                color: showReminders ? "var(--foreground)" : "var(--muted)",
-                background: showReminders ? "var(--glass-bg)" : "transparent",
-                border: showReminders ? "1px solid var(--glass-border)" : "1px solid transparent",
-                textDecoration: "none",
-                transition: "all 0.2s",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                if (!showReminders) {
-                  e.currentTarget.style.color = "var(--foreground)";
-                  e.currentTarget.style.background = "var(--glass-bg)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!showReminders) {
-                  e.currentTarget.style.color = "var(--muted)";
-                  e.currentTarget.style.background = "transparent";
-                }
-              }}
-            >
-              <Bell style={{ width: "18px", height: "18px" }} />
-              <span>Reminders</span>
-            </button>
             <NavLink href="/settings" icon={Settings} label="Settings" active={isActive("/settings")} />
-          </div>
-        )}
-        
-        {/* Reminders Modal */}
-        {showReminders && (
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.75)",
-              backdropFilter: "blur(8px)",
-              zIndex: 999,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "20px",
-            }}
-            onClick={() => setShowReminders(false)}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: "100%",
-                maxWidth: "700px",
-                maxHeight: "85vh",
-                overflowY: "auto",
-                position: "relative",
-              }}
-            >
-              <Reminders defaultCollapsed={false} compact={false} />
-            </div>
           </div>
         )}
       </div>

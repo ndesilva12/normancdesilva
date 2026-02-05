@@ -1,587 +1,508 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
-import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import {
-  ArrowLeft,
-  Plus,
-  X,
-  Layers,
-  Clock,
-  CheckCircle2,
-  Archive,
-  Link as LinkIcon,
-  ExternalLink,
-  GripVertical,
-  Edit2,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw
-} from 'lucide-react';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
+import { Plus, GripVertical, ExternalLink, Trash2 } from "lucide-react";
 
 interface MissionItem {
   id: string;
   title: string;
-  description?: string;
-  links?: string[];
+  description: string;
+  links: string[];
   status: 'created' | 'processing' | 'filed';
-  createdAt: number;
-  movedToProcessingAt?: number;
-  filedAt?: number;
   order: number;
+  created_at: number;
+  updated_at: number;
 }
 
-type Status = 'created' | 'processing' | 'filed';
-
-const statusConfig = {
-  created: {
-    label: 'Created',
-    icon: Clock,
-    color: '#f59e0b',
-    bgColor: 'rgba(245, 158, 11, 0.1)',
-    borderColor: 'rgba(245, 158, 11, 0.2)',
-  },
-  processing: {
-    label: 'Processing',
-    icon: Layers,
-    color: '#6366f1',
-    bgColor: 'rgba(99, 102, 241, 0.1)',
-    borderColor: 'rgba(99, 102, 241, 0.2)',
-  },
-  filed: {
-    label: 'Filed',
-    icon: CheckCircle2,
-    color: '#10b981',
-    bgColor: 'rgba(16, 185, 129, 0.1)',
-    borderColor: 'rgba(16, 185, 129, 0.2)',
-  },
-};
-
-export default function MissionControl() {
+export default function MissionPage() {
   const [items, setItems] = useState<MissionItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<MissionItem | null>(null);
-  const [expandedFiled, setExpandedFiled] = useState(false);
-
-  // Form state
-  const [newTitle, setNewTitle] = useState('');
-  const [newDescription, setNewDescription] = useState('');
-  const [newLinks, setNewLinks] = useState('');
-
-  const loadItems = useCallback(async () => {
-    try {
-      const res = await fetch('/api/mission');
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data.items);
-      }
-    } catch (err) {
-      console.error('Failed to load items:', err);
-    }
-    setLoading(false);
-  }, []);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newItem, setNewItem] = useState({ title: '', description: '', links: '' });
 
   useEffect(() => {
     loadItems();
-  }, [loadItems]);
+  }, []);
 
-  const addItem = async () => {
-    if (!newTitle.trim()) return;
+  const loadItems = async () => {
+    try {
+      const res = await fetch('/api/mission');
+      const data = await res.json();
+      setItems(data.items || []);
+    } catch (err) {
+      console.error('Failed to load mission items:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const createItem = async () => {
+    if (!newItem.title.trim()) return;
+    
     try {
       const res = await fetch('/api/mission', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: newTitle.trim(),
-          description: newDescription.trim(),
-          links: newLinks.split('\n').map(l => l.trim()).filter(Boolean),
+          title: newItem.title,
+          description: newItem.description,
+          links: newItem.links.split('\n').filter(l => l.trim()),
         }),
       });
-
+      
       if (res.ok) {
-        const data = await res.json();
-        setItems(prev => [...prev, data.item]);
-        setNewTitle('');
-        setNewDescription('');
-        setNewLinks('');
-        setShowAddModal(false);
+        setShowCreateModal(false);
+        setNewItem({ title: '', description: '', links: '' });
+        loadItems();
       }
     } catch (err) {
-      console.error('Failed to add item:', err);
+      console.error('Failed to create item:', err);
     }
   };
 
-  const updateItem = async (item: MissionItem, updates: Partial<MissionItem>) => {
+  const moveItem = async (itemId: string, newStatus: MissionItem['status']) => {
     try {
-      const res = await fetch('/api/mission', {
-        method: 'PUT',
+      await fetch(`/api/mission/${itemId}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: item.id, ...updates }),
+        body: JSON.stringify({ status: newStatus }),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        setItems(prev => prev.map(i => i.id === item.id ? data.item : i));
-      }
+      loadItems();
     } catch (err) {
-      console.error('Failed to update item:', err);
+      console.error('Failed to move item:', err);
     }
   };
 
-  const deleteItem = async (id: string) => {
+  const deleteItem = async (itemId: string) => {
+    if (!confirm('Delete this item?')) return;
+    
     try {
-      const res = await fetch(`/api/mission?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setItems(prev => prev.filter(i => i.id !== id));
-      }
+      await fetch(`/api/mission/${itemId}`, { method: 'DELETE' });
+      loadItems();
     } catch (err) {
       console.error('Failed to delete item:', err);
     }
   };
 
-  const moveItem = async (item: MissionItem, newStatus: Status) => {
-    await updateItem(item, { status: newStatus });
-  };
+  const getItemsByStatus = (status: MissionItem['status']) => 
+    items.filter(i => i.status === status).sort((a, b) => a.order - b.order);
 
-  const saveEdit = async () => {
-    if (!editingItem) return;
-
-    await updateItem(editingItem, {
-      title: newTitle.trim(),
-      description: newDescription.trim(),
-      links: newLinks.split('\n').map(l => l.trim()).filter(Boolean),
-    });
-
-    setEditingItem(null);
-    setNewTitle('');
-    setNewDescription('');
-    setNewLinks('');
-  };
-
-  const openEdit = (item: MissionItem) => {
-    setEditingItem(item);
-    setNewTitle(item.title);
-    setNewDescription(item.description || '');
-    setNewLinks((item.links || []).join('\n'));
-  };
-
-  const formatDate = (ts: number) => {
-    const date = new Date(ts);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / 86400000);
-
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const getItemsByStatus = (status: Status) =>
-    items.filter(item => item.status === status).sort((a, b) => a.order - b.order);
-
-  const createdItems = getItemsByStatus('created');
-  const processingItems = getItemsByStatus('processing');
-  const filedItems = getItemsByStatus('filed');
-
-  if (loading) {
+  const renderColumn = (
+    status: MissionItem['status'],
+    title: string,
+    emoji: string,
+    color: string,
+    compact = false
+  ) => {
+    const columnItems = getItemsByStatus(status);
+    
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw size={32} className="animate-spin mx-auto mb-4 text-indigo-400" />
-          <p className="text-gray-400">Loading mission items...</p>
+      <div style={{
+        flex: 1,
+        minWidth: 0,
+        background: 'rgba(30, 41, 59, 0.4)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRadius: '20px',
+        border: '1px solid rgba(148, 163, 184, 0.15)',
+        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: '75vh',
+      }}>
+        {/* Column Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '20px',
+          paddingBottom: '16px',
+          borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '24px' }}>{emoji}</span>
+            <h2 style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: 'white',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}>
+              {title}
+            </h2>
+          </div>
+          <span style={{
+            padding: '4px 12px',
+            background: `${color}20`,
+            border: `1px solid ${color}40`,
+            borderRadius: '12px',
+            fontSize: '13px',
+            fontWeight: '600',
+            color: color,
+          }}>
+            {columnItems.length}
+          </span>
+        </div>
+
+        {/* Items */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: compact ? '8px' : '12px',
+        }}>
+          {columnItems.length === 0 ? (
+            <div style={{
+              padding: '48px 20px',
+              textAlign: 'center',
+              color: '#64748b',
+              fontSize: '14px',
+            }}>
+              No items yet
+            </div>
+          ) : (
+            columnItems.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  border: '1px solid rgba(148, 163, 184, 0.1)',
+                  borderRadius: compact ? '12px' : '16px',
+                  padding: compact ? '12px 16px' : '20px',
+                  cursor: 'move',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(15, 23, 42, 0.9)';
+                  e.currentTarget.style.borderColor = color + '40';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(15, 23, 42, 0.6)';
+                  e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.1)';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
+                  <GripVertical size={compact ? 14 : 16} style={{ color: '#64748b', marginTop: '2px', flexShrink: 0 }} />
+                  
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{
+                      fontSize: compact ? '14px' : '16px',
+                      fontWeight: '600',
+                      color: 'white',
+                      marginBottom: compact ? '4px' : '8px',
+                    }}>
+                      {item.title}
+                    </h3>
+                    
+                    {!compact && item.description && (
+                      <p style={{
+                        fontSize: '14px',
+                        color: '#cbd5e1',
+                        marginBottom: '12px',
+                        lineHeight: '1.6',
+                      }}>
+                        {item.description}
+                      </p>
+                    )}
+                    
+                    {!compact && item.links.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                        {item.links.map((link, idx) => (
+                          <a
+                            key={idx}
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '4px 10px',
+                              background: 'rgba(99, 102, 241, 0.15)',
+                              border: '1px solid rgba(99, 102, 241, 0.3)',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              color: '#a5b4fc',
+                              textDecoration: 'none',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink size={12} />
+                            Link
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Move buttons */}
+                    {!compact && (
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                        {status !== 'processing' && (
+                          <button
+                            onClick={() => moveItem(item.id, 'processing')}
+                            style={{
+                              padding: '6px 12px',
+                              background: 'rgba(59, 130, 246, 0.15)',
+                              border: '1px solid rgba(59, 130, 246, 0.3)',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              color: '#60a5fa',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            → Processing
+                          </button>
+                        )}
+                        {status !== 'filed' && (
+                          <button
+                            onClick={() => moveItem(item.id, 'filed')}
+                            style={{
+                              padding: '6px 12px',
+                              background: 'rgba(16, 185, 129, 0.15)',
+                              border: '1px solid rgba(16, 185, 129, 0.3)',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              color: '#10b981',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            → Filed
+                          </button>
+                        )}
+                        <button
+                          onClick={() => deleteItem(item.id)}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            marginLeft: 'auto',
+                          }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     );
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto px-12 py-12">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 text-sm mb-8"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
-
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-              <Layers size={28} />
-            </div>
+    <>
+      <TopNav />
+      <BottomNav />
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #6366f1 0%, #1e293b 50%, #0f172a 100%)',
+        padding: '104px 20px 40px 20px',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}>
+        {/* Header */}
+        <div style={{ maxWidth: '1400px', margin: '0 auto 32px auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-2">
+              <h1 style={{
+                fontSize: '48px',
+                fontWeight: 'bold',
+                color: 'white',
+                marginBottom: '8px',
+              }}>
                 Mission Control
               </h1>
-              <p className="text-gray-400 text-lg">Track and manage your tasks and projects</p>
+              <p style={{ fontSize: '18px', color: '#cbd5e1' }}>
+                Kanban workflow pipeline
+              </p>
             </div>
-          </div>
-
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-105 transition-all duration-200"
-          >
-            <Plus size={20} />
-            Add Item
-          </button>
-        </div>
-      </div>
-
-      {/* Kanban Board */}
-      <div className="max-w-7xl mx-auto px-12 pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Created Column */}
-          <div className="backdrop-blur-xl rounded-2xl border overflow-hidden"
-            style={{
-              background: statusConfig.created.bgColor,
-              borderColor: statusConfig.created.borderColor,
-            }}>
-            <div className="p-4 border-b" style={{ borderColor: statusConfig.created.borderColor }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock size={20} style={{ color: statusConfig.created.color }} />
-                  <span className="font-semibold">Created</span>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-                  style={{ background: statusConfig.created.color, color: '#000' }}>
-                  {createdItems.length}
-                </span>
-              </div>
-            </div>
-            <div className="p-4 space-y-3 min-h-[300px]">
-              <AnimatePresence>
-                {createdItems.map((item) => (
-                  <MissionCard
-                    key={item.id}
-                    item={item}
-                    onMove={moveItem}
-                    onEdit={openEdit}
-                    onDelete={deleteItem}
-                    formatDate={formatDate}
-                  />
-                ))}
-              </AnimatePresence>
-              {createdItems.length === 0 && (
-                <p className="text-gray-500 text-center py-8 text-sm">No items yet</p>
-              )}
-            </div>
-          </div>
-
-          {/* Processing Column */}
-          <div className="backdrop-blur-xl rounded-2xl border overflow-hidden"
-            style={{
-              background: statusConfig.processing.bgColor,
-              borderColor: statusConfig.processing.borderColor,
-            }}>
-            <div className="p-4 border-b" style={{ borderColor: statusConfig.processing.borderColor }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Layers size={20} style={{ color: statusConfig.processing.color }} />
-                  <span className="font-semibold">Processing</span>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-                  style={{ background: statusConfig.processing.color, color: '#fff' }}>
-                  {processingItems.length}
-                </span>
-              </div>
-            </div>
-            <div className="p-4 space-y-3 min-h-[300px]">
-              <AnimatePresence>
-                {processingItems.map((item) => (
-                  <MissionCard
-                    key={item.id}
-                    item={item}
-                    onMove={moveItem}
-                    onEdit={openEdit}
-                    onDelete={deleteItem}
-                    formatDate={formatDate}
-                  />
-                ))}
-              </AnimatePresence>
-              {processingItems.length === 0 && (
-                <p className="text-gray-500 text-center py-8 text-sm">No items in progress</p>
-              )}
-            </div>
-          </div>
-
-          {/* Filed Column */}
-          <div className="backdrop-blur-xl rounded-2xl border overflow-hidden"
-            style={{
-              background: statusConfig.filed.bgColor,
-              borderColor: statusConfig.filed.borderColor,
-            }}>
-            <div className="p-4 border-b" style={{ borderColor: statusConfig.filed.borderColor }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 size={20} style={{ color: statusConfig.filed.color }} />
-                  <span className="font-semibold">Filed</span>
-                </div>
-                <button
-                  onClick={() => setExpandedFiled(!expandedFiled)}
-                  className="flex items-center gap-1"
-                >
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-                    style={{ background: statusConfig.filed.color, color: '#000' }}>
-                    {filedItems.length}
-                  </span>
-                  {expandedFiled ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-              </div>
-            </div>
-            <div className="p-4 space-y-3 min-h-[300px]">
-              <AnimatePresence>
-                {(expandedFiled ? filedItems : filedItems.slice(0, 5)).map((item) => (
-                  <MissionCard
-                    key={item.id}
-                    item={item}
-                    onMove={moveItem}
-                    onEdit={openEdit}
-                    onDelete={deleteItem}
-                    formatDate={formatDate}
-                    compact
-                  />
-                ))}
-              </AnimatePresence>
-              {filedItems.length === 0 && (
-                <p className="text-gray-500 text-center py-8 text-sm">No filed items</p>
-              )}
-              {filedItems.length > 5 && !expandedFiled && (
-                <button
-                  onClick={() => setExpandedFiled(true)}
-                  className="w-full text-center py-2 text-sm text-gray-400 hover:text-white"
-                >
-                  Show {filedItems.length - 5} more...
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Add/Edit Modal */}
-      <AnimatePresence>
-        {(showAddModal || editingItem) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => {
-              setShowAddModal(false);
-              setEditingItem(null);
-              setNewTitle('');
-              setNewDescription('');
-              setNewLinks('');
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-3xl max-w-lg w-full border border-white/10"
+            <button
+              onClick={() => setShowCreateModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '16px 32px',
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                border: 'none',
+                borderRadius: '12px',
+                color: 'white',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)',
+              }}
             >
-              <div className="p-6 border-b border-white/10">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold">
-                    {editingItem ? 'Edit Item' : 'Add New Item'}
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setShowAddModal(false);
-                      setEditingItem(null);
-                      setNewTitle('');
-                      setNewDescription('');
-                      setNewLinks('');
+              <Plus size={20} />
+              New Item
+            </button>
+          </div>
+        </div>
+
+        {/* Kanban Board */}
+        <div style={{
+          maxWidth: '1400px',
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '24px',
+        }}>
+          {renderColumn('created', 'Created', '✨', '#fbbf24')}
+          {renderColumn('processing', 'Processing', '⚙️', '#60a5fa')}
+          {renderColumn('filed', 'Filed', '✅', '#10b981', true)}
+        </div>
+
+        {/* Create Modal */}
+        {showCreateModal && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.75)',
+              backdropFilter: 'blur(8px)',
+              zIndex: 100,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+            }}
+            onClick={() => setShowCreateModal(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%',
+                maxWidth: '600px',
+                background: 'rgba(30, 41, 59, 0.98)',
+                borderRadius: '20px',
+                border: '1px solid rgba(148, 163, 184, 0.2)',
+                padding: '32px',
+              }}
+            >
+              <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'white', marginBottom: '24px' }}>
+                Create New Item
+              </h2>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#cbd5e1', marginBottom: '8px' }}>
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={newItem.title}
+                    onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
+                    placeholder="Enter title..."
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'rgba(15, 23, 42, 0.6)',
+                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      borderRadius: '10px',
+                      color: 'white',
+                      fontSize: '16px',
+                      outline: 'none',
                     }}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#cbd5e1', marginBottom: '8px' }}>
+                    Description
+                  </label>
+                  <textarea
+                    value={newItem.description}
+                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                    placeholder="Enter description..."
+                    rows={4}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'rgba(15, 23, 42, 0.6)',
+                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      borderRadius: '10px',
+                      color: 'white',
+                      fontSize: '16px',
+                      outline: 'none',
+                      resize: 'vertical',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#cbd5e1', marginBottom: '8px' }}>
+                    Links (one per line)
+                  </label>
+                  <textarea
+                    value={newItem.links}
+                    onChange={(e) => setNewItem({ ...newItem, links: e.target.value })}
+                    placeholder="https://example.com"
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'rgba(15, 23, 42, 0.6)',
+                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      borderRadius: '10px',
+                      color: 'white',
+                      fontSize: '14px',
+                      outline: 'none',
+                      resize: 'vertical',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                </div>
+                
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                  <button
+                    onClick={createItem}
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                    }}
                   >
-                    <X size={20} />
+                    Create
+                  </button>
+                  <button
+                    onClick={() => setShowCreateModal(false)}
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      background: 'rgba(148, 163, 184, 0.1)',
+                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      borderRadius: '10px',
+                      color: '#cbd5e1',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
                   </button>
                 </div>
               </div>
-
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Title</label>
-                  <input
-                    type="text"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder="What needs to be done?"
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                    autoFocus
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Description</label>
-                  <textarea
-                    value={newDescription}
-                    onChange={(e) => setNewDescription(e.target.value)}
-                    placeholder="Add more details..."
-                    rows={3}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Links (one per line)</label>
-                  <textarea
-                    value={newLinks}
-                    onChange={(e) => setNewLinks(e.target.value)}
-                    placeholder="https://example.com&#10;https://another.com"
-                    rows={2}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none font-mono text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-white/10 flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setEditingItem(null);
-                    setNewTitle('');
-                    setNewDescription('');
-                    setNewLinks('');
-                  }}
-                  className="px-5 py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={editingItem ? saveEdit : addItem}
-                  disabled={!newTitle.trim()}
-                  className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl font-medium disabled:opacity-50"
-                >
-                  {editingItem ? 'Save Changes' : 'Add Item'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// Mission Card Component
-function MissionCard({
-  item,
-  onMove,
-  onEdit,
-  onDelete,
-  formatDate,
-  compact = false,
-}: {
-  item: MissionItem;
-  onMove: (item: MissionItem, status: Status) => void;
-  onEdit: (item: MissionItem) => void;
-  onDelete: (id: string) => void;
-  formatDate: (ts: number) => string;
-  compact?: boolean;
-}) {
-  const [showActions, setShowActions] = useState(false);
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className={`bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all ${
-        compact ? 'p-3' : 'p-4'
-      }`}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <h3 className={`font-medium ${compact ? 'text-sm' : 'text-base'} truncate`}>
-            {item.title}
-          </h3>
-          {!compact && item.description && (
-            <p className="text-gray-400 text-sm mt-1 line-clamp-2">{item.description}</p>
-          )}
-        </div>
-
-        <AnimatePresence>
-          {showActions && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center gap-1"
-            >
-              <button
-                onClick={() => onEdit(item)}
-                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <Edit2 size={14} className="text-gray-400" />
-              </button>
-              <button
-                onClick={() => onDelete(item.id)}
-                className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors"
-              >
-                <Trash2 size={14} className="text-red-400" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
-
-      {/* Links */}
-      {!compact && item.links && item.links.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {item.links.map((link, i) => (
-            <a
-              key={i}
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded-lg text-xs text-cyan-400 hover:bg-white/20 transition-colors"
-            >
-              <LinkIcon size={12} />
-              <span className="truncate max-w-[150px]">
-                {new URL(link).hostname}
-              </span>
-              <ExternalLink size={10} />
-            </a>
-          ))}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="mt-3 flex items-center justify-between">
-        <span className="text-xs text-gray-500">{formatDate(item.createdAt)}</span>
-
-        {/* Move buttons */}
-        <div className="flex gap-1">
-          {item.status !== 'created' && (
-            <button
-              onClick={() => onMove(item, item.status === 'filed' ? 'processing' : 'created')}
-              className="px-2 py-1 text-xs bg-white/10 rounded hover:bg-white/20 transition-colors"
-            >
-              ← Back
-            </button>
-          )}
-          {item.status !== 'filed' && (
-            <button
-              onClick={() => onMove(item, item.status === 'created' ? 'processing' : 'filed')}
-              className="px-2 py-1 text-xs bg-indigo-500/20 text-indigo-300 rounded hover:bg-indigo-500/30 transition-colors"
-            >
-              {item.status === 'created' ? 'Start →' : 'File →'}
-            </button>
-          )}
-        </div>
-      </div>
-    </motion.div>
+    </>
   );
 }

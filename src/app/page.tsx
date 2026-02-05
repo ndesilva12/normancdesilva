@@ -6,7 +6,6 @@ import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { IntelToolsBar } from "@/components/home/IntelToolsBar";
 import { QuickAccessDock } from "@/components/home/QuickAccessDock";
 import { DashboardQuickLinks } from "@/components/home/DashboardQuickLinks";
-import { RemindersBanner } from "@/components/RemindersBanner";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -23,6 +22,11 @@ import { TrendingPreview } from "@/components/TrendingPreview";
 import { StocksPreview } from "@/components/StocksPreview";
 import { SpotifyPreview } from "@/components/SpotifyPreview";
 import { AccountsPreview } from "@/components/AccountsPreview";
+import { BusinessInfoPreview } from "@/components/BusinessInfoPreview";
+import { VisualRostersPreview } from "@/components/VisualRostersPreview";
+import { CorporateInfoPreview } from "@/components/CorporateInfoPreview";
+import { ContactFinderPreview } from "@/components/ContactFinderPreview";
+import { ImageLookupPreview } from "@/components/ImageLookupPreview";
 
 export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
@@ -93,6 +97,16 @@ export default function Home() {
         return <SpotifyPreview />;
       case "accounts":
         return <AccountsPreview />;
+      case "business-info":
+        return <BusinessInfoPreview />;
+      case "visual-rosters":
+        return <VisualRostersPreview />;
+      case "corporate-info":
+        return <CorporateInfoPreview />;
+      case "contact-finder":
+        return <ContactFinderPreview />;
+      case "image-lookup":
+        return <ImageLookupPreview />;
       default:
         return (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
@@ -148,9 +162,6 @@ export default function Home() {
             margin: "0 auto",
           }}
         >
-          {/* Reminders */}
-          <RemindersBanner />
-
           {/* Date/Time (mobile only) */}
           {isMobile && <MobileDateTimeBanner />}
 
@@ -168,17 +179,18 @@ export default function Home() {
           {/* Quick Access Dock */}
           <QuickAccessDock onToolClick={handleToolClick} />
 
-          {/* Preview Section */}
-          <div
-            style={{
-              marginTop: "32px",
-              background: "rgba(255, 255, 255, 0.03)",
-              borderRadius: "12px",
-              overflow: "hidden",
-              border: "1px solid var(--glass-border)",
-              position: "relative",
-            }}
-          >
+          {/* Preview Section - only show if tool selected */}
+          {selectedTool && (
+            <div
+              style={{
+                marginTop: "32px",
+                background: "rgba(255, 255, 255, 0.03)",
+                borderRadius: "12px",
+                overflow: "hidden",
+                border: "1px solid var(--glass-border)",
+                position: "relative",
+              }}
+            >
             {/* Colored top border */}
             <div
               style={{
@@ -246,6 +258,7 @@ export default function Home() {
               {renderPreview()}
             </div>
           </div>
+          )}
         </div>
       </div>
     </>
