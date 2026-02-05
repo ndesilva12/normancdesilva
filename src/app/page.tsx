@@ -168,17 +168,18 @@ export default function Home() {
           {/* Quick Access Dock */}
           <QuickAccessDock onToolClick={handleToolClick} />
 
-          {/* Preview Section */}
-          <div
-            style={{
-              marginTop: "32px",
-              background: "rgba(255, 255, 255, 0.03)",
-              borderRadius: "12px",
-              overflow: "hidden",
-              border: "1px solid var(--glass-border)",
-              position: "relative",
-            }}
-          >
+          {/* Preview Section - only show if tool selected */}
+          {selectedTool && (
+            <div
+              style={{
+                marginTop: "32px",
+                background: "rgba(255, 255, 255, 0.03)",
+                borderRadius: "12px",
+                overflow: "hidden",
+                border: "1px solid var(--glass-border)",
+                position: "relative",
+              }}
+            >
             {/* Colored top border */}
             <div
               style={{
@@ -246,6 +247,7 @@ export default function Home() {
               {renderPreview()}
             </div>
           </div>
+          )}
         </div>
       </div>
     </>

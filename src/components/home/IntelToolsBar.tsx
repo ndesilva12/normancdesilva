@@ -101,7 +101,7 @@ export function IntelToolsBar({ onToolClick }: { onToolClick?: (toolId: string, 
             color: "var(--muted)",
           }}
         >
-          Tools
+          INTEL
         </h2>
       </div>
 

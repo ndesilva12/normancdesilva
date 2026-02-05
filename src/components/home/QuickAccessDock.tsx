@@ -134,7 +134,20 @@ export function QuickAccessDock({ onToolClick }: { onToolClick?: (toolId: string
   }, []);
 
   return (
-    <div>
+    <div style={{ marginBottom: "32px" }}>
+      <div style={{ marginBottom: "12px" }}>
+        <h2
+          style={{
+            fontSize: "14px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            color: "var(--muted)",
+          }}
+        >
+          TOOLS
+        </h2>
+      </div>
       <div
         style={{
           display: "grid",

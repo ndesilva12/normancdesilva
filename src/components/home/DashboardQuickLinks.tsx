@@ -62,7 +62,7 @@ export function DashboardQuickLinks() {
             color: "var(--muted)",
           }}
         >
-          Quick Access
+          SYSTEMS
         </h2>
       </div>
 
