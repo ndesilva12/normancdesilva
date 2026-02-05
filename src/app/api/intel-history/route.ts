@@ -21,10 +21,17 @@ const COLLECTION_MAP: Record<ToolType, string> = {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const tool = searchParams.get('tool') as ToolType;
-  const limit = parseInt(searchParams.get('limit') || '20');
+  const collection = searchParams.get('collection');
+  const limit = parseInt(searchParams.get('limit') || '50');
 
-  if (!tool || !COLLECTION_MAP[tool]) {
-    return NextResponse.json({ error: 'Invalid tool type' }, { status: 400 });
+  // Accept either 'tool' or 'collection' parameter
+  let collectionName: string | undefined;
+  if (collection) {
+    collectionName = collection;
+  } else if (tool && COLLECTION_MAP[tool]) {
+    collectionName = COLLECTION_MAP[tool];
+  } else {
+    return NextResponse.json({ error: 'Either tool or collection parameter required' }, { status: 400 });
   }
 
   try {
@@ -33,8 +40,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }
 
-    const collection = COLLECTION_MAP[tool];
-    const snapshot = await db.collection(collection)
+    const snapshot = await db.collection(collectionName)
       .orderBy('timestamp', 'desc')
       .limit(limit)
       .get();
