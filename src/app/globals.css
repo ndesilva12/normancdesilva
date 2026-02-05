@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0f;
-  --background-secondary: #0f172a;
+  --background: #030712;
+  --background-secondary: #0c1220;
   --foreground: #f0f0f5;
   --foreground-muted: #94a3b8;
   --muted: #94a3b8;
@@ -10,25 +10,25 @@
   --accent-rgb: 59, 130, 246;
   --accent-light: #60a5fa;
   --accent-dark: #2563eb;
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-hover: rgba(255, 255, 255, 0.06);
-  --header-bg: rgba(10, 10, 15, 0.85);
-  --dropdown-bg: #1e293b;
+  --glass-bg: rgba(255, 255, 255, 0.02);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-hover: rgba(255, 255, 255, 0.04);
+  --header-bg: rgba(3, 7, 18, 0.9);
+  --dropdown-bg: #0c1220;
 }
 
 /* Dark theme (default) */
 [data-theme="dark"] {
-  --background: #0a0a0f;
-  --background-secondary: #0f172a;
+  --background: #030712;
+  --background-secondary: #0c1220;
   --foreground: #f0f0f5;
   --foreground-muted: #94a3b8;
   --muted: #94a3b8;
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-hover: rgba(255, 255, 255, 0.06);
-  --header-bg: rgba(10, 10, 15, 0.85);
-  --dropdown-bg: #1e293b;
+  --glass-bg: rgba(255, 255, 255, 0.02);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-hover: rgba(255, 255, 255, 0.04);
+  --header-bg: rgba(3, 7, 18, 0.9);
+  --dropdown-bg: #0c1220;
 }
 
 /* Light theme */
@@ -92,7 +92,7 @@ body {
 }
 
 body {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  background: linear-gradient(135deg, #030712 0%, #0c1220 50%, #1e293b 100%);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   min-height: 100vh;
