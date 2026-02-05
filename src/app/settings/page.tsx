@@ -2,9 +2,9 @@
 
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
-import { useSettings, THEME_COLORS, TIMEZONES, TOOL_IDS } from "@/contexts/SettingsContext";
-import { CustomizeLayout } from "@/components/CustomizeLayout";
-import { Settings as SettingsIcon, Palette, Clock, Search, History } from "lucide-react";
+import { useSettings } from "@/contexts/SettingsContext";
+import { ToolSettings } from "@/components/ToolSettings";
+import { Settings as SettingsIcon, Palette } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export default function SettingsPage() {
@@ -34,12 +34,12 @@ export default function SettingsPage() {
         <div
           className="container"
           style={{
-            maxWidth: "900px",
+            maxWidth: "1000px",
             margin: "0 auto",
           }}
         >
           {/* Header */}
-          <div style={{ marginBottom: "32px" }}>
+          <div style={{ marginBottom: "40px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
               <SettingsIcon style={{ width: "32px", height: "32px", color: "var(--accent)" }} />
               <h1
@@ -53,199 +53,49 @@ export default function SettingsPage() {
                 Settings
               </h1>
             </div>
-            <p style={{ fontSize: "16px", color: "var(--foreground-muted)" }}>
-              Configure your dashboard preferences
+            <p style={{ fontSize: "15px", color: "var(--foreground-muted)" }}>
+              Manage your preferences and customize your dashboard
             </p>
           </div>
 
           {/* Theme Settings */}
-          <Section
-            icon={<Palette style={{ width: "20px", height: "20px" }} />}
-            title="Theme"
-            description="Customize the look and feel of your dashboard"
-          >
-            {/* Theme Mode */}
-            <SettingRow label="Mode">
-              <div style={{ display: "flex", gap: "8px" }}>
-                {["dark", "light"].map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => updateSettings({ themeMode: mode as "dark" | "light" })}
-                    style={{
-                      flex: 1,
-                      padding: "10px 20px",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      background: settings.themeMode === mode
-                        ? "linear-gradient(135deg, var(--accent) 0%, var(--accent) 100%)"
-                        : "rgba(255, 255, 255, 0.05)",
-                      border: settings.themeMode === mode
-                        ? "2px solid var(--accent)"
-                        : "1px solid var(--glass-border)",
-                      borderRadius: "8px",
-                      color: settings.themeMode === mode ? "#ffffff" : "var(--foreground-muted)",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                      textTransform: "capitalize",
-                    }}
-                  >
-                    {mode}
-                  </button>
-                ))}
-              </div>
-            </SettingRow>
-          </Section>
-
-          {/* Customize Layout - MOVED TO TOP */}
-          <div className="glass" style={{ padding: "24px", borderRadius: "12px", marginBottom: "24px" }}>
-            <CustomizeLayout />
-          </div>
-
-          {/* Time & Date Settings */}
-          <Section
-            icon={<Clock style={{ width: "20px", height: "20px" }} />}
-            title="Time & Date"
-            description="Configure timezone and time format preferences"
-          >
-            {/* Timezone */}
-            <SettingRow label="Timezone">
-              <select
-                value={settings.timezone}
-                onChange={(e) => updateSettings({ timezone: e.target.value })}
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  fontSize: "14px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid var(--glass-border)",
-                  borderRadius: "8px",
-                  color: "var(--foreground)",
-                  cursor: "pointer",
-                }}
-              >
-                {TIMEZONES.map((tz) => (
-                  <option key={tz.value} value={tz.value} style={{ backgroundColor: "var(--dropdown-bg)" }}>
-                    {tz.label}
-                  </option>
-                ))}
-              </select>
-            </SettingRow>
-
-            {/* Time Format */}
-            <SettingRow label="Time Format">
-              <div style={{ display: "flex", gap: "8px" }}>
+          <Section icon={Palette} title="Appearance">
+            <SettingRow label="Theme Mode">
+              <div style={{ display: "flex", gap: "12px" }}>
                 {[
-                  { value: "12h", label: "12-hour (2:30 PM)" },
-                  { value: "24h", label: "24-hour (14:30)" },
-                ].map((format) => (
+                  { value: "dark", label: "Dark" },
+                  { value: "light", label: "Light" },
+                ].map((mode) => (
                   <button
-                    key={format.value}
-                    onClick={() => updateSettings({ timeFormat: format.value as "12h" | "24h" })}
+                    key={mode.value}
+                    onClick={() => updateSettings({ themeMode: mode.value as "dark" | "light" })}
                     style={{
                       flex: 1,
-                      padding: "10px 16px",
+                      padding: "12px 20px",
                       fontSize: "14px",
                       fontWeight: 600,
-                      background: settings.timeFormat === format.value
+                      background: settings.themeMode === mode.value
                         ? "linear-gradient(135deg, var(--accent) 0%, var(--accent) 100%)"
                         : "rgba(255, 255, 255, 0.05)",
-                      border: settings.timeFormat === format.value
+                      border: settings.themeMode === mode.value
                         ? "2px solid var(--accent)"
                         : "1px solid var(--glass-border)",
                       borderRadius: "8px",
-                      color: settings.timeFormat === format.value ? "#ffffff" : "var(--foreground-muted)",
+                      color: settings.themeMode === mode.value ? "#ffffff" : "var(--foreground-muted)",
                       cursor: "pointer",
                       transition: "all 0.2s",
                     }}
                   >
-                    {format.label}
+                    {mode.label}
                   </button>
                 ))}
               </div>
             </SettingRow>
           </Section>
 
-          {/* Recent Searches Settings */}
-          <Section
-            icon={<History style={{ width: "20px", height: "20px" }} />}
-            title="Recent Searches"
-            description="Control which tools show recent search history"
-          >
-            {/* Max Recent Items */}
-            <SettingRow label="Items to Show">
-              <input
-                type="number"
-                min="3"
-                max="10"
-                value={settings.recentSearches.maxRecentItems}
-                onChange={(e) =>
-                  updateSettings({
-                    recentSearches: {
-                      ...settings.recentSearches,
-                      maxRecentItems: parseInt(e.target.value) || 5,
-                    },
-                  })
-                }
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  fontSize: "14px",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid var(--glass-border)",
-                  borderRadius: "8px",
-                  color: "var(--foreground)",
-                }}
-              />
-            </SettingRow>
-
-            {/* Enabled Tools */}
-            <SettingRow label="Enabled for Tools">
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)",
-                  gap: "8px",
-                }}
-              >
-                {TOOL_IDS.map((toolId) => {
-                  const isEnabled = settings.recentSearches.enabledTools.includes(toolId);
-                  return (
-                    <button
-                      key={toolId}
-                      onClick={() => {
-                        const newEnabled = isEnabled
-                          ? settings.recentSearches.enabledTools.filter((id) => id !== toolId)
-                          : [...settings.recentSearches.enabledTools, toolId];
-                        updateSettings({
-                          recentSearches: {
-                            ...settings.recentSearches,
-                            enabledTools: newEnabled,
-                          },
-                        });
-                      }}
-                      style={{
-                        padding: "10px 14px",
-                        fontSize: "13px",
-                        fontWeight: 500,
-                        background: isEnabled
-                          ? "rgba(var(--accent-rgb), 0.15)"
-                          : "rgba(255, 255, 255, 0.03)",
-                        border: isEnabled
-                          ? "2px solid var(--accent)"
-                          : "1px solid var(--glass-border)",
-                        borderRadius: "8px",
-                        color: isEnabled ? "var(--accent)" : "var(--foreground-muted)",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {toolId.replace(/-/g, " ")}
-                    </button>
-                  );
-                })}
-              </div>
-            </SettingRow>
+          {/* Tool Settings */}
+          <Section icon={null} title="Tools">
+            <ToolSettings />
           </Section>
         </div>
       </div>
@@ -255,28 +105,30 @@ export default function SettingsPage() {
 
 // Section Component
 function Section({
-  icon,
+  icon: IconComponent,
   title,
-  description,
   children,
 }: {
-  icon: React.ReactNode;
+  icon?: React.ComponentType<{ size?: number; style?: React.CSSProperties }> | null;
   title: string;
-  description: string;
   children: React.ReactNode;
 }) {
   return (
     <div
       className="glass"
       style={{
-        padding: "24px",
+        padding: "32px",
         borderRadius: "12px",
         marginBottom: "24px",
       }}
     >
-      <div style={{ marginBottom: "20px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-          <div style={{ color: "var(--accent)" }}>{icon}</div>
+      <div style={{ marginBottom: "24px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+          {IconComponent && (
+            <div style={{ color: "var(--accent)" }}>
+              <IconComponent size={24} />
+            </div>
+          )}
           <h2
             style={{
               fontSize: "20px",
@@ -288,11 +140,8 @@ function Section({
             {title}
           </h2>
         </div>
-        <p style={{ fontSize: "14px", color: "var(--foreground-muted)", margin: 0 }}>
-          {description}
-        </p>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         {children}
       </div>
     </div>
@@ -309,7 +158,7 @@ function SettingRow({ label, children }: { label: string; children: React.ReactN
           fontSize: "14px",
           fontWeight: 600,
           color: "var(--foreground)",
-          marginBottom: "10px",
+          marginBottom: "12px",
         }}
       >
         {label}
