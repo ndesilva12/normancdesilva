@@ -1,245 +1,56 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowLeft,
-  Users,
-  Plus,
-  Search,
-  RefreshCw,
-  Edit2,
-  Trash2,
-  X,
-  Mail,
-  Phone,
-  Building,
-  Tag,
-  Save,
-  CloudDownload
-} from 'lucide-react';
-
-interface Person {
-  id: string;
-  notionId?: string;
-  name: string;
-  relationship?: string;
-  tags?: string[];
-  notes?: string;
-  email?: string;
-  phone?: string;
-  company?: string;
-  lastSynced?: number;
-}
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { ArrowLeft, Search, Plus, Users, Mail, Phone } from "lucide-react";
 
 export default function PeoplePage() {
-  const [people, setPeople] = useState<Person[]>([]);
-  const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
+  const [people, setPeople] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingPerson, setEditingPerson] = useState<Person | null>(null);
-
-  // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    relationship: '',
-    email: '',
-    phone: '',
-    company: '',
-    tags: '',
-    notes: '',
-  });
-
-  const loadPeople = useCallback(async () => {
-    try {
-      const res = await fetch('/api/people');
-      if (res.ok) {
-        const data = await res.json();
-        setPeople(data.people);
-        setFilteredPeople(data.people);
-      }
-    } catch (err) {
-      console.error('Failed to load people:', err);
-    }
-    setLoading(false);
-  }, []);
 
   useEffect(() => {
     loadPeople();
-  }, [loadPeople]);
+  }, []);
 
-  useEffect(() => {
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      setFilteredPeople(people.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.email?.toLowerCase().includes(q) ||
-        p.company?.toLowerCase().includes(q) ||
-        p.relationship?.toLowerCase().includes(q) ||
-        p.tags?.some(t => t.toLowerCase().includes(q))
-      ));
-    } else {
-      setFilteredPeople(people);
-    }
-  }, [searchQuery, people]);
-
-  const syncFromNotion = async () => {
-    setSyncing(true);
+  const loadPeople = async () => {
     try {
-      const res = await fetch('/api/people', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sync: true }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.people) {
-          loadPeople();
-        }
-      }
+      const res = await fetch('/api/people');
+      const data = await res.json();
+      setPeople(data.people || []);
     } catch (err) {
-      console.error('Sync failed:', err);
-    }
-    setSyncing(false);
-  };
-
-  const savePerson = async () => {
-    const { name, relationship, email, phone, company, tags, notes } = formData;
-
-    if (!name.trim()) return;
-
-    const personData = {
-      name: name.trim(),
-      relationship: relationship.trim() || undefined,
-      email: email.trim() || undefined,
-      phone: phone.trim() || undefined,
-      company: company.trim() || undefined,
-      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-      notes: notes.trim() || undefined,
-    };
-
-    try {
-      if (editingPerson) {
-        // Update
-        const res = await fetch('/api/people', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingPerson.id, ...personData }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setPeople(prev => prev.map(p => p.id === editingPerson.id ? data.person : p));
-        }
-      } else {
-        // Create
-        const res = await fetch('/api/people', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(personData),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setPeople(prev => [...prev, data.person]);
-        }
-      }
-    } catch (err) {
-      console.error('Save failed:', err);
-    }
-
-    closeModal();
-  };
-
-  const deletePerson = async (id: string) => {
-    try {
-      const res = await fetch(`/api/people?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setPeople(prev => prev.filter(p => p.id !== id));
-      }
-    } catch (err) {
-      console.error('Delete failed:', err);
+      console.error('Failed to load people:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const openEdit = (person: Person) => {
-    setEditingPerson(person);
-    setFormData({
-      name: person.name,
-      relationship: person.relationship || '',
-      email: person.email || '',
-      phone: person.phone || '',
-      company: person.company || '',
-      tags: person.tags?.join(', ') || '',
-      notes: person.notes || '',
-    });
-  };
-
-  const closeModal = () => {
-    setShowAddModal(false);
-    setEditingPerson(null);
-    setFormData({
-      name: '',
-      relationship: '',
-      email: '',
-      phone: '',
-      company: '',
-      tags: '',
-      notes: '',
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw size={32} className="animate-spin mx-auto mb-4 text-violet-400" />
-          <p className="text-gray-400">Loading people database...</p>
-        </div>
-      </div>
-    );
-  }
+  const filteredPeople = people.filter(p =>
+    p.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
+    <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a]">
       {/* Header */}
-      <div className="max-w-[1200px] mx-auto px-12 py-12">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 text-sm mb-8"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
-
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
-              <Users size={28} />
+      <div className="bg-[#1e293b]/80 backdrop-blur-xl border-b border-slate-700/50">
+        <div className="max-w-7xl mx-auto px-8 py-8">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-6">
+            <ArrowLeft size={16} />
+            Dashboard
+          </Link>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <Users size={28} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-1">People</h1>
+                <p className="text-slate-400">{people.length} in your network</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent mb-2">
-                People Database
-              </h1>
-              <p className="text-gray-400 text-lg">{people.length} people in your network</p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <button
-              onClick={syncFromNotion}
-              disabled={syncing}
-              className="px-8 py-3 backdrop-blur-xl bg-white/10 border border-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 hover:border-white/20 transition-all duration-200 disabled:opacity-50"
-            >
-              <CloudDownload size={18} className={syncing ? 'animate-pulse' : ''} />
-              {syncing ? 'Syncing...' : 'Sync Notion'}
-            </button>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-8 py-3 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-violet-500/25 hover:scale-105 transition-all duration-200"
-            >
-              <Plus size={20} />
+            <button className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2">
+              <Plus size={18} />
               Add Person
             </button>
           </div>
@@ -247,100 +58,79 @@ export default function PeoplePage() {
       </div>
 
       {/* Search */}
-      <div className="max-w-[1200px] mx-auto px-12 mb-8">
-        <div className="relative max-w-lg">
-          <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search people..."
-            className="w-full pl-12 pr-4 py-4 backdrop-blur-xl bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 focus:bg-white/10 transition-all duration-200"
-          />
+      <div className="max-w-7xl mx-auto px-8 py-8">
+        <div className="bg-[#1e293b] rounded-2xl border border-slate-700/50 p-6 shadow-2xl">
+          <div className="relative">
+            <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search people..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 bg-slate-800/70 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="max-w-[1200px] mx-auto px-12 pb-16">
-        <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
-          <div className="overflow-x-auto">
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-8 pb-12">
+        {loading ? (
+          <div className="bg-[#1e293b] rounded-2xl border border-slate-700/50 p-16 shadow-2xl text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
+          </div>
+        ) : filteredPeople.length === 0 ? (
+          <div className="bg-[#1e293b] rounded-2xl border border-slate-700/50 p-16 shadow-2xl text-center">
+            <div className="w-16 h-16 rounded-xl bg-slate-800 flex items-center justify-center mx-auto mb-6">
+              <Users size={32} className="text-slate-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">No people found</h3>
+            <p className="text-slate-400">Start building your network</p>
+          </div>
+        ) : (
+          <div className="bg-[#1e293b] rounded-2xl border border-slate-700/50 overflow-hidden shadow-2xl">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Name</th>
-                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Relationship</th>
-                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
-                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Company</th>
-                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Tags</th>
-                  <th className="text-right px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Actions</th>
+                <tr className="bg-slate-800/50 border-b border-slate-700/50">
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Name</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Relationship</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Tags</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Contact</th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredPeople.map((person) => (
-                  <tr key={person.id} className="border-b border-white/5 hover:bg-white/10 transition-all duration-200 group">
-                    <td className="px-8 py-6">
-                      <div className="font-medium">{person.name}</div>
-                      {person.notes && (
-                        <div className="text-xs text-gray-500 truncate max-w-[200px]">{person.notes}</div>
-                      )}
-                    </td>
-                    <td className="px-8 py-6">
-                      {person.relationship && (
-                        <span className="px-3 py-1.5 bg-violet-500/20 text-violet-300 rounded-lg text-xs font-medium border border-violet-500/30">
-                          {person.relationship}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="space-y-1">
-                        {person.email && (
-                          <div className="flex items-center gap-1 text-sm text-gray-400">
-                            <Mail size={12} />
-                            <span className="truncate max-w-[150px]">{person.email}</span>
-                          </div>
-                        )}
-                        {person.phone && (
-                          <div className="flex items-center gap-1 text-sm text-gray-400">
-                            <Phone size={12} />
-                            <span>{person.phone}</span>
-                          </div>
-                        )}
+              <tbody className="divide-y divide-slate-700/30">
+                {filteredPeople.map((person, i) => (
+                  <tr key={i} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-slate-600">
+                          <span className="text-sm font-bold text-white">{person.name?.charAt(0) || '?'}</span>
+                        </div>
+                        <span className="font-medium text-white">{person.name}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-6">
-                      {person.company && (
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                          <Building size={14} />
-                          <span>{person.company}</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-8 py-6">
+                    <td className="px-6 py-5 text-slate-400">{person.relationship || '-'}</td>
+                    <td className="px-6 py-5">
                       <div className="flex flex-wrap gap-2">
-                        {person.tags?.slice(0, 3).map(tag => (
-                          <span key={tag} className="px-2 py-1 bg-white/10 text-gray-300 rounded-lg text-xs font-medium border border-white/20">
+                        {person.tags?.map((tag: string, i: number) => (
+                          <span key={i} className="px-3 py-1 bg-slate-700/50 border border-slate-600 rounded-lg text-xs font-medium text-slate-300">
                             {tag}
                           </span>
                         ))}
-                        {person.tags && person.tags.length > 3 && (
-                          <span className="text-xs text-gray-500 font-medium">+{person.tags.length - 3}</span>
-                        )}
                       </div>
                     </td>
-                    <td className="px-8 py-6">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <button
-                          onClick={() => openEdit(person)}
-                          className="p-2.5 hover:bg-white/10 rounded-lg transition-all duration-200 hover:scale-110"
-                        >
-                          <Edit2 size={16} className="text-gray-400 hover:text-white" />
-                        </button>
-                        <button
-                          onClick={() => deletePerson(person.id)}
-                          className="p-2.5 hover:bg-red-500/20 rounded-lg transition-all duration-200 hover:scale-110"
-                        >
-                          <Trash2 size={16} className="text-red-400 hover:text-red-300" />
-                        </button>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-2">
+                        {person.email && (
+                          <a href={`mailto:${person.email}`} className="p-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors">
+                            <Mail size={14} className="text-slate-300" />
+                          </a>
+                        )}
+                        {person.phone && (
+                          <a href={`tel:${person.phone}`} className="p-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors">
+                            <Phone size={14} className="text-slate-300" />
+                          </a>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -348,146 +138,8 @@ export default function PeoplePage() {
               </tbody>
             </table>
           </div>
-
-          {filteredPeople.length === 0 && (
-            <div className="p-16 text-center text-gray-400">
-              <Users size={48} className="mx-auto mb-4 text-gray-600" />
-              <p className="text-lg">{searchQuery ? 'No people found matching your search' : 'No people in the database yet'}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Add/Edit Modal */}
-      <AnimatePresence>
-        {(showAddModal || editingPerson) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={closeModal}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-3xl max-w-lg w-full border border-white/10"
-            >
-              <div className="p-6 border-b border-white/10">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold">
-                    {editingPerson ? 'Edit Person' : 'Add New Person'}
-                  </h2>
-                  <button onClick={closeModal} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                    <X size={20} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Name *</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Full name"
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Relationship</label>
-                    <input
-                      type="text"
-                      value={formData.relationship}
-                      onChange={(e) => setFormData(prev => ({ ...prev, relationship: e.target.value }))}
-                      placeholder="Friend, Colleague, etc."
-                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Company</label>
-                    <input
-                      type="text"
-                      value={formData.company}
-                      onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
-                      placeholder="Company name"
-                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      placeholder="email@example.com"
-                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Phone</label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="+1 555 000 0000"
-                      className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Tags (comma separated)</label>
-                  <input
-                    type="text"
-                    value={formData.tags}
-                    onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
-                    placeholder="investor, advisor, mentor"
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Notes</label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Any additional notes..."
-                    rows={3}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-white/10 flex justify-end gap-3">
-                <button
-                  onClick={closeModal}
-                  className="px-5 py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={savePerson}
-                  disabled={!formData.name.trim()}
-                  className="px-5 py-2 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl font-medium flex items-center gap-2 disabled:opacity-50"
-                >
-                  <Save size={18} />
-                  {editingPerson ? 'Save Changes' : 'Add Person'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   );
 }
