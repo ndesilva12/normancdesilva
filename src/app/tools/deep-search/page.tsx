@@ -95,19 +95,159 @@ export default function DeepSearchPage() {
         </div>
 
         {/* Results */}
-        {results && (
+        {results && results.report && (
           <div style={{
             background: 'rgba(30, 41, 59, 0.8)',
             border: '1px solid rgba(148, 163, 184, 0.15)',
             borderRadius: '16px',
             padding: '32px',
           }}>
-            <h2 style={{ fontSize: '28px', fontWeight: '700', color: 'white', marginBottom: '24px' }}>
-              Results
-            </h2>
-            <div style={{ fontSize: '16px', color: '#cbd5e1', lineHeight: '1.8' }}>
-              {JSON.stringify(results, null, 2)}
-            </div>
+            {/* Brief Overview */}
+            {results.report.briefOverview && (
+              <div style={{ marginBottom: '32px' }}>
+                <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'white', marginBottom: '16px' }}>
+                  Overview
+                </h2>
+                <p style={{ fontSize: '16px', color: '#cbd5e1', lineHeight: '1.8' }}>
+                  {results.report.briefOverview}
+                </p>
+              </div>
+            )}
+
+            {/* Sections */}
+            {results.report.sections?.map((section: any, idx: number) => (
+              <div key={idx} style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '12px' }}>
+                  {section.title}
+                </h3>
+                <p style={{ fontSize: '15px', color: '#cbd5e1', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
+                  {section.content}
+                </p>
+                {section.links && section.links.length > 0 && (
+                  <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {section.links.map((link: any, linkIdx: number) => (
+                      <a
+                        key={linkIdx}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: '13px',
+                          color: '#60a5fa',
+                          textDecoration: 'none',
+                          padding: '4px 12px',
+                          background: 'rgba(96, 165, 250, 0.1)',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(96, 165, 250, 0.2)',
+                        }}
+                      >
+                        {link.title} →
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Hidden Mechanics */}
+            {results.report.hiddenMechanics && results.report.hiddenMechanics.length > 0 && (
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '12px' }}>
+                  Hidden Mechanics
+                </h3>
+                <ul style={{ fontSize: '15px', color: '#cbd5e1', lineHeight: '1.8', paddingLeft: '20px' }}>
+                  {results.report.hiddenMechanics.map((item: string, idx: number) => (
+                    <li key={idx} style={{ marginBottom: '8px' }}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Counterintuitive Insights */}
+            {results.report.counterintuitiveInsights && results.report.counterintuitiveInsights.length > 0 && (
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '12px' }}>
+                  Counterintuitive Insights
+                </h3>
+                <ul style={{ fontSize: '15px', color: '#cbd5e1', lineHeight: '1.8', paddingLeft: '20px' }}>
+                  {results.report.counterintuitiveInsights.map((item: string, idx: number) => (
+                    <li key={idx} style={{ marginBottom: '8px' }}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Expert Debates */}
+            {results.report.expertDebates && results.report.expertDebates.length > 0 && (
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '12px' }}>
+                  Expert Debates
+                </h3>
+                <ul style={{ fontSize: '15px', color: '#cbd5e1', lineHeight: '1.8', paddingLeft: '20px' }}>
+                  {results.report.expertDebates.map((item: string, idx: number) => (
+                    <li key={idx} style={{ marginBottom: '8px' }}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Underreported Angles */}
+            {results.report.underreportedAngles && results.report.underreportedAngles.length > 0 && (
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '12px' }}>
+                  Underreported Angles
+                </h3>
+                <ul style={{ fontSize: '15px', color: '#cbd5e1', lineHeight: '1.8', paddingLeft: '20px' }}>
+                  {results.report.underreportedAngles.map((item: string, idx: number) => (
+                    <li key={idx} style={{ marginBottom: '8px' }}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Links */}
+            {results.report.links && results.report.links.length > 0 && (
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '12px' }}>
+                  Sources
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {results.report.links.map((link: any, idx: number) => (
+                    <a
+                      key={idx}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontSize: '14px',
+                        color: '#60a5fa',
+                        textDecoration: 'none',
+                        padding: '12px 16px',
+                        background: 'rgba(96, 165, 250, 0.05)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(96, 165, 250, 0.2)',
+                        display: 'block',
+                      }}
+                    >
+                      <span style={{ fontWeight: '600' }}>{link.title}</span>
+                      <span style={{ marginLeft: '8px', opacity: 0.7 }}>→</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {results && results.error && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '16px',
+            padding: '32px',
+            color: '#fca5a5',
+          }}>
+            Error: {results.error}
           </div>
         )}
 
