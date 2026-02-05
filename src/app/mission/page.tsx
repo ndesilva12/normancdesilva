@@ -93,7 +93,6 @@ export default function MissionPage() {
   const renderColumn = (
     status: MissionItem['status'],
     title: string,
-    emoji: string,
     color: string,
     compact = false
   ) => {
@@ -123,7 +122,6 @@ export default function MissionPage() {
           borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '24px' }}>{emoji}</span>
             <h2 style={{
               fontSize: '18px',
               fontWeight: '700',
@@ -312,6 +310,25 @@ export default function MissionPage() {
       }}>
         {/* Header */}
         <div style={{ maxWidth: '1400px', margin: '0 auto 32px auto' }}>
+          {/* Back Button */}
+          <Link
+            href="/"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#cbd5e1',
+              textDecoration: 'none',
+              fontSize: '14px',
+              marginBottom: '24px',
+              transition: 'color 0.2s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#cbd5e1')}
+          >
+            ← Back to Dashboard
+          </Link>
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h1 style={{
@@ -357,9 +374,9 @@ export default function MissionPage() {
           gridTemplateColumns: 'repeat(3, 1fr)',
           gap: '24px',
         }}>
-          {renderColumn('created', 'Created', '✨', '#fbbf24')}
-          {renderColumn('processing', 'Processing', '⚙️', '#60a5fa')}
-          {renderColumn('filed', 'Filed', '✅', '#10b981', true)}
+          {renderColumn('created', 'Created', '#fbbf24')}
+          {renderColumn('processing', 'Processing', '#60a5fa')}
+          {renderColumn('filed', 'Filed', '#10b981', true)}
         </div>
 
         {/* Create Modal */}
