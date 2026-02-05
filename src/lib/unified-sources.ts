@@ -13,14 +13,8 @@ export type UnifiedSourceId =
   | "youtube"
   | "rumble"
   | "amazon"
-  // Tool sources
-  | "deep-search"
-  | "dark-search"
-  | "corporate-info"
-  | "business-info"
-  | "contact-finder"
+  // Tool sources (removed: deep-search, dark-search, corporate-info, business-info, contact-finder, rosters - have dedicated pages)
   | "image-lookup"
-  | "rosters"
   | "spotify"
   // AI sources (last)
   | "grok"
@@ -124,136 +118,8 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     type: "web",
     searchUrlTemplate: "https://grokipedia.com/search?q={query}",
   },
-  // Tool sources
-  {
-    id: "deep-search",
-    name: "Deep Search",
-    description: "Expert-level research reports",
-    longDescription: "Generate comprehensive expert-level research reports focused on nuances, hidden mechanics, and insights that even educated people miss.",
-    type: "tool",
-    apiEndpoint: "/api/deep-search",
-    usesSearchInput: true,
-    toolHref: "/tools/deep-search",
-    navigateDirectly: true,
-    exampleSearches: [
-      "How do central banks actually control inflation?",
-      "The hidden mechanics of social media algorithms",
-      "Why do some medications work differently for different people?",
-    ],
-  },
-  {
-    id: "dark-search",
-    name: "Dark Search",
-    description: "All perspectives research",
-    longDescription: "Comprehensive research exploring all perspectives including alternative, fringe, and controversial viewpoints that mainstream sources often avoid.",
-    type: "tool",
-    apiEndpoint: "/api/dark-search",
-    usesSearchInput: true,
-    toolHref: "/tools/dark-search",
-    navigateDirectly: true,
-    toolOptions: [
-      {
-        id: "mode",
-        type: "radio",
-        label: "Output Mode",
-        options: [
-          { value: "long", label: "Long", description: "Full report" },
-          { value: "short", label: "Short", description: "2 paragraphs, 3 links" },
-          { value: "links", label: "Links", description: "3 sentences, 10+ links" },
-        ],
-        defaultValue: "long",
-      },
-    ],
-    exampleSearches: [
-      "Alternative theories about consciousness",
-      "Controversial nutrition science",
-      "Suppressed historical events",
-    ],
-  },
-  {
-    id: "corporate-info",
-    name: "Corporate Info",
-    description: "Corporate political analysis",
-    longDescription: "Analyze corporate political leanings, donations, lobbying activities, and public statements to understand a company's political stance.",
-    type: "tool",
-    apiEndpoint: "/api/company/analyze",
-    toolHref: "/tools/company-politics",
-    additionalInputs: [
-      {
-        id: "companyName",
-        label: "Company Name",
-        placeholder: "Enter company name...",
-        required: true,
-      },
-    ],
-    exampleSearches: ["Apple", "Amazon", "Tesla", "Disney", "Nike"],
-  },
-  {
-    id: "business-info",
-    name: "Business Info",
-    description: "Local business research",
-    longDescription: "Deep dive into local businesses with public records, filings, ownership details, and news coverage.",
-    type: "tool",
-    apiEndpoint: "/api/business/search",
-    toolHref: "/tools/business-info",
-    additionalInputs: [
-      {
-        id: "businessName",
-        label: "Business Name",
-        placeholder: "Enter business name...",
-        required: true,
-      },
-      {
-        id: "location",
-        label: "Location",
-        placeholder: "City, State (optional)",
-        required: false,
-      },
-    ],
-    exampleSearches: ["Joe's Coffee Shop, Brooklyn", "Main Street Bakery, Austin TX"],
-  },
-  {
-    id: "contact-finder",
-    name: "Contact Finder",
-    description: "AI-powered OSINT research",
-    longDescription: "Find publicly available contact information for individuals or organizations using AI-powered OSINT research.",
-    type: "tool",
-    apiEndpoint: "/api/contact-finder",
-    toolHref: "/tools/contact-finder",
-    additionalInputs: [
-      {
-        id: "query",
-        label: "Person/Organization Name",
-        placeholder: "Enter name to search...",
-        required: true,
-      },
-    ],
-    toolOptions: [
-      {
-        id: "searchType",
-        type: "toggle",
-        label: "Search Type",
-        options: [
-          { value: "individual", label: "Individual", description: "Search for a person" },
-          { value: "target", label: "Target", description: "Search for an organization" },
-        ],
-        defaultValue: "individual",
-      },
-      {
-        id: "aiSource",
-        type: "radio",
-        label: "AI Source",
-        options: [
-          { value: "grok", label: "Grok" },
-          { value: "gemini", label: "Gemini" },
-          { value: "claude", label: "Claude" },
-          { value: "chatgpt", label: "ChatGPT" },
-        ],
-        defaultValue: "grok",
-      },
-    ],
-    exampleSearches: ["Elon Musk contact info", "Apple HR department", "Local council member"],
-  },
+  // Tool sources removed (deep-search, dark-search, corporate-info, business-info, contact-finder, rosters)
+  // These have dedicated tool pages and shouldn't appear as search sources
   // More web sources
   {
     id: "x",
@@ -284,61 +150,11 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
     searchUrlTemplate: "https://www.amazon.com/s?k={query}",
   },
   {
-    id: "contacts",
-    name: "Contacts",
-    description: "Search Google Contacts",
-    longDescription: "Search and manage your Google Contacts directly from the dashboard.",
-    type: "tool",
-    apiEndpoint: "/api/contacts",
-    usesSearchInput: true,
-    toolHref: "/tools/contacts",
-    exampleSearches: ["John Smith", "email contains @gmail", "phone 555"],
-  },
-  {
-    id: "rosters",
-    name: "Rosters",
-    description: "Sports team rosters",
-    longDescription: "View sports team rosters with player details and hometown mapping across NBA, NFL, NCAA, and more.",
-    type: "tool",
-    apiEndpoint: "/api/roster",
-    toolHref: "/tools/visual-rosters",
-    additionalInputs: [
-      {
-        id: "teamName",
-        label: "Team Name",
-        placeholder: "Enter team name...",
-        required: true,
-      },
-    ],
-    toolOptions: [
-      {
-        id: "league",
-        type: "select",
-        label: "League",
-        options: [
-          { value: "nba", label: "NBA" },
-          { value: "nfl", label: "NFL" },
-          { value: "mlb", label: "MLB" },
-          { value: "nhl", label: "NHL" },
-          { value: "mls", label: "MLS" },
-          { value: "ncaaf", label: "NCAA Football" },
-          { value: "ncaab", label: "NCAA Basketball" },
-        ],
-        defaultValue: "nba",
-      },
-    ],
-    exampleSearches: ["Los Angeles Lakers", "New England Patriots", "Duke Blue Devils"],
-  },
-  {
     id: "spotify",
     name: "Spotify",
-    description: "Music search & playback",
-    longDescription: "Control Spotify playback, browse playlists, and search for music right from your dashboard.",
-    type: "tool",
-    apiEndpoint: "/api/spotify/search",
-    usesSearchInput: true,
-    toolHref: "/tools/spotify",
-    exampleSearches: ["Taylor Swift", "90s hip hop playlist", "Lo-fi beats"],
+    description: "Spotify music search",
+    type: "web",
+    searchUrlTemplate: "https://open.spotify.com/search/{query}",
   },
   // AI sources (last)
   {
