@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { ArrowLeft, Calendar, Search, Globe, MessageSquare, Hash, RefreshCw, ExternalLink, TrendingUp, CheckCircle, XCircle, Lightbulb, FileText } from "lucide-react";
+import { Calendar, Search, Globe, MessageSquare, Hash, RefreshCw, ExternalLink, TrendingUp, CheckCircle, XCircle, Lightbulb, FileText } from "lucide-react";
+import { IntelToolNav } from "@/components/IntelToolNav";
 
 interface ResearchResult {
   patterns: string[];
@@ -88,15 +88,8 @@ export default function Last30DaysPage() {
         margin: "0 auto",
         marginBottom: "48px",
       }}>
-        <Link 
-          href="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            color: "#94a3b8",
-            textDecoration: "none",
-            fontSize: "14px",
+        <IntelToolNav current="l3d" />
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "#94a3b8", fontSize: "14px",
             marginBottom: "24px",
             transition: "color 0.2s",
           }}
