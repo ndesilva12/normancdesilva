@@ -185,7 +185,7 @@ export default function RecommendationsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
       {/* Header */}
-      <div className="max-w-6xl mx-auto px-12 py-12">
+      <div className="max-w-7xl mx-auto px-12 py-12">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 text-sm mb-8"
@@ -228,7 +228,7 @@ export default function RecommendationsPage() {
       </div>
 
       {/* Filters */}
-      <div className="max-w-6xl mx-auto px-12 mb-8">
+      <div className="max-w-7xl mx-auto px-12 mb-8">
         <div className="flex flex-wrap items-center gap-6">
           {/* Status Tabs */}
           <div className="flex gap-1 backdrop-blur-xl bg-white/5 p-1.5 rounded-xl border border-white/10">
@@ -262,7 +262,7 @@ export default function RecommendationsPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-12 pb-16">
+      <div className="max-w-7xl mx-auto px-12 pb-16">
         {Object.keys(groupedByType).length === 0 ? (
           <div className="text-center py-20">
             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-pink-500/20 to-rose-600/20 flex items-center justify-center mx-auto mb-6">
