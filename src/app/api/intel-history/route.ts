@@ -45,10 +45,16 @@ export async function GET(request: Request) {
       .limit(limit)
       .get();
 
-    const history: HistoryItem[] = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data() as Omit<HistoryItem, 'id'>
-    }));
+    const history = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        // Convert Firestore timestamps to ISO strings for JSON serialization
+        timestamp: data.timestamp?.toDate?.()?.toISOString?.() || data.timestamp || new Date().toISOString(),
+        completed_at: data.completed_at?.toDate?.()?.toISOString?.() || data.completed_at || null,
+      };
+    });
 
     return NextResponse.json({ history });
   } catch (error: any) {

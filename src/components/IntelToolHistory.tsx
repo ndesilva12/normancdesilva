@@ -63,14 +63,47 @@ export function IntelToolHistory({ toolName, collectionName, onResultClick }: In
 
   const formatTimestamp = (timestamp: any) => {
     if (!timestamp) return "Unknown";
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    }).format(date);
+
+    try {
+      let date: Date | null = null;
+
+      // Handle Firestore Timestamp objects with toDate method
+      if (timestamp && typeof timestamp === 'object' && timestamp.toDate && typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+      }
+      // Handle ISO strings
+      else if (typeof timestamp === 'string') {
+        date = new Date(timestamp);
+      }
+      // Handle milliseconds (number)
+      else if (typeof timestamp === 'number') {
+        date = new Date(timestamp);
+      }
+      // Handle Date objects
+      else if (timestamp instanceof Date) {
+        date = timestamp;
+      }
+      // Fallback
+      else {
+        return "Unknown";
+      }
+
+      // Validate the date
+      if (!date || isNaN(date.getTime())) {
+        return "Unknown";
+      }
+
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }).format(date);
+    } catch (error) {
+      console.error('Error formatting timestamp:', error, timestamp);
+      return "Unknown";
+    }
   };
 
   const getStatusIcon = (status: string) => {
