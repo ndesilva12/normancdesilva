@@ -610,9 +610,10 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
       let data: Record<string, unknown>;
 
       if (sourceConfig.type === "ai") {
-        // AI source
+        // AI source - use configured endpoint
+        const endpoint = sourceConfig.apiEndpoint || "/api/search";
         response = await fetch(
-          `/api/search?q=${encodeURIComponent(query.trim())}&source=${selectedSource}`
+          `${endpoint}?q=${encodeURIComponent(query.trim())}&source=${selectedSource}`
         );
         data = await response.json();
 

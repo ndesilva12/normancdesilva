@@ -160,9 +160,9 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
   {
     id: "grok",
     name: "Grok",
-    description: "xAI Grok",
-    type: "web",
-    searchUrlTemplate: "https://x.com/i/grok",
+    description: "xAI Grok (via subscription)",
+    type: "ai",
+    apiEndpoint: "/api/ai-chat",
   },
   {
     id: "gemini",
@@ -174,9 +174,9 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
   {
     id: "claude",
     name: "Claude",
-    description: "Anthropic Claude",
-    type: "web",
-    searchUrlTemplate: "https://claude.ai/new",
+    description: "Anthropic Claude (via subscription)",
+    type: "ai",
+    apiEndpoint: "/api/ai-chat",
   },
   {
     id: "chatgpt",
