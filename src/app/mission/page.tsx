@@ -201,31 +201,31 @@ export default function MissionControl() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-12 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm mb-6"
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 text-sm mb-8"
         >
           <ArrowLeft size={16} />
           Back to Dashboard
         </Link>
 
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Layers size={24} />
+        <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+              <Layers size={28} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-2">
                 Mission Control
               </h1>
-              <p className="text-gray-400">Track and manage your tasks and projects</p>
+              <p className="text-gray-400 text-lg">Track and manage your tasks and projects</p>
             </div>
           </div>
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-lg hover:shadow-indigo-500/20 transition-all"
+            className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-105 transition-all duration-200"
           >
             <Plus size={20} />
             Add Item
@@ -234,8 +234,8 @@ export default function MissionControl() {
       </div>
 
       {/* Kanban Board */}
-      <div className="max-w-7xl mx-auto px-6 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto px-12 pb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Created Column */}
           <div className="backdrop-blur-xl rounded-2xl border overflow-hidden"
             style={{
