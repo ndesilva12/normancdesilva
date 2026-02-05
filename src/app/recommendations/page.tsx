@@ -1,495 +1,137 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowLeft,
-  Bookmark,
-  Plus,
-  Search,
-  RefreshCw,
-  Check,
-  Archive,
-  Trash2,
-  X,
-  ExternalLink,
-  CloudDownload,
-  Film,
-  BookOpen,
-  FileText,
-  Video,
-  Headphones,
-  User,
-  Hash,
-  MoreHorizontal
-} from 'lucide-react';
-
-interface Recommendation {
-  id: string;
-  type: string;
-  title: string;
-  description?: string;
-  source?: string;
-  url?: string;
-  status: 'pending' | 'completed' | 'archived';
-  createdAt: number;
-  completedAt?: number;
-}
-
-const typeConfig: Record<string, { icon: any; color: string; label: string }> = {
-  movie: { icon: Film, color: '#f43f5e', label: 'Movie' },
-  book: { icon: BookOpen, color: '#8b5cf6', label: 'Book' },
-  article: { icon: FileText, color: '#3b82f6', label: 'Article' },
-  video: { icon: Video, color: '#ef4444', label: 'Video' },
-  podcast: { icon: Headphones, color: '#10b981', label: 'Podcast' },
-  person: { icon: User, color: '#f59e0b', label: 'Person' },
-  topic: { icon: Hash, color: '#6366f1', label: 'Topic' },
-  other: { icon: MoreHorizontal, color: '#6b7280', label: 'Other' },
-};
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { ArrowLeft, Search, Filter, Plus, ExternalLink, Check } from "lucide-react";
 
 export default function RecommendationsPage() {
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'archived'>('pending');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-
-  // Form state
-  const [formData, setFormData] = useState({
-    type: 'article',
-    title: '',
-    description: '',
-    source: '',
-    url: '',
-  });
-
-  const loadRecommendations = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/recommendations?status=${statusFilter}`);
-      if (res.ok) {
-        const data = await res.json();
-        setRecommendations(data.recommendations);
-      }
-    } catch (err) {
-      console.error('Failed to load recommendations:', err);
-    }
-    setLoading(false);
-  }, [statusFilter]);
 
   useEffect(() => {
     loadRecommendations();
-  }, [loadRecommendations]);
+  }, []);
 
-  const filteredRecommendations = searchQuery
-    ? recommendations.filter(r =>
-        r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.source?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : recommendations;
-
-  // Group by type
-  const groupedByType = filteredRecommendations.reduce((acc, rec) => {
-    const type = rec.type || 'other';
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(rec);
-    return acc;
-  }, {} as Record<string, Recommendation[]>);
-
-  const syncFromNotion = async () => {
-    setSyncing(true);
+  const loadRecommendations = async () => {
     try {
-      const res = await fetch('/api/recommendations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sync: true }),
-      });
-      if (res.ok) {
-        loadRecommendations();
-      }
+      const res = await fetch('/api/recommendations');
+      const data = await res.json();
+      setRecommendations(data.recommendations || []);
     } catch (err) {
-      console.error('Sync failed:', err);
-    }
-    setSyncing(false);
-  };
-
-  const updateStatus = async (id: string, status: 'pending' | 'completed' | 'archived') => {
-    try {
-      const res = await fetch('/api/recommendations', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRecommendations(prev => prev.map(r => r.id === id ? data.recommendation : r));
-        // If the item no longer matches the filter, remove it
-        if (statusFilter !== 'all' && status !== statusFilter) {
-          setRecommendations(prev => prev.filter(r => r.id !== id));
-        }
-      }
-    } catch (err) {
-      console.error('Update failed:', err);
+      console.error('Failed to load recommendations:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const deleteRecommendation = async (id: string) => {
-    try {
-      const res = await fetch(`/api/recommendations?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setRecommendations(prev => prev.filter(r => r.id !== id));
-      }
-    } catch (err) {
-      console.error('Delete failed:', err);
-    }
-  };
-
-  const addRecommendation = async () => {
-    if (!formData.title.trim()) return;
-
-    try {
-      const res = await fetch('/api/recommendations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRecommendations(prev => [data.recommendation, ...prev]);
-        setShowAddModal(false);
-        setFormData({ type: 'article', title: '', description: '', source: '', url: '' });
-      }
-    } catch (err) {
-      console.error('Add failed:', err);
-    }
-  };
-
-  const formatDate = (ts: number) => {
-    const date = new Date(ts);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw size={32} className="animate-spin mx-auto mb-4 text-pink-400" />
-          <p className="text-gray-400">Loading recommendations...</p>
-        </div>
-      </div>
-    );
-  }
+  const filteredRecs = recommendations
+    .filter(r => r.title?.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter(r => statusFilter === 'all' || r.status === statusFilter);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-12 py-12">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 text-sm mb-8"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
-
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-500/25">
-              <Bookmark size={28} />
-            </div>
+      <div className="border-b border-white/[0.08] bg-black/40 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-8 py-6">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-6">
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </Link>
+          
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent mb-2">
-                Recommendations
-              </h1>
-              <p className="text-gray-400 text-lg">Things to watch, read, and explore</p>
+              <h1 className="text-3xl font-semibold tracking-tight mb-2">Recommendations</h1>
+              <p className="text-gray-400">Things to watch, read, and explore</p>
             </div>
-          </div>
-
-          <div className="flex gap-4">
-            <button
-              onClick={syncFromNotion}
-              disabled={syncing}
-              className="px-8 py-3 backdrop-blur-xl bg-white/10 border border-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 hover:border-white/20 transition-all duration-200 disabled:opacity-50"
-            >
-              <CloudDownload size={18} className={syncing ? 'animate-pulse' : ''} />
-              {syncing ? 'Syncing...' : 'Sync Notion'}
-            </button>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-8 py-3 bg-gradient-to-r from-pink-500 to-rose-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-pink-500/25 hover:scale-105 transition-all duration-200"
-            >
-              <Plus size={20} />
-              Add
+            <button className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2">
+              <Plus size={16} />
+              Add Recommendation
             </button>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="max-w-7xl mx-auto px-12 mb-8">
-        <div className="flex flex-wrap items-center gap-6">
-          {/* Status Tabs */}
-          <div className="flex gap-1 backdrop-blur-xl bg-white/5 p-1.5 rounded-xl border border-white/10">
-            {(['pending', 'completed', 'archived', 'all'] as const).map(status => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  statusFilter === status
-                    ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/25'
-                    : 'text-gray-400 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
-          </div>
+      <div className="border-b border-white/[0.08] bg-black/20">
+        <div className="max-w-7xl mx-auto px-8 py-4">
+          <div className="flex items-center gap-4">
+            {/* Status Filter */}
+            <div className="flex items-center gap-2">
+              {['all', 'pending', 'completed'].map(status => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    statusFilter === status
+                      ? 'bg-white text-black'
+                      : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                  }`}
+                >
+                  {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
 
-          {/* Search */}
-          <div className="relative flex-1 max-w-lg">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search recommendations..."
-              className="w-full pl-11 pr-4 py-3 backdrop-blur-xl bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 focus:bg-white/10 transition-all duration-200"
-            />
+            {/* Search */}
+            <div className="relative flex-1 max-w-md">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search recommendations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:border-white/20 focus:bg-white/[0.05] transition-colors"
+              />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-12 pb-16">
-        {Object.keys(groupedByType).length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-pink-500/20 to-rose-600/20 flex items-center justify-center mx-auto mb-6">
-              <Bookmark size={48} className="text-gray-600" />
-            </div>
-            <p className="text-gray-400 text-lg">No recommendations found</p>
-          </div>
+      <div className="max-w-7xl mx-auto px-8 py-8">
+        {loading ? (
+          <div className="text-center py-20 text-gray-500">Loading...</div>
+        ) : filteredRecs.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">No recommendations found</div>
         ) : (
-          <div className="space-y-12">
-            {Object.entries(groupedByType).map(([type, items]) => {
-              const config = typeConfig[type] || typeConfig.other;
-              const Icon = config.icon;
-
-              return (
-                <div key={type}>
-                  <div className="flex items-center gap-4 mb-6">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
-                      style={{ background: `${config.color}20`, boxShadow: `0 4px 20px ${config.color}20` }}
-                    >
-                      <Icon size={20} style={{ color: config.color }} />
-                    </div>
-                    <h2 className="text-2xl font-bold" style={{ color: config.color }}>
-                      {config.label}
-                    </h2>
-                    <span className="text-gray-500 text-sm font-medium">({items.length})</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredRecs.map((rec, i) => (
+              <div key={i} className="p-5 bg-white/[0.02] border border-white/[0.08] hover:bg-white/[0.04] hover:border-white/[0.15] rounded-lg transition-all group">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h3 className="font-medium mb-1 line-clamp-2">{rec.title}</h3>
+                    {rec.type && (
+                      <span className="inline-block px-2 py-0.5 bg-white/[0.05] border border-white/[0.08] rounded text-xs text-gray-400 capitalize">
+                        {rec.type}
+                      </span>
+                    )}
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {items.map((rec) => (
-                      <motion.div
-                        key={rec.id}
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="backdrop-blur-xl bg-white/5 rounded-xl border border-white/10 p-6 hover:border-white/20 hover:bg-white/10 transition-all duration-200 hover:scale-105"
-                      >
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <h3 className="font-semibold text-lg line-clamp-2">{rec.title}</h3>
-                          {rec.url && (
-                            <a
-                              href={rec.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200 flex-shrink-0 hover:scale-110"
-                            >
-                              <ExternalLink size={14} className="text-gray-400 hover:text-white" />
-                            </a>
-                          )}
-                        </div>
-
-                        {rec.description && (
-                          <p className="text-gray-400 text-sm line-clamp-2 mb-4">{rec.description}</p>
-                        )}
-
-                        <div className="flex items-center justify-between pt-3 border-t border-white/10">
-                          <div className="text-xs text-gray-500 font-medium">
-                            {rec.source && <span>From {rec.source}</span>}
-                            {!rec.source && <span>{formatDate(rec.createdAt)}</span>}
-                          </div>
-
-                          <div className="flex gap-1">
-                            {rec.status === 'pending' && (
-                              <>
-                                <button
-                                  onClick={() => updateStatus(rec.id, 'completed')}
-                                  className="p-1.5 hover:bg-green-500/20 rounded transition-colors"
-                                  title="Mark complete"
-                                >
-                                  <Check size={14} className="text-green-400" />
-                                </button>
-                                <button
-                                  onClick={() => updateStatus(rec.id, 'archived')}
-                                  className="p-1.5 hover:bg-gray-500/20 rounded transition-colors"
-                                  title="Archive"
-                                >
-                                  <Archive size={14} className="text-gray-400" />
-                                </button>
-                              </>
-                            )}
-                            {rec.status === 'completed' && (
-                              <span className="text-xs text-green-400 flex items-center gap-1">
-                                <Check size={12} /> Done
-                              </span>
-                            )}
-                            {rec.status === 'archived' && (
-                              <button
-                                onClick={() => updateStatus(rec.id, 'pending')}
-                                className="text-xs text-gray-500 hover:text-white"
-                              >
-                                Restore
-                              </button>
-                            )}
-                            <button
-                              onClick={() => deleteRecommendation(rec.id)}
-                              className="p-1.5 hover:bg-red-500/20 rounded transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 size={14} className="text-red-400" />
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
+                  {rec.status === 'completed' && (
+                    <Check size={16} className="text-green-500 flex-shrink-0 ml-2" />
+                  )}
                 </div>
-              );
-            })}
+
+                {rec.description && (
+                  <p className="text-sm text-gray-400 mb-3 line-clamp-2">{rec.description}</p>
+                )}
+
+                {rec.url && (
+                  <a 
+                    href={rec.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors"
+                  >
+                    View <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
-
-      {/* Add Modal */}
-      <AnimatePresence>
-        {showAddModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowAddModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-3xl max-w-lg w-full border border-white/10"
-            >
-              <div className="p-6 border-b border-white/10">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold">Add Recommendation</h2>
-                  <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-white/10 rounded-lg">
-                    <X size={20} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Type</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {Object.entries(typeConfig).map(([key, config]) => {
-                      const Icon = config.icon;
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => setFormData(prev => ({ ...prev, type: key }))}
-                          className={`p-2 rounded-lg border text-xs font-medium flex flex-col items-center gap-1 transition-all ${
-                            formData.type === key
-                              ? 'border-pink-500 bg-pink-500/20'
-                              : 'border-white/10 bg-black/20 hover:bg-white/5'
-                          }`}
-                        >
-                          <Icon size={16} style={{ color: config.color }} />
-                          {config.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Title *</label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="What was recommended?"
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-pink-500"
-                    autoFocus
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Source</label>
-                  <input
-                    type="text"
-                    value={formData.source}
-                    onChange={(e) => setFormData(prev => ({ ...prev, source: e.target.value }))}
-                    placeholder="Who recommended it?"
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-pink-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">URL</label>
-                  <input
-                    type="url"
-                    value={formData.url}
-                    onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                    placeholder="https://..."
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-pink-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Notes</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Any additional notes..."
-                    rows={2}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-white/10 flex justify-end gap-3">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="px-5 py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={addRecommendation}
-                  disabled={!formData.title.trim()}
-                  className="px-5 py-2 bg-gradient-to-r from-pink-500 to-rose-600 rounded-xl font-medium disabled:opacity-50"
-                >
-                  Add Recommendation
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

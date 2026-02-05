@@ -1,587 +1,131 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
-import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import {
-  ArrowLeft,
-  Plus,
-  X,
-  Layers,
-  Clock,
-  CheckCircle2,
-  Archive,
-  Link as LinkIcon,
-  ExternalLink,
-  GripVertical,
-  Edit2,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw
-} from 'lucide-react';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { ArrowLeft, Plus, GripVertical } from "lucide-react";
 
 interface MissionItem {
   id: string;
   title: string;
   description?: string;
-  links?: string[];
   status: 'created' | 'processing' | 'filed';
-  createdAt: number;
-  movedToProcessingAt?: number;
-  filedAt?: number;
-  order: number;
 }
 
-type Status = 'created' | 'processing' | 'filed';
-
-const statusConfig = {
-  created: {
-    label: 'Created',
-    icon: Clock,
-    color: '#f59e0b',
-    bgColor: 'rgba(245, 158, 11, 0.1)',
-    borderColor: 'rgba(245, 158, 11, 0.2)',
-  },
-  processing: {
-    label: 'Processing',
-    icon: Layers,
-    color: '#6366f1',
-    bgColor: 'rgba(99, 102, 241, 0.1)',
-    borderColor: 'rgba(99, 102, 241, 0.2)',
-  },
-  filed: {
-    label: 'Filed',
-    icon: CheckCircle2,
-    color: '#10b981',
-    bgColor: 'rgba(16, 185, 129, 0.1)',
-    borderColor: 'rgba(16, 185, 129, 0.2)',
-  },
-};
-
-export default function MissionControl() {
+export default function MissionPage() {
   const [items, setItems] = useState<MissionItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<MissionItem | null>(null);
-  const [expandedFiled, setExpandedFiled] = useState(false);
-
-  // Form state
-  const [newTitle, setNewTitle] = useState('');
-  const [newDescription, setNewDescription] = useState('');
-  const [newLinks, setNewLinks] = useState('');
-
-  const loadItems = useCallback(async () => {
-    try {
-      const res = await fetch('/api/mission');
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data.items);
-      }
-    } catch (err) {
-      console.error('Failed to load items:', err);
-    }
-    setLoading(false);
-  }, []);
 
   useEffect(() => {
     loadItems();
-  }, [loadItems]);
+  }, []);
 
-  const addItem = async () => {
-    if (!newTitle.trim()) return;
-
+  const loadItems = async () => {
     try {
-      const res = await fetch('/api/mission', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: newTitle.trim(),
-          description: newDescription.trim(),
-          links: newLinks.split('\n').map(l => l.trim()).filter(Boolean),
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setItems(prev => [...prev, data.item]);
-        setNewTitle('');
-        setNewDescription('');
-        setNewLinks('');
-        setShowAddModal(false);
-      }
+      const res = await fetch('/api/mission');
+      const data = await res.json();
+      setItems(data.items || []);
     } catch (err) {
-      console.error('Failed to add item:', err);
+      console.error('Failed to load mission items:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateItem = async (item: MissionItem, updates: Partial<MissionItem>) => {
-    try {
-      const res = await fetch('/api/mission', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: item.id, ...updates }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setItems(prev => prev.map(i => i.id === item.id ? data.item : i));
-      }
-    } catch (err) {
-      console.error('Failed to update item:', err);
-    }
-  };
-
-  const deleteItem = async (id: string) => {
-    try {
-      const res = await fetch(`/api/mission?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setItems(prev => prev.filter(i => i.id !== id));
-      }
-    } catch (err) {
-      console.error('Failed to delete item:', err);
-    }
-  };
-
-  const moveItem = async (item: MissionItem, newStatus: Status) => {
-    await updateItem(item, { status: newStatus });
-  };
-
-  const saveEdit = async () => {
-    if (!editingItem) return;
-
-    await updateItem(editingItem, {
-      title: newTitle.trim(),
-      description: newDescription.trim(),
-      links: newLinks.split('\n').map(l => l.trim()).filter(Boolean),
-    });
-
-    setEditingItem(null);
-    setNewTitle('');
-    setNewDescription('');
-    setNewLinks('');
-  };
-
-  const openEdit = (item: MissionItem) => {
-    setEditingItem(item);
-    setNewTitle(item.title);
-    setNewDescription(item.description || '');
-    setNewLinks((item.links || []).join('\n'));
-  };
-
-  const formatDate = (ts: number) => {
-    const date = new Date(ts);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / 86400000);
-
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const getItemsByStatus = (status: Status) =>
-    items.filter(item => item.status === status).sort((a, b) => a.order - b.order);
-
-  const createdItems = getItemsByStatus('created');
-  const processingItems = getItemsByStatus('processing');
-  const filedItems = getItemsByStatus('filed');
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw size={32} className="animate-spin mx-auto mb-4 text-indigo-400" />
-          <p className="text-gray-400">Loading mission items...</p>
-        </div>
-      </div>
-    );
-  }
+  const getItemsByStatus = (status: string) => items.filter(i => i.status === status);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Header */}
-      <div className="max-w-[1200px] mx-auto px-12 py-12">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 text-sm mb-8"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
-
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-              <Layers size={28} />
-            </div>
+      <div className="border-b border-white/[0.08] bg-black/40 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-8 py-6">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-6">
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </Link>
+          
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-2">
-                Mission Control
-              </h1>
-              <p className="text-gray-400 text-lg">Track and manage your tasks and projects</p>
+              <h1 className="text-3xl font-semibold tracking-tight mb-2">Mission Control</h1>
+              <p className="text-gray-400">Track tasks through your workflow</p>
             </div>
+            <button className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2">
+              <Plus size={16} />
+              New Task
+            </button>
           </div>
-
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-105 transition-all duration-200"
-          >
-            <Plus size={20} />
-            Add Item
-          </button>
         </div>
       </div>
 
       {/* Kanban Board */}
-      <div className="max-w-[1200px] mx-auto px-12 pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Created Column */}
-          <div className="backdrop-blur-xl rounded-2xl border overflow-hidden"
-            style={{
-              background: statusConfig.created.bgColor,
-              borderColor: statusConfig.created.borderColor,
-            }}>
-            <div className="p-4 border-b" style={{ borderColor: statusConfig.created.borderColor }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock size={20} style={{ color: statusConfig.created.color }} />
-                  <span className="font-semibold">Created</span>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-                  style={{ background: statusConfig.created.color, color: '#000' }}>
-                  {createdItems.length}
-                </span>
-              </div>
+      <div className="max-w-7xl mx-auto px-8 py-8">
+        <div className="grid grid-cols-3 gap-6">
+          {/* Created */}
+          <div>
+            <div className="mb-4">
+              <h2 className="text-sm font-medium text-gray-400 mb-1">CREATED</h2>
+              <div className="text-xs text-gray-600">{getItemsByStatus('created').length} items</div>
             </div>
-            <div className="p-4 space-y-3 min-h-[300px]">
-              <AnimatePresence>
-                {createdItems.map((item) => (
-                  <MissionCard
-                    key={item.id}
-                    item={item}
-                    onMove={moveItem}
-                    onEdit={openEdit}
-                    onDelete={deleteItem}
-                    formatDate={formatDate}
-                  />
-                ))}
-              </AnimatePresence>
-              {createdItems.length === 0 && (
-                <p className="text-gray-500 text-center py-8 text-sm">No items yet</p>
+            <div className="space-y-3">
+              {getItemsByStatus('created').map(item => (
+                <div key={item.id} className="p-4 bg-white/[0.02] border border-white/[0.08] rounded-lg hover:bg-white/[0.04] hover:border-white/[0.15] transition-all cursor-pointer group">
+                  <div className="flex items-start gap-3">
+                    <GripVertical size={16} className="text-gray-600 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex-1">
+                      <h3 className="font-medium mb-1 text-sm">{item.title}</h3>
+                      {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {getItemsByStatus('created').length === 0 && (
+                <div className="text-center py-12 text-gray-600 text-sm">No tasks</div>
               )}
             </div>
           </div>
 
-          {/* Processing Column */}
-          <div className="backdrop-blur-xl rounded-2xl border overflow-hidden"
-            style={{
-              background: statusConfig.processing.bgColor,
-              borderColor: statusConfig.processing.borderColor,
-            }}>
-            <div className="p-4 border-b" style={{ borderColor: statusConfig.processing.borderColor }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Layers size={20} style={{ color: statusConfig.processing.color }} />
-                  <span className="font-semibold">Processing</span>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-                  style={{ background: statusConfig.processing.color, color: '#fff' }}>
-                  {processingItems.length}
-                </span>
-              </div>
+          {/* Processing */}
+          <div>
+            <div className="mb-4">
+              <h2 className="text-sm font-medium text-gray-400 mb-1">PROCESSING</h2>
+              <div className="text-xs text-gray-600">{getItemsByStatus('processing').length} items</div>
             </div>
-            <div className="p-4 space-y-3 min-h-[300px]">
-              <AnimatePresence>
-                {processingItems.map((item) => (
-                  <MissionCard
-                    key={item.id}
-                    item={item}
-                    onMove={moveItem}
-                    onEdit={openEdit}
-                    onDelete={deleteItem}
-                    formatDate={formatDate}
-                  />
-                ))}
-              </AnimatePresence>
-              {processingItems.length === 0 && (
-                <p className="text-gray-500 text-center py-8 text-sm">No items in progress</p>
+            <div className="space-y-3">
+              {getItemsByStatus('processing').map(item => (
+                <div key={item.id} className="p-4 bg-white/[0.02] border border-white/[0.08] rounded-lg hover:bg-white/[0.04] hover:border-white/[0.15] transition-all cursor-pointer group">
+                  <div className="flex items-start gap-3">
+                    <GripVertical size={16} className="text-gray-600 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex-1">
+                      <h3 className="font-medium mb-1 text-sm">{item.title}</h3>
+                      {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {getItemsByStatus('processing').length === 0 && (
+                <div className="text-center py-12 text-gray-600 text-sm">No tasks</div>
               )}
             </div>
           </div>
 
-          {/* Filed Column */}
-          <div className="backdrop-blur-xl rounded-2xl border overflow-hidden"
-            style={{
-              background: statusConfig.filed.bgColor,
-              borderColor: statusConfig.filed.borderColor,
-            }}>
-            <div className="p-4 border-b" style={{ borderColor: statusConfig.filed.borderColor }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 size={20} style={{ color: statusConfig.filed.color }} />
-                  <span className="font-semibold">Filed</span>
-                </div>
-                <button
-                  onClick={() => setExpandedFiled(!expandedFiled)}
-                  className="flex items-center gap-1"
-                >
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-                    style={{ background: statusConfig.filed.color, color: '#000' }}>
-                    {filedItems.length}
-                  </span>
-                  {expandedFiled ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-              </div>
+          {/* Filed */}
+          <div>
+            <div className="mb-4">
+              <h2 className="text-sm font-medium text-gray-400 mb-1">FILED</h2>
+              <div className="text-xs text-gray-600">{getItemsByStatus('filed').length} items</div>
             </div>
-            <div className="p-4 space-y-3 min-h-[300px]">
-              <AnimatePresence>
-                {(expandedFiled ? filedItems : filedItems.slice(0, 5)).map((item) => (
-                  <MissionCard
-                    key={item.id}
-                    item={item}
-                    onMove={moveItem}
-                    onEdit={openEdit}
-                    onDelete={deleteItem}
-                    formatDate={formatDate}
-                    compact
-                  />
-                ))}
-              </AnimatePresence>
-              {filedItems.length === 0 && (
-                <p className="text-gray-500 text-center py-8 text-sm">No filed items</p>
-              )}
-              {filedItems.length > 5 && !expandedFiled && (
-                <button
-                  onClick={() => setExpandedFiled(true)}
-                  className="w-full text-center py-2 text-sm text-gray-400 hover:text-white"
-                >
-                  Show {filedItems.length - 5} more...
-                </button>
+            <div className="space-y-3">
+              {getItemsByStatus('filed').map(item => (
+                <div key={item.id} className="p-3 bg-white/[0.01] border border-white/[0.05] rounded-lg hover:bg-white/[0.02] hover:border-white/[0.1] transition-all cursor-pointer">
+                  <h3 className="font-medium text-sm text-gray-500">{item.title}</h3>
+                </div>
+              ))}
+              {getItemsByStatus('filed').length === 0 && (
+                <div className="text-center py-12 text-gray-600 text-sm">No tasks</div>
               )}
             </div>
           </div>
         </div>
       </div>
-
-      {/* Add/Edit Modal */}
-      <AnimatePresence>
-        {(showAddModal || editingItem) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => {
-              setShowAddModal(false);
-              setEditingItem(null);
-              setNewTitle('');
-              setNewDescription('');
-              setNewLinks('');
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-3xl max-w-lg w-full border border-white/10"
-            >
-              <div className="p-6 border-b border-white/10">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold">
-                    {editingItem ? 'Edit Item' : 'Add New Item'}
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setShowAddModal(false);
-                      setEditingItem(null);
-                      setNewTitle('');
-                      setNewDescription('');
-                      setNewLinks('');
-                    }}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Title</label>
-                  <input
-                    type="text"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder="What needs to be done?"
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                    autoFocus
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Description</label>
-                  <textarea
-                    value={newDescription}
-                    onChange={(e) => setNewDescription(e.target.value)}
-                    placeholder="Add more details..."
-                    rows={3}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Links (one per line)</label>
-                  <textarea
-                    value={newLinks}
-                    onChange={(e) => setNewLinks(e.target.value)}
-                    placeholder="https://example.com&#10;https://another.com"
-                    rows={2}
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none font-mono text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-white/10 flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setEditingItem(null);
-                    setNewTitle('');
-                    setNewDescription('');
-                    setNewLinks('');
-                  }}
-                  className="px-5 py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={editingItem ? saveEdit : addItem}
-                  disabled={!newTitle.trim()}
-                  className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl font-medium disabled:opacity-50"
-                >
-                  {editingItem ? 'Save Changes' : 'Add Item'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
-  );
-}
-
-// Mission Card Component
-function MissionCard({
-  item,
-  onMove,
-  onEdit,
-  onDelete,
-  formatDate,
-  compact = false,
-}: {
-  item: MissionItem;
-  onMove: (item: MissionItem, status: Status) => void;
-  onEdit: (item: MissionItem) => void;
-  onDelete: (id: string) => void;
-  formatDate: (ts: number) => string;
-  compact?: boolean;
-}) {
-  const [showActions, setShowActions] = useState(false);
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className={`bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all ${
-        compact ? 'p-3' : 'p-4'
-      }`}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <h3 className={`font-medium ${compact ? 'text-sm' : 'text-base'} truncate`}>
-            {item.title}
-          </h3>
-          {!compact && item.description && (
-            <p className="text-gray-400 text-sm mt-1 line-clamp-2">{item.description}</p>
-          )}
-        </div>
-
-        <AnimatePresence>
-          {showActions && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center gap-1"
-            >
-              <button
-                onClick={() => onEdit(item)}
-                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <Edit2 size={14} className="text-gray-400" />
-              </button>
-              <button
-                onClick={() => onDelete(item.id)}
-                className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors"
-              >
-                <Trash2 size={14} className="text-red-400" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Links */}
-      {!compact && item.links && item.links.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {item.links.map((link, i) => (
-            <a
-              key={i}
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded-lg text-xs text-cyan-400 hover:bg-white/20 transition-colors"
-            >
-              <LinkIcon size={12} />
-              <span className="truncate max-w-[150px]">
-                {new URL(link).hostname}
-              </span>
-              <ExternalLink size={10} />
-            </a>
-          ))}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="mt-3 flex items-center justify-between">
-        <span className="text-xs text-gray-500">{formatDate(item.createdAt)}</span>
-
-        {/* Move buttons */}
-        <div className="flex gap-1">
-          {item.status !== 'created' && (
-            <button
-              onClick={() => onMove(item, item.status === 'filed' ? 'processing' : 'created')}
-              className="px-2 py-1 text-xs bg-white/10 rounded hover:bg-white/20 transition-colors"
-            >
-              ← Back
-            </button>
-          )}
-          {item.status !== 'filed' && (
-            <button
-              onClick={() => onMove(item, item.status === 'created' ? 'processing' : 'filed')}
-              className="px-2 py-1 text-xs bg-indigo-500/20 text-indigo-300 rounded hover:bg-indigo-500/30 transition-colors"
-            >
-              {item.status === 'created' ? 'Start →' : 'File →'}
-            </button>
-          )}
-        </div>
-      </div>
-    </motion.div>
   );
 }
