@@ -1,6 +1,7 @@
 "use client";
 import { IntelToolHistory } from "@/components/IntelToolHistory";
 import { IntelToolNav } from "@/components/IntelToolNav";
+import { DeepSearchResults } from "@/components/DeepSearchResults";
 
 import { useState } from "react";
 import { Radar, Search, RefreshCw } from "lucide-react";
@@ -89,21 +90,7 @@ export default function DeepSearchPage() {
         </div>
 
         {/* Results */}
-        {results && (
-          <div style={{
-            background: 'rgba(30, 41, 59, 0.8)',
-            border: '1px solid rgba(148, 163, 184, 0.15)',
-            borderRadius: '16px',
-            padding: '32px',
-          }}>
-            <h2 style={{ fontSize: '28px', fontWeight: '700', color: 'white', marginBottom: '24px' }}>
-              Results
-            </h2>
-            <div style={{ fontSize: '16px', color: '#cbd5e1', lineHeight: '1.8' }}>
-              {JSON.stringify(results, null, 2)}
-            </div>
-          </div>
-        )}
+        {results && <DeepSearchResults results={results} color="#6366f1" />}
 
         {/* History */}
         <IntelToolHistory toolName="deep-search" collectionName="deep_search_history" />

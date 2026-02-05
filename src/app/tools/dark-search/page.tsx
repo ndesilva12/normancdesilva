@@ -1,6 +1,7 @@
 "use client";
 import { IntelToolHistory } from "@/components/IntelToolHistory";
 import { IntelToolNav } from "@/components/IntelToolNav";
+import { DeepSearchResults } from "@/components/DeepSearchResults";
 
 import { useState } from "react";
 import { Lock, Search, RefreshCw } from "lucide-react";
@@ -89,21 +90,7 @@ export default function DarkSearchPage() {
         </div>
 
         {/* Results */}
-        {results && (
-          <div style={{
-            background: 'rgba(26, 26, 26, 0.8)',
-            border: '1px solid rgba(220, 38, 38, 0.3)',
-            borderRadius: '16px',
-            padding: '32px',
-          }}>
-            <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#dc2626', marginBottom: '24px' }}>
-              Results
-            </h2>
-            <div style={{ fontSize: '16px', color: '#9ca3af', lineHeight: '1.8' }}>
-              {JSON.stringify(results, null, 2)}
-            </div>
-          </div>
-        )}
+        {results && <DeepSearchResults results={results} color="#dc2626" />}
 
         {/* History */}
         <IntelToolHistory toolName="dark-search" collectionName="dark_search_history" />
