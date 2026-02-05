@@ -1,4 +1,5 @@
 "use client";
+import { IntelToolHistory } from "@/components/IntelToolHistory";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
