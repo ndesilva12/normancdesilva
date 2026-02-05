@@ -1,152 +1,75 @@
 import { NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebase-admin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-interface MissionItem {
-  id?: string;
-  title: string;
-  description?: string;
-  links?: string[];
-  status: 'created' | 'processing' | 'filed';
-  createdAt: number;
-  movedToProcessingAt?: number;
-  filedAt?: number;
-  order: number;
+// Initialize Firebase Admin
+if (getApps().length === 0) {
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'the-dashboard-50be1';
+
+  initializeApp({
+    credential: cert({
+      projectId,
+      clientEmail,
+      privateKey,
+    }),
+  });
 }
+
+const db = getFirestore();
 
 export async function GET() {
   try {
-    const db = getAdminFirestore();
-    if (!db) {
-      return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
-    }
-
-    const snapshot = await db.collection('mission_items')
-      .orderBy('order', 'asc')
-      .get();
-
-    const items: MissionItem[] = snapshot.docs.map(doc => ({
+    const snapshot = await db.collection('missions').orderBy('order').get();
+    const items = snapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data() as Omit<MissionItem, 'id'>
+      ...doc.data(),
     }));
 
     return NextResponse.json({ items });
-  } catch (error: any) {
-    console.error('Mission GET error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('Error fetching missions:', error);
+    return NextResponse.json({ error: 'Failed to fetch missions' }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const db = getAdminFirestore();
-    if (!db) {
-      return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
-    }
+    const { title, description, links } = await request.json();
 
-    const body = await request.json();
-    const { title, description, links } = body;
-
-    if (!title) {
+    if (!title?.trim()) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
-    // Get the highest order number for created items
-    const existingSnapshot = await db.collection('mission_items')
+    // Get current max order for 'created' status
+    const createdSnapshot = await db
+      .collection('missions')
       .where('status', '==', 'created')
       .orderBy('order', 'desc')
       .limit(1)
       .get();
 
-    const highestOrder = existingSnapshot.empty ? 0 : (existingSnapshot.docs[0].data().order || 0);
+    const maxOrder = createdSnapshot.empty ? 0 : createdSnapshot.docs[0].data().order;
 
-    const newItem: Omit<MissionItem, 'id'> = {
-      title,
-      description: description || '',
+    const newItem = {
+      title: title.trim(),
+      description: description?.trim() || '',
       links: links || [],
       status: 'created',
-      createdAt: Date.now(),
-      order: highestOrder + 1,
+      order: maxOrder + 1,
+      created_at: Date.now(),
+      updated_at: Date.now(),
     };
 
-    const docRef = await db.collection('mission_items').add(newItem);
+    const docRef = await db.collection('missions').add(newItem);
 
     return NextResponse.json({
-      item: { id: docRef.id, ...newItem }
+      id: docRef.id,
+      ...newItem,
     });
-  } catch (error: any) {
-    console.error('Mission POST error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-export async function PUT(request: Request) {
-  try {
-    const db = getAdminFirestore();
-    if (!db) {
-      return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
-    }
-
-    const body = await request.json();
-    const { id, title, description, links, status, order } = body;
-
-    if (!id) {
-      return NextResponse.json({ error: 'Item ID is required' }, { status: 400 });
-    }
-
-    const docRef = db.collection('mission_items').doc(id);
-    const doc = await docRef.get();
-
-    if (!doc.exists) {
-      return NextResponse.json({ error: 'Item not found' }, { status: 404 });
-    }
-
-    const currentData = doc.data() as MissionItem;
-    const updates: Partial<MissionItem> = {};
-
-    if (title !== undefined) updates.title = title;
-    if (description !== undefined) updates.description = description;
-    if (links !== undefined) updates.links = links;
-    if (order !== undefined) updates.order = order;
-
-    if (status !== undefined && status !== currentData.status) {
-      updates.status = status;
-      if (status === 'processing' && currentData.status === 'created') {
-        updates.movedToProcessingAt = Date.now();
-      } else if (status === 'filed') {
-        updates.filedAt = Date.now();
-      }
-    }
-
-    await docRef.update(updates);
-
-    return NextResponse.json({
-      item: { id, ...currentData, ...updates }
-    });
-  } catch (error: any) {
-    console.error('Mission PUT error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-export async function DELETE(request: Request) {
-  try {
-    const db = getAdminFirestore();
-    if (!db) {
-      return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json({ error: 'Item ID is required' }, { status: 400 });
-    }
-
-    await db.collection('mission_items').doc(id).delete();
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('Mission DELETE error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('Error creating mission:', error);
+    return NextResponse.json({ error: 'Failed to create mission' }, { status: 500 });
   }
 }
