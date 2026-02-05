@@ -4,9 +4,11 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Search, MessageSquare, Settings } from "lucide-react";
+import { useGlobalSearch } from "../GlobalSearchProvider";
 
 export function TopNav() {
   const pathname = usePathname();
+  const { openSearch } = useGlobalSearch();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -71,6 +73,35 @@ export function TopNav() {
             }}
           >
             <NavLink href="/" icon={Search} label="Home" active={isActive("/")} />
+            <button
+              onClick={openSearch}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                fontSize: "15px",
+                fontWeight: 600,
+                color: "var(--muted)",
+                background: "transparent",
+                border: "1px solid transparent",
+                textDecoration: "none",
+                transition: "all 0.2s",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "var(--foreground)";
+                e.currentTarget.style.background = "var(--glass-bg)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <Search style={{ width: "18px", height: "18px" }} />
+              <span>Search</span>
+            </button>
             <NavLink href="/jimmy" icon={MessageSquare} label="Jimmy" active={isActive("/jimmy")} />
             <NavLink href="/settings" icon={Settings} label="Settings" active={isActive("/settings")} />
           </div>

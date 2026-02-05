@@ -40,22 +40,22 @@ const QUICK_TOOLS = [
   // Row 1: Communication & Organization (7 tools)
   { id: "emails", name: "Emails", icon: Mail, href: "/tools/emails", color: "#3b82f6" },
   { id: "calendar", name: "Calendar", icon: Calendar, href: "/tools/calendar", color: "#10b981" },
-  { id: "contacts", name: "Contacts", icon: Users, href: "/tools/contacts", color: "#f59e0b" },
-  { id: "files", name: "Files", icon: FolderOpen, href: "/tools/files", color: "#8b5cf6" },
-  { id: "notes", name: "Notes", icon: StickyNote, href: "/tools/notes", color: "#ec4899" },
+  { id: "contacts", name: "Contacts", icon: Users, href: "/tools/contacts", color: "#8b5cf6" },
+  { id: "files", name: "Files", icon: FolderOpen, href: "/tools/files", color: "#6366f1" },
+  { id: "notes", name: "Notes", icon: StickyNote, href: "/tools/notes", color: "#a78bfa" },
   { id: "raindrop", name: "Bookmarks", icon: Droplets, href: "/tools/raindrop", color: "#06b6d4" },
   { id: "spotify", name: "Spotify", icon: Music, href: "/tools/spotify", color: "#10b981" },
   
   // Row 2: Data & Business Tools (10 tools)
-  { id: "news", name: "News", icon: Newspaper, href: "/tools/news", color: "#f59e0b" },
-  { id: "market", name: "Market", icon: DollarSign, href: "/tools/market", color: "#ef4444" },
+  { id: "news", name: "News", icon: Newspaper, href: "/tools/news", color: "#64748b" },
+  { id: "market", name: "Market", icon: DollarSign, href: "/tools/market", color: "#3b82f6" },
   { id: "inoreader", name: "RSS", icon: BookOpen, href: "/tools/inoreader", color: "#10b981" },
-  { id: "trending", name: "Trending", icon: TrendingUp, href: "/tools/trending", color: "#f59e0b" },
+  { id: "trending", name: "Trending", icon: TrendingUp, href: "/tools/trending", color: "#14b8a6" },
   { id: "business-info", name: "Business Info", icon: Building2, href: "/tools/business-info", color: "#8b5cf6" },
   { id: "visual-rosters", name: "Rosters", icon: BarChart3, href: "/tools/visual-rosters", color: "#3b82f6" },
   { id: "corporate-info", name: "Corporate", icon: Briefcase, href: "/tools/company-politics", color: "#10b981" },
-  { id: "contact-finder", name: "Contact Finder", icon: UserSearch, href: "/tools/contact-finder", color: "#f59e0b" },
-  { id: "image-lookup", name: "Image Lookup", icon: Image, href: "/tools/image-lookup", color: "#ec4899" },
+  { id: "contact-finder", name: "Contact Finder", icon: UserSearch, href: "/tools/contact-finder", color: "#6366f1" },
+  { id: "image-lookup", name: "Image Lookup", icon: Image, href: "/tools/image-lookup", color: "#a78bfa" },
   { id: "accounts", name: "Accounts", icon: Globe, href: "/tools/accounts", color: "#64748b" },
 ];
 
