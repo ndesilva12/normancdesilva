@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
     // Escape single quotes in the message for shell
     const escapedQuery = query.replace(/'/g, "'\\''");
 
-    // Use clawdbot agent command with webchat session
-    // Run through bash to ensure proper environment setup
-    const command = `bash -l -c "/home/ubuntu/.npm-global/bin/clawdbot agent --session-id \\"${convId}\\" --message '${escapedQuery}' --json --timeout 30"`;
+    // Use npx to run clawdbot (installed as npm package @2026.1.24-3)
+    // npx automatically finds the binary in node_modules/.bin
+    const command = `npx clawdbot agent --session-id "${convId}" --message '${escapedQuery}' --json --timeout 30`;
 
     console.log("[Jimmy API] Sending message to Clawdbot:", { userId, convId, queryLength: query.length });
 
