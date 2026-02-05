@@ -49,6 +49,27 @@ export function DeepSearchResults({ results, color }: DeepSearchResultsProps) {
     );
   };
 
+  const renderSections = (sections: any[]) => {
+    if (!sections || !Array.isArray(sections)) return null;
+
+    const sectionColors = [
+      "#8b5cf6", // purple
+      "#10b981", // green
+      "#06b6d4", // cyan
+      "#f59e0b", // orange
+      "#ec4899", // pink
+      "#6366f1", // indigo
+    ];
+
+    return sections.map((section: any, idx: number) => {
+      const sectionColor = sectionColors[idx % sectionColors.length];
+      const title = section.title || section.name || `Section ${idx + 1}`;
+      const content = section.content || section.text || section.body;
+
+      return renderSection(title, content, sectionColor);
+    });
+  };
+
   const renderLinks = (links: any[]) => {
     if (!links || !Array.isArray(links) || links.length === 0) return null;
 
@@ -144,9 +165,46 @@ export function DeepSearchResults({ results, color }: DeepSearchResultsProps) {
         Results
       </h2>
 
-      {/* Try to intelligently parse the results */}
-      {results.overview && renderSection("Overview", results.overview, "#8b5cf6")}
+      {/* Topic/Mode metadata */}
+      {(results.topic || results.mode) && (
+        <div style={{ marginBottom: "16px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          {results.topic && (
+            <span style={{
+              padding: "6px 12px",
+              background: "rgba(139, 92, 246, 0.15)",
+              border: "1px solid rgba(139, 92, 246, 0.3)",
+              borderRadius: "6px",
+              fontSize: "12px",
+              color: "#a78bfa",
+              fontWeight: 600,
+            }}>
+              {results.topic}
+            </span>
+          )}
+          {results.mode && (
+            <span style={{
+              padding: "6px 12px",
+              background: "rgba(16, 185, 129, 0.15)",
+              border: "1px solid rgba(16, 185, 129, 0.3)",
+              borderRadius: "6px",
+              fontSize: "12px",
+              color: "#34d399",
+              fontWeight: 600,
+            }}>
+              Mode: {results.mode}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Summary first if it exists */}
       {results.summary && renderSection("Summary", results.summary, "#8b5cf6")}
+
+      {/* Sections array - most important for structured output */}
+      {results.sections && renderSections(results.sections)}
+
+      {/* Try to intelligently parse other common fields */}
+      {results.overview && renderSection("Overview", results.overview, "#8b5cf6")}
       {results.keyTakeaways && renderSection("Key Takeaways", results.keyTakeaways, "#10b981")}
       {results.key_takeaways && renderSection("Key Takeaways", results.key_takeaways, "#10b981")}
       {results.insights && renderSection("Insights", results.insights, "#10b981")}
@@ -166,7 +224,7 @@ export function DeepSearchResults({ results, color }: DeepSearchResultsProps) {
 
       {/* Fallback: display everything else */}
       {Object.keys(results).filter(key => 
-        !['overview', 'summary', 'keyTakeaways', 'key_takeaways', 'insights', 
+        !['topic', 'mode', 'overview', 'summary', 'sections', 'keyTakeaways', 'key_takeaways', 'insights', 
           'counterintuitive', 'alternative_perspectives', 'debates', 'expert_debates',
           'unanswered', 'underreported', 'underreported_angles', 'hidden_mechanics',
           'sources', 'links', 'urls'].includes(key)
