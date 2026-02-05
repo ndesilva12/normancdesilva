@@ -100,24 +100,12 @@ export default function InvestorsPage() {
     }
   };
 
-  const getStatusEmoji = (status: Investor['status']) => {
-    switch (status) {
-      case 'cold': return '🧊';
-      case 'warm': return '🔥';
-      case 'active': return '⚡';
-      case 'committed': return '✅';
-      case 'passed': return '❌';
-      default: return '📋';
-    }
-  };
-
   const renderPipelineColumn = (
     status: Investor['status'],
     title: string
   ) => {
     const columnInvestors = getInvestorsByStatus(status);
     const color = getStatusColor(status);
-    const emoji = getStatusEmoji(status);
     
     return (
       <div style={{
@@ -141,7 +129,6 @@ export default function InvestorsPage() {
           borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '24px' }}>{emoji}</span>
             <h2 style={{
               fontSize: '18px',
               fontWeight: '700',
@@ -262,6 +249,25 @@ export default function InvestorsPage() {
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}>
         <div style={{ maxWidth: '1600px', margin: '0 auto 32px auto' }}>
+          {/* Back Button */}
+          <Link
+            href="/"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#cbd5e1',
+              textDecoration: 'none',
+              fontSize: '14px',
+              marginBottom: '24px',
+              transition: 'color 0.2s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#cbd5e1')}
+          >
+            ← Back to Dashboard
+          </Link>
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h1 style={{
