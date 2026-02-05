@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-export default function DarkSearchPage() {
+export default function L3DPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any>(null);
@@ -12,7 +12,7 @@ export default function DarkSearchPage() {
     if (!query.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/dark-search', {
+      const res = await fetch('/api/l3d', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query })
@@ -29,13 +29,13 @@ export default function DarkSearchPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #000000 100%)',
+      background: 'linear-gradient(135deg, #f59e0b 0%, #1e293b 50%, #0f172a 100%)',
       padding: '40px 20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <Link href="/" style={{ 
-          color: '#6b7280', 
+          color: '#94a3b8', 
           textDecoration: 'none',
           fontSize: '14px',
           marginBottom: '24px',
@@ -47,21 +47,21 @@ export default function DarkSearchPage() {
         <h1 style={{ 
           fontSize: '48px', 
           fontWeight: 'bold', 
-          color: '#dc2626',
+          color: 'white',
           marginTop: '24px',
           marginBottom: '12px'
         }}>
-          🕵️ Dark Search
+          📅 L3D (Last 30 Days)
         </h1>
-        <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '40px' }}>
-          Deep web research & hidden insights
+        <p style={{ fontSize: '18px', color: '#94a3b8', marginBottom: '40px' }}>
+          Recent trends & insights from the last 30 days
         </p>
 
         {/* Search Input */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '40px' }}>
           <input
             type="text"
-            placeholder="Enter sensitive research query..."
+            placeholder="Enter topic to research recent trends..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -69,8 +69,8 @@ export default function DarkSearchPage() {
               flex: 1,
               padding: '20px 24px',
               fontSize: '16px',
-              background: 'rgba(26, 26, 26, 0.9)',
-              border: '1px solid rgba(107, 114, 128, 0.3)',
+              background: 'rgba(30, 41, 59, 0.9)',
+              border: '1px solid rgba(148, 163, 184, 0.2)',
               borderRadius: '12px',
               color: 'white',
               outline: 'none',
@@ -81,7 +81,7 @@ export default function DarkSearchPage() {
             disabled={loading}
             style={{
               padding: '20px 40px',
-              background: loading ? 'rgba(220, 38, 38, 0.5)' : 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+              background: loading ? 'rgba(245, 158, 11, 0.5)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
               border: 'none',
               borderRadius: '12px',
               color: 'white',
@@ -97,15 +97,15 @@ export default function DarkSearchPage() {
         {/* Results */}
         {results && (
           <div style={{
-            background: 'rgba(26, 26, 26, 0.8)',
-            border: '1px solid rgba(220, 38, 38, 0.3)',
+            background: 'rgba(30, 41, 59, 0.8)',
+            border: '1px solid rgba(148, 163, 184, 0.15)',
             borderRadius: '16px',
             padding: '32px',
           }}>
-            <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#dc2626', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '28px', fontWeight: '700', color: 'white', marginBottom: '24px' }}>
               Results
             </h2>
-            <div style={{ fontSize: '16px', color: '#9ca3af', lineHeight: '1.8' }}>
+            <div style={{ fontSize: '16px', color: '#cbd5e1', lineHeight: '1.8' }}>
               {JSON.stringify(results, null, 2)}
             </div>
           </div>
@@ -115,15 +115,15 @@ export default function DarkSearchPage() {
           <div style={{ 
             textAlign: 'center', 
             padding: '100px 20px',
-            background: 'rgba(26, 26, 26, 0.5)',
+            background: 'rgba(30, 41, 59, 0.5)',
             borderRadius: '16px',
-            border: '1px solid rgba(107, 114, 128, 0.2)'
+            border: '1px solid rgba(148, 163, 184, 0.1)'
           }}>
-            <h3 style={{ fontSize: '24px', color: '#dc2626', marginBottom: '12px' }}>
-              Ready to investigate
+            <h3 style={{ fontSize: '24px', color: 'white', marginBottom: '12px' }}>
+              Ready to research
             </h3>
-            <p style={{ color: '#6b7280' }}>
-              Enter a query above for deep web research
+            <p style={{ color: '#94a3b8' }}>
+              Enter a topic to see what's happened in the last 30 days
             </p>
           </div>
         )}
