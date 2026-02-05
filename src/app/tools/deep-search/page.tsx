@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Radar, Search, RefreshCw } from "lucide-react";
 
 export default function DeepSearchPage() {
   const [query, setQuery] = useState("");
