@@ -68,31 +68,49 @@ export function QuickAccessDock({ onToolClick }: { onToolClick?: (toolId: string
     loading: true,
   });
 
-  // Load layout config from localStorage
+  // Load layout config from localStorage and apply settings
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // If no user, show all tools with default order/colors
+      setTools(QUICK_TOOLS);
+      return;
+    }
+    
     const stored = localStorage.getItem(`layout-config-${user.uid}`);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        const quickAccessConfig = parsed.quickAccessTools as LayoutItem[] | undefined;
-        if (quickAccessConfig) {
-          // Merge config with default tools
-          const mergedTools = QUICK_TOOLS.map(tool => {
-            const config = quickAccessConfig.find(c => c.id === tool.id);
-            return {
-              ...tool,
-              visible: config?.visible ?? true,
-              order: config?.order ?? tool.id === "emails" ? 0 : QUICK_TOOLS.indexOf(tool),
-              color: config?.color || tool.color,
-            };
-          }).filter(tool => tool.visible)
-            .sort((a, b) => a.order - b.order);
-          setTools(mergedTools);
-        }
-      } catch (e) {
-        console.error("Failed to parse layout config:", e);
+    if (!stored) {
+      // No saved config - use defaults
+      setTools(QUICK_TOOLS);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(stored);
+      const quickAccessConfig = parsed.quickAccessTools as LayoutItem[] | undefined;
+      
+      if (!quickAccessConfig) {
+        setTools(QUICK_TOOLS);
+        return;
       }
+
+      // Apply saved config: order, visibility, color
+      const mergedTools = QUICK_TOOLS.map(tool => {
+        const config = quickAccessConfig.find(c => c.id === tool.id);
+        if (!config) return tool; // No config for this tool - use default
+        
+        return {
+          ...tool,
+          visible: config.visible,
+          order: config.order,
+          color: config.color || tool.color, // Use saved color or fall back to default
+        };
+      })
+      .filter(tool => tool.visible) // HIDE tools where visible = false
+      .sort((a, b) => a.order - b.order); // SORT by saved order
+
+      setTools(mergedTools);
+    } catch (e) {
+      console.error("Failed to parse layout config:", e);
+      setTools(QUICK_TOOLS); // Fallback to defaults on error
     }
   }, [user]);
 
