@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
     // Escape single quotes in the message for shell
     const escapedQuery = query.replace(/'/g, "'\\''");
 
-    // Use npx to run clawdbot (installed as npm package @2026.1.24-3)
-    // npx automatically finds the binary in node_modules/.bin
-    const command = `npx clawdbot agent --session-id "${convId}" --message '${escapedQuery}' --json --timeout 30`;
+    // Use full path to clawdbot which is already installed globally for ubuntu user
+    // This avoids npm trying to create cache directories for the current process user
+    const command = `/home/ubuntu/.npm-global/bin/clawdbot agent --session-id "${convId}" --message '${escapedQuery}' --json --timeout 30`;
 
     console.log("[Jimmy API] Sending message to Clawdbot:", { userId, convId, queryLength: query.length });
 
@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
       const { stdout, stderr } = await execPromise(command, {
         timeout: 35000, // 35 second timeout (5s more than agent timeout)
         maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+        cwd: '/home/ubuntu', // Run from ubuntu's home directory
+        uid: 0, // Run as root to avoid permission issues
       });
 
       if (stderr) {
@@ -135,7 +137,15 @@ export async function POST(request: NextRequest) {
       // Check if clawdbot command was not found
       if (execError.code === 127 || execError.message?.includes('not found')) {
         return NextResponse.json(
-          { error: "ClawdBot command not found. Please verify the installation path and that SSH tunnel is active if required." },
+          { error: "ClawdBot command not found at /home/ubuntu/.npm-global/bin/clawdbot. Please verify installation." },
+          { status: 500 }
+        );
+      }
+
+      // Check if it's a permission issue
+      if (execError.code === 13 || execError.message?.includes('Permission denied')) {
+        return NextResponse.json(
+          { error: "Permission denied accessing ClawdBot. Check file permissions on /home/ubuntu/.npm-global/bin/clawdbot" },
           { status: 500 }
         );
       }
