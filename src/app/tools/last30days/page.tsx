@@ -89,16 +89,6 @@ export default function Last30DaysPage() {
         marginBottom: "48px",
       }}>
         <IntelToolNav current="l3d" />
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "#94a3b8", fontSize: "14px",
-            marginBottom: "24px",
-            transition: "color 0.2s",
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.color = "#f1f5f9"}
-          onMouseLeave={(e) => e.currentTarget.style.color = "#94a3b8"}
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
 
         <div style={{
           display: "flex",
