@@ -29,7 +29,6 @@ export default function PeoplePage() {
 
   const filteredPeople = people.filter(p =>
     p.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    </>
   );
 
   return (
