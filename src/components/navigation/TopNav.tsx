@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Search, MessageSquare, Settings } from "lucide-react";
+import { Home, Search, MessageSquare, Settings } from "lucide-react";
 import { useGlobalSearch } from "../GlobalSearchProvider";
 
 export function TopNav() {
@@ -72,7 +72,7 @@ export function TopNav() {
               gap: "8px",
             }}
           >
-            <NavLink href="/" icon={Search} label="Home" active={isActive("/")} />
+            <NavLink href="/" icon={Home} label="Dashboard" active={isActive("/")} />
             <button
               onClick={openSearch}
               style={{

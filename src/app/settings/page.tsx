@@ -96,6 +96,11 @@ export default function SettingsPage() {
             </SettingRow>
           </Section>
 
+          {/* Customize Layout - MOVED TO TOP */}
+          <div className="glass" style={{ padding: "24px", borderRadius: "12px", marginBottom: "24px" }}>
+            <CustomizeLayout />
+          </div>
+
           {/* Time & Date Settings */}
           <Section
             icon={<Clock style={{ width: "20px", height: "20px" }} />}
@@ -242,11 +247,6 @@ export default function SettingsPage() {
               </div>
             </SettingRow>
           </Section>
-
-          {/* Customize Layout */}
-          <div className="glass" style={{ padding: "24px", borderRadius: "12px", marginBottom: "24px" }}>
-            <CustomizeLayout />
-          </div>
         </div>
       </div>
     </>
