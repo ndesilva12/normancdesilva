@@ -188,7 +188,7 @@ export default function RelationshipIntel() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Contact List */}
           <div className="lg:col-span-1">
-            <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+            <div className="backdrop-blur-xl  rounded-2xl border border-white/10 overflow-hidden">
               {/* Search & Filters */}
               <div className="p-6 border-b border-white/10 space-y-4">
                 <div className="relative">
@@ -236,7 +236,7 @@ export default function RelationshipIntel() {
                       key={contact.email}
                       onClick={() => openContactDetail(contact)}
                       className={`p-4 border-b border-white/5 cursor-pointer transition-all duration-200 ${
-                        isSelected ? 'bg-white/10' : 'hover:bg-white/5'
+                        isSelected ? 'bg-white/10' : 'hover:'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -270,7 +270,7 @@ export default function RelationshipIntel() {
           {/* Right: Contact Detail */}
           <div className="lg:col-span-2">
             {selectedContact ? (
-              <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+              <div className="backdrop-blur-xl  rounded-2xl border border-white/10 overflow-hidden">
                 {/* Contact Header */}
                 <div className="p-8 border-b border-white/10">
                   <div className="flex items-start justify-between mb-6">
@@ -331,11 +331,11 @@ export default function RelationshipIntel() {
                       return (
                         <div
                           key={interaction.id}
-                          className="backdrop-blur-xl bg-white/5 rounded-xl border border-white/10 overflow-hidden transition-all duration-200"
+                          className="backdrop-blur-xl  rounded-xl border border-white/10 overflow-hidden transition-all duration-200"
                         >
                           <div
                             onClick={() => setExpandedInteraction(isExpanded ? null : interaction.id)}
-                            className="p-4 cursor-pointer hover:bg-white/5 transition-colors"
+                            className="p-4 cursor-pointer hover: transition-colors"
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1 min-w-0">
@@ -388,7 +388,7 @@ export default function RelationshipIntel() {
                 </div>
               </div>
             ) : (
-              <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 p-16 text-center">
+              <div className="backdrop-blur-xl  rounded-2xl border border-white/10 p-16 text-center">
                 <Users size={48} className="mx-auto mb-4 text-gray-600" />
                 <p className="text-gray-400 text-lg">Select a contact to view details</p>
               </div>

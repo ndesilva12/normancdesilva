@@ -255,7 +255,7 @@ export default function RecommendationsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search recommendations..."
-              className="w-full pl-11 pr-4 py-3 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 focus:bg-white/10 transition-all duration-200"
+              className="w-full pl-11 pr-4 py-3 backdrop-blur-xl bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 focus:bg-white/10 transition-all duration-200"
             />
           </div>
         </div>
