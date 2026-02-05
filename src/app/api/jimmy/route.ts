@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
     // Escape single quotes in the message for shell
     const escapedQuery = query.replace(/'/g, "'\\''");
 
-    // Use clawdbot agent command with webchat session (full path)
-    // This creates a persistent session for the web interface
-    const command = `/home/ubuntu/.npm-global/bin/clawdbot agent --session-id "${convId}" --message '${escapedQuery}' --json --timeout 30`;
+    // Use npx to run clawdbot (installed as npm package @2026.1.24-3)
+    // npx automatically finds the binary in node_modules/.bin
+    const command = `npx clawdbot agent --session-id "${convId}" --message '${escapedQuery}' --json --timeout 30`;
 
     console.log("[Jimmy API] Sending message to Clawdbot:", { userId, convId, queryLength: query.length });
 
@@ -115,12 +115,28 @@ export async function POST(request: NextRequest) {
       }
     } catch (execError: any) {
       console.error("[Jimmy API] Clawdbot exec error:", execError);
+      console.error("[Jimmy API] Error details:", {
+        message: execError.message,
+        code: execError.code,
+        signal: execError.signal,
+        killed: execError.killed,
+        stdout: execError.stdout?.toString?.(),
+        stderr: execError.stderr?.toString?.(),
+      });
 
       // Check if it's a timeout
       if (execError.killed && execError.signal === 'SIGTERM') {
         return NextResponse.json(
           { error: "Request timed out. Jimmy is taking too long to respond." },
           { status: 504 }
+        );
+      }
+
+      // Check if clawdbot command was not found
+      if (execError.code === 127 || execError.message?.includes('not found')) {
+        return NextResponse.json(
+          { error: "ClawdBot command not found. Please verify the installation path and that SSH tunnel is active if required." },
+          { status: 500 }
         );
       }
 
