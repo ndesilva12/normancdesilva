@@ -28,11 +28,15 @@ import {
   UserSearch,
   Globe,
   TrendingUp as TrendingIcon,
+  Network,
+  Target,
+  TrendingDown,
+  Handshake,
 } from "lucide-react";
 
 const TOOL_CATEGORIES = [
   {
-    name: "Intelligence",
+    name: "Intel",
     tools: [
       {
         id: "curate",
@@ -40,7 +44,6 @@ const TOOL_CATEGORIES = [
         icon: Sparkles,
         href: "/tools/curate",
         color: "#8b5cf6",
-        description: "AI-curated content for your worldview",
       },
       {
         id: "l3d",
@@ -48,7 +51,6 @@ const TOOL_CATEGORIES = [
         icon: TrendingUp,
         href: "/tools/l3d",
         color: "#10b981",
-        description: "Last 30 days research & trends",
       },
       {
         id: "deep",
@@ -56,7 +58,6 @@ const TOOL_CATEGORIES = [
         icon: Search,
         href: "/tools/deep-search",
         color: "#6366f1",
-        description: "Multi-source deep research",
       },
       {
         id: "dark",
@@ -64,40 +65,76 @@ const TOOL_CATEGORIES = [
         icon: Lock,
         href: "/tools/dark-search",
         color: "#dc2626",
-        description: "Hidden content discovery",
+      },
+      {
+        id: "image-lookup",
+        name: "Image Lookup",
+        icon: Image,
+        href: "/tools/image-lookup",
+        color: "#a78bfa",
+      },
+      {
+        id: "contact-finder",
+        name: "Contact Finder",
+        icon: UserSearch,
+        href: "/tools/contact-finder",
+        color: "#6366f1",
+      },
+      {
+        id: "relationship-intel",
+        name: "Relationships",
+        icon: Network,
+        href: "/tools/relationship-intel",
+        color: "#14b8a6",
+      },
+      {
+        id: "mission",
+        name: "Mission",
+        icon: Target,
+        href: "/tools/mission",
+        color: "#f59e0b",
+      },
+      {
+        id: "investors",
+        name: "Investors",
+        icon: TrendingDown,
+        href: "/tools/investors",
+        color: "#3b82f6",
+      },
+      {
+        id: "business-info",
+        name: "Business Info",
+        icon: Building2,
+        href: "/tools/business-info",
+        color: "#8b5cf6",
+      },
+      {
+        id: "corporate-info",
+        name: "Corporate",
+        icon: Briefcase,
+        href: "/tools/company-politics",
+        color: "#10b981",
       },
     ],
   },
   {
-    name: "Communication",
+    name: "Basics",
     tools: [
-      { id: "emails", name: "Emails", icon: Mail, href: "/tools/emails", color: "#3b82f6", description: "Email management & search" },
-      { id: "calendar", name: "Calendar", icon: Calendar, href: "/tools/calendar", color: "#10b981", description: "Calendar & events" },
-      { id: "contacts", name: "Contacts", icon: Users, href: "/tools/contacts", color: "#8b5cf6", description: "Contact directory" },
-    ],
-  },
-  {
-    name: "Content",
-    tools: [
-      { id: "files", name: "Files", icon: FolderOpen, href: "/tools/files", color: "#6366f1", description: "File browser" },
-      { id: "notes", name: "Notes", icon: StickyNote, href: "/tools/notes", color: "#a78bfa", description: "Note taking" },
-      { id: "raindrop", name: "Bookmarks", icon: Droplets, href: "/tools/raindrop", color: "#06b6d4", description: "Bookmarks & collections" },
-      { id: "news", name: "News", icon: Newspaper, href: "/tools/news", color: "#64748b", description: "News & articles" },
-      { id: "inoreader", name: "RSS", icon: BookOpen, href: "/tools/inoreader", color: "#10b981", description: "RSS feeds" },
-      { id: "spotify", name: "Spotify", icon: Music, href: "/tools/spotify", color: "#1DB954", description: "Music & playlists" },
-    ],
-  },
-  {
-    name: "Business Intelligence",
-    tools: [
-      { id: "accounts", name: "Accounts", icon: Globe, href: "/tools/accounts", color: "#64748b", description: "Account profiles" },
-      { id: "market", name: "Market", icon: DollarSign, href: "/tools/market", color: "#3b82f6", description: "Market data" },
-      { id: "trending", name: "Trending", icon: TrendingIcon, href: "/tools/trending", color: "#14b8a6", description: "Trending topics" },
-      { id: "business-info", name: "Business Info", icon: Building2, href: "/tools/business-info", color: "#8b5cf6", description: "Business data" },
-      { id: "corporate-info", name: "Corporate", icon: Briefcase, href: "/tools/company-politics", color: "#10b981", description: "Corporate insights" },
-      { id: "contact-finder", name: "Contact Finder", icon: UserSearch, href: "/tools/contact-finder", color: "#6366f1", description: "Find contacts" },
-      { id: "visual-rosters", name: "Rosters", icon: BarChart3, href: "/tools/visual-rosters", color: "#3b82f6", description: "Team rosters" },
-      { id: "image-lookup", name: "Image Lookup", icon: Image, href: "/tools/image-lookup", color: "#a78bfa", description: "Image search" },
+      { id: "emails", name: "Emails", icon: Mail, href: "/tools/emails", color: "#3b82f6" },
+      { id: "calendar", name: "Calendar", icon: Calendar, href: "/tools/calendar", color: "#10b981" },
+      { id: "contacts", name: "Contacts", icon: Users, href: "/tools/contacts", color: "#8b5cf6" },
+      { id: "people", name: "People", icon: Users, href: "/tools/people", color: "#06b6d4" },
+      { id: "recommendations", name: "Recommendations", icon: Handshake, href: "/tools/recommendations", color: "#ec4899" },
+      { id: "news", name: "News", icon: Newspaper, href: "/tools/news", color: "#64748b" },
+      { id: "inoreader", name: "RSS", icon: BookOpen, href: "/tools/inoreader", color: "#10b981" },
+      { id: "raindrop", name: "Bookmarks", icon: Droplets, href: "/tools/raindrop", color: "#06b6d4" },
+      { id: "market", name: "Market", icon: DollarSign, href: "/tools/market", color: "#3b82f6" },
+      { id: "notes", name: "Notes", icon: StickyNote, href: "/tools/notes", color: "#a78bfa" },
+      { id: "files", name: "Files", icon: FolderOpen, href: "/tools/files", color: "#6366f1" },
+      { id: "spotify", name: "Spotify", icon: Music, href: "/tools/spotify", color: "#1DB954" },
+      { id: "accounts", name: "Accounts", icon: Globe, href: "/tools/accounts", color: "#64748b" },
+      { id: "trending", name: "Trending", icon: TrendingIcon, href: "/tools/trending", color: "#14b8a6" },
+      { id: "visual-rosters", name: "Rosters", icon: BarChart3, href: "/tools/visual-rosters", color: "#3b82f6" },
     ],
   },
 ];
@@ -165,16 +202,16 @@ export default function Home() {
                 </h2>
 
                 {TOOL_CATEGORIES.map((category) => (
-                  <div key={category.name} style={{ marginBottom: "48px" }}>
+                  <div key={category.name} style={{ marginBottom: "32px" }}>
                     <h3
                       style={{
-                        fontSize: "12px",
+                        fontSize: "11px",
                         fontWeight: 700,
                         textTransform: "uppercase",
                         letterSpacing: "0.1em",
                         color: "var(--muted)",
-                        marginBottom: "16px",
-                        opacity: 0.8,
+                        marginBottom: "12px",
+                        opacity: 0.7,
                       }}
                     >
                       {category.name}
@@ -182,8 +219,8 @@ export default function Home() {
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))",
-                        gap: "16px",
+                        gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(160px, 1fr))",
+                        gap: "12px",
                       }}
                     >
                       {category.tools.map((tool) => {
@@ -193,21 +230,24 @@ export default function Home() {
                             key={tool.id}
                             className="card"
                             style={{
-                              padding: "24px",
+                              padding: "12px 14px",
                               cursor: "pointer",
                               transition: "all 0.2s",
                               position: "relative",
                               overflow: "hidden",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "10px",
                             }}
                             onClick={() => router.push(tool.href)}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = "translateY(-4px)";
+                              e.currentTarget.style.transform = "translateX(2px)";
                               e.currentTarget.style.borderColor = tool.color;
                               const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
-                              if (overlay) overlay.style.opacity = "0.1";
+                              if (overlay) overlay.style.opacity = "0.05";
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = "translateY(0)";
+                              e.currentTarget.style.transform = "translateX(0)";
                               e.currentTarget.style.borderColor = "var(--glass-border)";
                               const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
                               if (overlay) overlay.style.opacity = "0";
@@ -224,50 +264,35 @@ export default function Home() {
                                 pointerEvents: "none",
                               }}
                             />
-                            <div style={{ position: "relative", zIndex: 1 }}>
+                            <div style={{ position: "relative", zIndex: 1, flexShrink: 0 }}>
                               <div
                                 style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  borderRadius: "8px",
+                                  background: `${tool.color}20`,
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: "12px",
-                                  marginBottom: "12px",
+                                  justifyContent: "center",
                                 }}
                               >
-                                <div
-                                  style={{
-                                    width: "48px",
-                                    height: "48px",
-                                    borderRadius: "12px",
-                                    background: `${tool.color}20`,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                  }}
-                                >
-                                  <Icon style={{ width: "24px", height: "24px", color: tool.color }} />
-                                </div>
-                                <h3
-                                  style={{
-                                    fontSize: "18px",
-                                    fontWeight: 700,
-                                    color: "var(--foreground)",
-                                    margin: 0,
-                                  }}
-                                >
-                                  {tool.name}
-                                </h3>
+                                <Icon style={{ width: "16px", height: "16px", color: tool.color }} />
                               </div>
-                              <p
-                                style={{
-                                  fontSize: "13px",
-                                  color: "var(--muted)",
-                                  lineHeight: "1.5",
-                                  margin: 0,
-                                }}
-                              >
-                                {tool.description}
-                              </p>
                             </div>
+                            <h3
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                color: "var(--foreground)",
+                                margin: 0,
+                                minWidth: 0,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {tool.name}
+                            </h3>
                           </div>
                         );
                       })}
