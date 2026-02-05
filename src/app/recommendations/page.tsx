@@ -32,7 +32,7 @@ export default function RecommendationsPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #be123c 0%, #1e293b 50%, #0f172a 100%)',
+      background: 'linear-gradient(135deg, #8b5cf6 0%, #1e293b 50%, #0f172a 100%)',
       padding: '40px 20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
@@ -68,8 +68,8 @@ export default function RecommendationsPage() {
               onClick={() => setStatusFilter(status)}
               style={{
                 padding: '12px 24px',
-                background: statusFilter === status ? 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)' : 'rgba(30, 41, 59, 0.8)',
-                border: '1px solid ' + (statusFilter === status ? 'rgba(236, 72, 153, 0.5)' : 'rgba(148, 163, 184, 0.15)'),
+                background: statusFilter === status ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' : 'rgba(30, 41, 59, 0.8)',
+                border: '1px solid ' + (statusFilter === status ? 'rgba(139, 92, 246, 0.5)' : 'rgba(148, 163, 184, 0.15)'),
                 borderRadius: '10px',
                 color: 'white',
                 fontSize: '14px',
@@ -138,10 +138,10 @@ export default function RecommendationsPage() {
                   <a href={rec.url} target="_blank" rel="noopener noreferrer" style={{
                     display: 'inline-block',
                     padding: '10px 20px',
-                    background: 'rgba(236, 72, 153, 0.15)',
-                    border: '1px solid rgba(236, 72, 153, 0.3)',
+                    background: 'rgba(139, 92, 246, 0.15)',
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
                     borderRadius: '8px',
-                    color: '#ec4899',
+                    color: '#8b5cf6',
                     textDecoration: 'none',
                     fontSize: '14px',
                     fontWeight: '500',

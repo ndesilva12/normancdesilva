@@ -51,7 +51,7 @@ export default function DeepSearchPage() {
           marginTop: '24px',
           marginBottom: '12px'
         }}>
-          🔎 Deep Search
+          Deep Search
         </h1>
         <p style={{ fontSize: '18px', color: '#94a3b8', marginBottom: '40px' }}>
           Advanced research tool

@@ -35,7 +35,7 @@ export default function MissionPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #4c1d95 0%, #1e293b 50%, #0f172a 100%)',
+      background: 'linear-gradient(135deg, #6366f1 0%, #1e293b 50%, #0f172a 100%)',
       padding: '40px 20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>

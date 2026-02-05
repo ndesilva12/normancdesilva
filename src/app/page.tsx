@@ -6,7 +6,6 @@ import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { IntelToolsBar } from "@/components/home/IntelToolsBar";
 import { QuickAccessDock } from "@/components/home/QuickAccessDock";
 import { DashboardQuickLinks } from "@/components/home/DashboardQuickLinks";
-import { RemindersBanner } from "@/components/RemindersBanner";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -163,9 +162,6 @@ export default function Home() {
             margin: "0 auto",
           }}
         >
-          {/* Reminders */}
-          <RemindersBanner />
-
           {/* Date/Time (mobile only) */}
           {isMobile && <MobileDateTimeBanner />}
 

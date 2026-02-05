@@ -51,7 +51,7 @@ export default function DarkSearchPage() {
           marginTop: '24px',
           marginBottom: '12px'
         }}>
-          🕵️ Dark Search
+          Dark Search
         </h1>
         <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '40px' }}>
           Deep web research & hidden insights

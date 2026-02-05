@@ -29,7 +29,7 @@ export default function CuratePage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #7c3aed 0%, #1e293b 50%, #0f172a 100%)',
+      background: 'linear-gradient(135deg, #8b5cf6 0%, #1e293b 50%, #0f172a 100%)',
       padding: '40px 20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
@@ -51,7 +51,7 @@ export default function CuratePage() {
           marginTop: '24px',
           marginBottom: '12px'
         }}>
-          ✨ Curate
+          Curate
         </h1>
         <p style={{ fontSize: '18px', color: '#94a3b8', marginBottom: '40px' }}>
           AI-powered content curation
@@ -81,7 +81,7 @@ export default function CuratePage() {
             disabled={loading}
             style={{
               padding: '20px 40px',
-              background: loading ? 'rgba(124, 58, 237, 0.5)' : 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+              background: loading ? 'rgba(139, 92, 246, 0.5)' : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
               border: 'none',
               borderRadius: '12px',
               color: 'white',

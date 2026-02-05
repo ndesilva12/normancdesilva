@@ -17,7 +17,7 @@ const QUICK_LINKS = [
     name: "Relationship Intel",
     icon: Users,
     href: "/relationship-intel",
-    color: "#8b5cf6",
+    color: "#3b82f6",
     description: "Contact insights & history",
   },
   {
@@ -25,7 +25,7 @@ const QUICK_LINKS = [
     name: "Mission Control",
     icon: Target,
     href: "/mission",
-    color: "#f59e0b",
+    color: "#6366f1",
     description: "Kanban task board",
   },
   {
@@ -33,7 +33,7 @@ const QUICK_LINKS = [
     name: "People Database",
     icon: UserSquare2,
     href: "/people",
-    color: "#3b82f6",
+    color: "#10b981",
     description: "Sync & manage contacts",
   },
   {
@@ -41,7 +41,7 @@ const QUICK_LINKS = [
     name: "Recommendations",
     icon: Lightbulb,
     href: "/recommendations",
-    color: "#10b981",
+    color: "#8b5cf6",
     description: "Track suggestions",
   },
 ];

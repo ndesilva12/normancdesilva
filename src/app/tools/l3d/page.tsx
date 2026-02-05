@@ -29,7 +29,7 @@ export default function L3DPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f59e0b 0%, #1e293b 50%, #0f172a 100%)',
+      background: 'linear-gradient(135deg, #10b981 0%, #1e293b 50%, #0f172a 100%)',
       padding: '40px 20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
@@ -51,7 +51,7 @@ export default function L3DPage() {
           marginTop: '24px',
           marginBottom: '12px'
         }}>
-          📅 L3D (Last 30 Days)
+          L3D (Last 30 Days)
         </h1>
         <p style={{ fontSize: '18px', color: '#94a3b8', marginBottom: '40px' }}>
           Recent trends & insights from the last 30 days
@@ -81,7 +81,7 @@ export default function L3DPage() {
             disabled={loading}
             style={{
               padding: '20px 40px',
-              background: loading ? 'rgba(245, 158, 11, 0.5)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              background: loading ? 'rgba(16, 185, 129, 0.5)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               border: 'none',
               borderRadius: '12px',
               color: 'white',

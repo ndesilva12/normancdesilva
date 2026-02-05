@@ -3,21 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Search,
-  X,
-  Users,
-  Mail,
-  Calendar,
-  FileText,
-  Bookmark,
-  User,
-  Layers,
-  Zap,
-  Eye,
-  ArrowRight,
-  Command
-} from 'lucide-react';
+import { Search, X, Command } from 'lucide-react';
 
 interface SearchResult {
   id: string;
@@ -30,15 +16,15 @@ interface SearchResult {
   metadata?: Record<string, any>;
 }
 
-const typeConfig = {
-  contact: { icon: Users, color: '#a855f7', label: 'Contact' },
-  interaction: { icon: Mail, color: '#06b6d4', label: 'Interaction' },
-  mission: { icon: Layers, color: '#f59e0b', label: 'Mission' },
-  curate: { icon: Zap, color: '#10b981', label: 'Curate' },
-  deep_search: { icon: Eye, color: '#6366f1', label: 'Deep Search' },
-  dark_search: { icon: Eye, color: '#ef4444', label: 'Dark Search' },
-  recommendation: { icon: Bookmark, color: '#ec4899', label: 'Recommendation' },
-  person: { icon: User, color: '#8b5cf6', label: 'Person' },
+const typeLabels: Record<string, string> = {
+  contact: 'Contact',
+  interaction: 'Interaction',
+  mission: 'Mission',
+  curate: 'Curate',
+  deep_search: 'Deep Search',
+  dark_search: 'Dark Search',
+  recommendation: 'Recommendation',
+  person: 'Person',
 };
 
 interface GlobalSearchProps {
@@ -144,17 +130,6 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Group results by type
-  const groupedResults = results.reduce((acc, result) => {
-    if (!acc[result.type]) {
-      acc[result.type] = [];
-    }
-    acc[result.type].push(result);
-    return acc;
-  }, {} as Record<string, SearchResult[]>);
-
-  let flatIndex = 0;
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -162,7 +137,17 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-start justify-center pt-[15vh]"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'start',
+            justifyContent: 'center',
+            paddingTop: '15vh',
+          }}
           onClick={onClose}
         >
           <motion.div
@@ -171,13 +156,29 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ duration: 0.15 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-2xl mx-4"
+            style={{
+              width: '100%',
+              maxWidth: '700px',
+              margin: '0 16px',
+            }}
           >
             {/* Search Container */}
-            <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+            <div style={{
+              background: 'rgba(30, 41, 59, 0.98)',
+              borderRadius: '16px',
+              border: '1px solid rgba(148, 163, 184, 0.2)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              overflow: 'hidden',
+            }}>
               {/* Search Input */}
-              <div className="flex items-center gap-3 p-4 border-b border-white/10">
-                <Search size={20} className="text-gray-400" />
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '20px 24px',
+                borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+              }}>
+                <Search size={22} style={{ color: '#94a3b8', flexShrink: 0 }} />
                 <input
                   ref={inputRef}
                   type="text"
@@ -185,86 +186,151 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Search everything..."
-                  className="flex-1 bg-transparent text-white text-lg outline-none placeholder-gray-500"
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    color: 'white',
+                    fontSize: '18px',
+                    outline: 'none',
+                    border: 'none',
+                  }}
                 />
                 {loading && (
-                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    border: '2px solid #6366f1',
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 0.6s linear infinite',
+                  }} />
                 )}
-                <div className="flex items-center gap-1 text-gray-500 text-sm">
-                  <kbd className="px-2 py-0.5 bg-white/10 rounded text-xs">esc</kbd>
-                </div>
+                <button
+                  onClick={onClose}
+                  style={{
+                    padding: '6px',
+                    background: 'rgba(148, 163, 184, 0.1)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <X size={16} />
+                </button>
               </div>
 
               {/* Results */}
-              <div className="max-h-[50vh] overflow-y-auto">
+              <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
                 {query.length < 2 ? (
-                  <div className="p-8 text-center">
-                    <div className="text-gray-400 mb-4">
-                      <Search size={32} className="mx-auto mb-3 opacity-50" />
-                      <p>Search across all your data</p>
-                    </div>
-                    <div className="flex flex-wrap justify-center gap-2 text-xs text-gray-500">
-                      <span className="px-2 py-1 bg-white/5 rounded">Contacts</span>
-                      <span className="px-2 py-1 bg-white/5 rounded">Emails</span>
-                      <span className="px-2 py-1 bg-white/5 rounded">Meetings</span>
-                      <span className="px-2 py-1 bg-white/5 rounded">Search History</span>
-                      <span className="px-2 py-1 bg-white/5 rounded">Recommendations</span>
+                  <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+                    <Search size={40} style={{ color: '#475569', margin: '0 auto 16px auto', opacity: 0.5 }} />
+                    <p style={{ color: '#94a3b8', fontSize: '15px', marginBottom: '20px' }}>
+                      Search across all your data
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px' }}>
+                      {['Contacts', 'Emails', 'Meetings', 'Search History', 'Recommendations'].map(tag => (
+                        <span key={tag} style={{
+                          padding: '6px 12px',
+                          background: 'rgba(148, 163, 184, 0.08)',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          color: '#64748b',
+                        }}>
+                          {tag}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 ) : results.length === 0 && !loading ? (
-                  <div className="p-8 text-center text-gray-400">
-                    <p>No results found for &quot;{query}&quot;</p>
+                  <div style={{ padding: '48px 24px', textAlign: 'center', color: '#94a3b8' }}>
+                    <p style={{ fontSize: '15px' }}>No results found for &quot;{query}&quot;</p>
                   </div>
                 ) : (
-                  <div className="py-2">
-                    {Object.entries(groupedResults).map(([type, typeResults]) => {
-                      const config = typeConfig[type as keyof typeof typeConfig];
-                      const Icon = config?.icon || FileText;
-
+                  <div style={{ padding: '8px 0' }}>
+                    {results.map((result, idx) => {
+                      const isSelected = idx === selectedIndex;
                       return (
-                        <div key={type}>
-                          <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                            <Icon size={14} style={{ color: config?.color }} />
-                            {config?.label || type}
+                        <button
+                          key={result.id}
+                          onClick={() => navigateToResult(result)}
+                          onMouseEnter={() => setSelectedIndex(idx)}
+                          style={{
+                            width: '100%',
+                            padding: '16px 24px',
+                            display: 'flex',
+                            alignItems: 'start',
+                            gap: '16px',
+                            textAlign: 'left',
+                            background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'background 0.15s ease',
+                            color: 'white',
+                          }}
+                          onMouseOver={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = 'rgba(148, 163, 184, 0.05)';
+                          }}
+                          onMouseOut={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = 'transparent';
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ 
+                              fontSize: '15px', 
+                              fontWeight: 600, 
+                              color: 'white',
+                              marginBottom: '4px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}>
+                              {result.title}
+                            </div>
+                            {result.subtitle && (
+                              <div style={{ 
+                                fontSize: '14px', 
+                                color: '#cbd5e1',
+                                marginBottom: '4px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}>
+                                {result.subtitle}
+                              </div>
+                            )}
+                            {result.snippet && (
+                              <div style={{ 
+                                fontSize: '13px', 
+                                color: '#94a3b8',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}>
+                                {result.snippet}
+                              </div>
+                            )}
                           </div>
-                          {typeResults.map((result) => {
-                            const currentIndex = flatIndex++;
-                            const isSelected = currentIndex === selectedIndex;
-
-                            return (
-                              <button
-                                key={result.id}
-                                onClick={() => navigateToResult(result)}
-                                onMouseEnter={() => setSelectedIndex(currentIndex)}
-                                className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors ${
-                                  isSelected ? 'bg-purple-500/20' : 'hover:bg-white/5'
-                                }`}
-                              >
-                                <div
-                                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                                  style={{ background: `${config?.color}20` }}
-                                >
-                                  <Icon size={20} style={{ color: config?.color }} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-white truncate">{result.title}</div>
-                                  {result.subtitle && (
-                                    <div className="text-sm text-gray-400 truncate">{result.subtitle}</div>
-                                  )}
-                                  {result.snippet && (
-                                    <div className="text-xs text-gray-500 truncate mt-0.5">{result.snippet}</div>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  {result.timestamp && (
-                                    <span className="text-xs text-gray-500">{formatTimestamp(result.timestamp)}</span>
-                                  )}
-                                  {isSelected && <ArrowRight size={16} className="text-purple-400" />}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'end', gap: '4px', flexShrink: 0 }}>
+                            <span style={{
+                              fontSize: '11px',
+                              color: '#64748b',
+                              textTransform: 'uppercase',
+                              fontWeight: 600,
+                              letterSpacing: '0.05em',
+                            }}>
+                              {typeLabels[result.type] || result.type}
+                            </span>
+                            {result.timestamp && (
+                              <span style={{ fontSize: '12px', color: '#64748b' }}>
+                                {formatTimestamp(result.timestamp)}
+                              </span>
+                            )}
+                          </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -272,23 +338,26 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
               </div>
 
               {/* Footer */}
-              <div className="px-4 py-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-500">
-                <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 bg-white/10 rounded">↑</kbd>
-                    <kbd className="px-1.5 py-0.5 bg-white/10 rounded">↓</kbd>
-                    navigate
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 bg-white/10 rounded">↵</kbd>
-                    select
+              {results.length > 0 && (
+                <div style={{
+                  padding: '12px 24px',
+                  borderTop: '1px solid rgba(148, 163, 184, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '12px',
+                  color: '#64748b',
+                }}>
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <span>↑↓ navigate</span>
+                    <span>↵ select</span>
+                  </div>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Command size={12} />
+                    <span>K to search</span>
                   </span>
                 </div>
-                <span className="flex items-center gap-1">
-                  <Command size={12} />
-                  <span>K to search</span>
-                </span>
-              </div>
+              )}
             </div>
           </motion.div>
         </motion.div>
