@@ -204,40 +204,40 @@ export default function PeoplePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-12 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm mb-6"
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 text-sm mb-8"
         >
           <ArrowLeft size={16} />
           Back to Dashboard
         </Link>
 
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-              <Users size={24} />
+        <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
+              <Users size={28} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent mb-2">
                 People Database
               </h1>
-              <p className="text-gray-400">{people.length} people in your network</p>
+              <p className="text-gray-400 text-lg">{people.length} people in your network</p>
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             <button
               onClick={syncFromNotion}
               disabled={syncing}
-              className="px-4 py-2 bg-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 transition-colors disabled:opacity-50"
+              className="px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 hover:border-white/20 transition-all duration-200 disabled:opacity-50"
             >
               <CloudDownload size={18} className={syncing ? 'animate-pulse' : ''} />
               {syncing ? 'Syncing...' : 'Sync Notion'}
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-5 py-2 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-lg hover:shadow-violet-500/20 transition-all"
+              className="px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-violet-500/25 hover:scale-105 transition-all duration-200"
             >
               <Plus size={20} />
               Add Person
@@ -247,51 +247,51 @@ export default function PeoplePage() {
       </div>
 
       {/* Search */}
-      <div className="max-w-7xl mx-auto px-6 mb-6">
-        <div className="relative max-w-md">
+      <div className="max-w-7xl mx-auto px-12 mb-8">
+        <div className="relative max-w-lg">
           <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search people..."
-            className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+            className="w-full pl-12 pr-4 py-4 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 focus:bg-white/10 transition-all duration-200"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="max-w-7xl mx-auto px-6 pb-12">
-        <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-12 pb-16">
+        <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-400">Name</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-400">Relationship</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-400">Contact</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-400">Company</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-400">Tags</th>
-                  <th className="text-right px-6 py-4 text-sm font-semibold text-gray-400">Actions</th>
+                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Name</th>
+                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Relationship</th>
+                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Contact</th>
+                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Company</th>
+                  <th className="text-left px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Tags</th>
+                  <th className="text-right px-8 py-6 text-sm font-semibold text-gray-400 uppercase tracking-wide">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredPeople.map((person) => (
-                  <tr key={person.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4">
+                  <tr key={person.id} className="border-b border-white/5 hover:bg-white/10 transition-all duration-200 group">
+                    <td className="px-8 py-6">
                       <div className="font-medium">{person.name}</div>
                       {person.notes && (
                         <div className="text-xs text-gray-500 truncate max-w-[200px]">{person.notes}</div>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-8 py-6">
                       {person.relationship && (
-                        <span className="px-2 py-1 bg-violet-500/20 text-violet-300 rounded text-xs font-medium">
+                        <span className="px-3 py-1.5 bg-violet-500/20 text-violet-300 rounded-lg text-xs font-medium border border-violet-500/30">
                           {person.relationship}
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-8 py-6">
                       <div className="space-y-1">
                         {person.email && (
                           <div className="flex items-center gap-1 text-sm text-gray-400">
@@ -307,39 +307,39 @@ export default function PeoplePage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-8 py-6">
                       {person.company && (
-                        <div className="flex items-center gap-1 text-sm text-gray-400">
-                          <Building size={12} />
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <Building size={14} />
                           <span>{person.company}</span>
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
+                    <td className="px-8 py-6">
+                      <div className="flex flex-wrap gap-2">
                         {person.tags?.slice(0, 3).map(tag => (
-                          <span key={tag} className="px-2 py-0.5 bg-white/10 text-gray-300 rounded text-xs">
+                          <span key={tag} className="px-2 py-1 bg-white/10 text-gray-300 rounded-lg text-xs font-medium border border-white/20">
                             {tag}
                           </span>
                         ))}
                         {person.tags && person.tags.length > 3 && (
-                          <span className="text-xs text-gray-500">+{person.tags.length - 3}</span>
+                          <span className="text-xs text-gray-500 font-medium">+{person.tags.length - 3}</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button
                           onClick={() => openEdit(person)}
-                          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                          className="p-2.5 hover:bg-white/10 rounded-lg transition-all duration-200 hover:scale-110"
                         >
-                          <Edit2 size={16} className="text-gray-400" />
+                          <Edit2 size={16} className="text-gray-400 hover:text-white" />
                         </button>
                         <button
                           onClick={() => deletePerson(person.id)}
-                          className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                          className="p-2.5 hover:bg-red-500/20 rounded-lg transition-all duration-200 hover:scale-110"
                         >
-                          <Trash2 size={16} className="text-red-400" />
+                          <Trash2 size={16} className="text-red-400 hover:text-red-300" />
                         </button>
                       </div>
                     </td>
@@ -350,8 +350,9 @@ export default function PeoplePage() {
           </div>
 
           {filteredPeople.length === 0 && (
-            <div className="p-12 text-center text-gray-400">
-              {searchQuery ? 'No people found matching your search' : 'No people in the database yet'}
+            <div className="p-16 text-center text-gray-400">
+              <Users size={48} className="mx-auto mb-4 text-gray-600" />
+              <p className="text-lg">{searchQuery ? 'No people found matching your search' : 'No people in the database yet'}</p>
             </div>
           )}
         </div>
