@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Users, Search, Mail, Phone, MessageSquare } from "lucide-react";
 
 export default function RelationshipIntelPage() {
-  const [selectedContact, setSelectedContact] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -31,89 +29,189 @@ export default function RelationshipIntelPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a]">
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #1e3a8a 0%, #1e293b 50%, #0f172a 100%)',
+      padding: '40px 20px',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    }}>
       {/* Header */}
-      <div className="bg-[#1e293b]/80 backdrop-blur-xl border-b border-slate-700/50">
-        <div className="max-w-7xl mx-auto px-8 py-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-6">
-            <ArrowLeft size={16} />
-            Dashboard
-          </Link>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                <Users size={28} className="text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-white mb-1">Relationship Intel</h1>
-                <p className="text-slate-400">{contacts.length} contacts</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div style={{ maxWidth: '1200px', margin: '0 auto 40px auto' }}>
+        <Link href="/" style={{ 
+          color: '#94a3b8', 
+          textDecoration: 'none',
+          fontSize: '14px',
+          marginBottom: '24px',
+          display: 'inline-block'
+        }}>
+          ← Back to Dashboard
+        </Link>
+        
+        <h1 style={{ 
+          fontSize: '48px', 
+          fontWeight: 'bold', 
+          color: 'white',
+          marginBottom: '12px'
+        }}>
+          Relationship Intel
+        </h1>
+        <p style={{ fontSize: '18px', color: '#94a3b8' }}>
+          {contacts.length} contacts tracked
+        </p>
       </div>
 
-      {/* Search - Solid Container */}
-      <div className="max-w-7xl mx-auto px-8 py-8">
-        <div className="bg-[#1e293b] rounded-2xl border border-slate-700/50 p-6 shadow-2xl">
-          <div className="relative">
-            <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search by name, company, or role..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-slate-800/70 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all"
-            />
-          </div>
-        </div>
+      {/* Search */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto 40px auto' }}>
+        <input
+          type="text"
+          placeholder="Search contacts..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '20px 24px',
+            fontSize: '16px',
+            background: 'rgba(30, 41, 59, 0.9)',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            borderRadius: '12px',
+            color: 'white',
+            outline: 'none',
+          }}
+        />
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-8 pb-12">
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {loading ? (
-          <div className="bg-[#1e293b] rounded-2xl border border-slate-700/50 p-16 shadow-2xl text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '100px 20px', 
+            color: '#94a3b8' 
+          }}>
+            Loading contacts...
           </div>
         ) : filteredContacts.length === 0 ? (
-          <div className="bg-[#1e293b] rounded-2xl border border-slate-700/50 p-16 shadow-2xl text-center">
-            <div className="w-16 h-16 rounded-xl bg-slate-800 flex items-center justify-center mx-auto mb-6">
-              <Users size={32} className="text-slate-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">No contacts yet</h3>
-            <p className="text-slate-400">Start building your network</p>
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '100px 20px',
+            background: 'rgba(30, 41, 59, 0.5)',
+            borderRadius: '16px',
+            border: '1px solid rgba(148, 163, 184, 0.1)'
+          }}>
+            <h3 style={{ fontSize: '24px', color: 'white', marginBottom: '12px' }}>
+              No contacts found
+            </h3>
+            <p style={{ color: '#94a3b8' }}>
+              {searchQuery ? 'Try a different search' : 'Start building your network'}
+            </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div style={{ display: 'grid', gap: '20px' }}>
             {filteredContacts.map((contact) => (
               <div
                 key={contact.id}
-                onClick={() => setSelectedContact(contact)}
-                className="bg-[#1e293b] hover:bg-[#1e293b]/80 border border-slate-700/50 rounded-2xl p-6 cursor-pointer transition-all shadow-lg"
+                style={{
+                  background: 'rgba(30, 41, 59, 0.8)',
+                  border: '1px solid rgba(148, 163, 184, 0.15)',
+                  borderRadius: '16px',
+                  padding: '32px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.95)';
+                  e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)';
+                  e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.15)';
+                }}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-slate-600">
-                      <span className="text-xl font-bold text-white">{contact.name.charAt(0)}</span>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-white mb-1">{contact.name}</h3>
-                      <p className="text-slate-400 mb-3">{contact.email}</p>
-                      <div className="flex items-center gap-4 text-xs text-slate-500">
-                        <span className="flex items-center gap-1.5">
-                          <MessageSquare size={14} />
-                          {contact.interaction_count || 0} interactions
-                        </span>
-                      </div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
+                  {/* Avatar */}
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '28px',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    flexShrink: 0,
+                  }}>
+                    {contact.name.charAt(0).toUpperCase()}
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ 
+                      fontSize: '24px', 
+                      fontWeight: '600', 
+                      color: 'white',
+                      marginBottom: '8px'
+                    }}>
+                      {contact.name}
+                    </h3>
+                    <p style={{ 
+                      fontSize: '16px', 
+                      color: '#94a3b8',
+                      marginBottom: '16px'
+                    }}>
+                      {contact.email}
+                    </p>
+                    {contact.company && (
+                      <p style={{ 
+                        fontSize: '14px', 
+                        color: '#64748b',
+                        marginBottom: '16px'
+                      }}>
+                        {contact.company}
+                      </p>
+                    )}
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '24px',
+                      fontSize: '14px',
+                      color: '#64748b'
+                    }}>
+                      <span>
+                        💬 {contact.interaction_count || 0} interactions
+                      </span>
+                      <span>
+                        📧 Last: {contact.last_contact ? new Date(contact.last_contact).toLocaleDateString() : 'Never'}
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button className="p-3 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl transition-colors">
-                      <Mail size={16} className="text-slate-300" />
-                    </button>
-                    <button className="p-3 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl transition-colors">
-                      <Phone size={16} className="text-slate-300" />
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `mailto:${contact.email}`;
+                      }}
+                      style={{
+                        padding: '12px 24px',
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '8px',
+                        color: '#60a5fa',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.25)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)';
+                      }}
+                    >
+                      Email
                     </button>
                   </div>
                 </div>
