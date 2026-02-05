@@ -126,9 +126,7 @@ export default function DarkSearchPage() {
               Enter a query above for deep web research
             </p>
           </div>
-<<<<<<< HEAD
         )}
-=======
 
           {/* Search Interface */}
           <div className="max-w-5xl mx-auto mb-12">
@@ -253,7 +251,6 @@ export default function DarkSearchPage() {
             </div>
           )}
         </div>
->>>>>>> eb6f69f (Restore Dark Search 3-mode selector with improved styling)
       </div>
     </div>
   );
