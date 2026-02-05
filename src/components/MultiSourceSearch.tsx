@@ -1610,10 +1610,10 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
 
   // Build ordered source list for display
   const orderedSources = useMemo(() => {
-    // Order: Google, Images, News, Trends, Duck, Wikipedia, Grokipedia | tools | X, Youtube, Rumble, Amazon | individual AI
+    // Order: Google, Images, News, Trends, Duck, Wikipedia, Grokipedia | Spotify | X, Youtube, Rumble, Amazon | individual AI
     const order: UnifiedSourceId[] = [
       "google", "images", "news", "trends", "duck", "wikipedia", "grokipedia",
-      "image-lookup", "spotify",
+      "spotify",
       "x", "youtube", "rumble", "amazon",
       "grok", "gemini", "claude", "chatgpt",
     ];

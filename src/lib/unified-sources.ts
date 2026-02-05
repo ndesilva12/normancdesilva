@@ -13,8 +13,6 @@ export type UnifiedSourceId =
   | "youtube"
   | "rumble"
   | "amazon"
-  // Tool sources (removed: deep-search, dark-search, corporate-info, business-info, contact-finder, rosters - have dedicated pages)
-  | "image-lookup"
   | "spotify"
   // AI sources (last)
   | "grok"
