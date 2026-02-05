@@ -149,6 +149,17 @@ export default function RelationshipIntelPage() {
                   }}>
                     {contact.name.charAt(0).toUpperCase()}
                   </div>
+                  <button onClick={() => setSelectedContact(null)} style={{
+                    padding: "10px",
+                    background: "rgba(255, 255, 255, 0.1)",
+                    border: "none",
+                    borderRadius: "10px",
+                    color: "#9ca3af",
+                    cursor: "pointer",
+                  }}>
+                    <X size={22} />
+                  </button>
+                </div>
 
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
