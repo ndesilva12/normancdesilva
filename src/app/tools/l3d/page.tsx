@@ -1,8 +1,8 @@
 "use client";
 import { IntelToolHistory } from "@/components/IntelToolHistory";
+import { IntelToolNav } from "@/components/IntelToolNav";
 
 import { useState } from "react";
-import Link from "next/link";
 import { TrendingUp, Search } from "lucide-react";
 
 export default function L3DPage() {
@@ -38,17 +38,9 @@ export default function L3DPage() {
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <Link href="/" style={{ 
-          color: '#94a3b8', 
-          textDecoration: 'none',
-          fontSize: '14px',
-          marginBottom: '24px',
-          display: 'inline-block'
-        }}>
-          ← Back to Dashboard
-        </Link>
+        <IntelToolNav current="l3d" />
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px', marginTop: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
           <TrendingUp size={48} style={{ color: '#34d399' }} />
           <h1 style={{ 
             fontSize: '48px', 

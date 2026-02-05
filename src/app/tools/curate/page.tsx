@@ -1,7 +1,7 @@
 "use client";
 import { IntelToolHistory } from "@/components/IntelToolHistory";
+import { IntelToolNav } from "@/components/IntelToolNav";
 import { useState } from "react";
-import Link from "next/link";
 import { Sparkles, Search } from "lucide-react";
 
 export default function CuratePage() {
@@ -38,17 +38,9 @@ export default function CuratePage() {
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <Link href="/" style={{ 
-          color: '#94a3b8', 
-          textDecoration: 'none',
-          fontSize: '14px',
-          marginBottom: '24px',
-          display: 'inline-block'
-        }}>
-          ← Back to Dashboard
-        </Link>
+        <IntelToolNav current="curate" />
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px', marginTop: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
           <Sparkles size={48} style={{ color: '#a78bfa' }} />
           <h1 style={{ 
             fontSize: '48px', 

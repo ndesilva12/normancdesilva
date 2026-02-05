@@ -9,7 +9,7 @@ interface IntelToolNavProps {
 
 const TOOLS = [
   { id: "curate", name: "Curate", href: "/tools/curate", icon: Sparkles, color: "#a78bfa" },
-  { id: "l3d", name: "Last 30 Days", href: "/tools/last30days", icon: Calendar, color: "#10b981" },
+  { id: "l3d", name: "L3D", href: "/tools/l3d", icon: Calendar, color: "#10b981" },
   { id: "deep", name: "Deep Search", href: "/tools/deep-search", icon: Search, color: "#3b82f6" },
   { id: "dark", name: "Dark Search", href: "/tools/dark-search", icon: Moon, color: "#ef4444" },
 ];
