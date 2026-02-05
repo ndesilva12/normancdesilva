@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { spawn } from 'child_process';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
@@ -22,7 +21,7 @@ const db = getFirestore();
 
 export async function POST(request: Request) {
   try {
-    const { query } = await request.json();
+    const { query, source } = await request.json();
 
     if (!query?.trim()) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
@@ -37,61 +36,36 @@ export async function POST(request: Request) {
       error: null,
     });
 
-    // Run curate script asynchronously
-    const scriptPath = '/home/ubuntu/clawd/skills/curate/curate_v3.py';
-    const workingDir = '/home/ubuntu/clawd/skills/curate';
-
-    const process = spawn('python3', [scriptPath, query], {
-      cwd: workingDir,
-      env: {
-        ...process.env,
-        PYTHONUNBUFFERED: '1',
-      },
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    process.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    process.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    // Don't wait for completion - return immediately
-    process.on('close', async (code) => {
-      try {
-        if (code === 0) {
-          // Parse results from stdout
-          let results = null;
-          try {
-            // Look for JSON output in stdout
-            const jsonMatch = stdout.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              results = JSON.parse(jsonMatch[0]);
-            }
-          } catch (e) {
-            console.error('Failed to parse results:', e);
-          }
-
+    // Call external Python API
+    const apiUrl = process.env.PYTHON_API_URL || 'https://api.normancdesilva.com';
+    
+    console.log(`Calling Python API: ${apiUrl}/curate`);
+    
+    fetch(`${apiUrl}/curate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: query.trim(), source: source || 'all' }),
+    })
+      .then(res => res.json())
+      .then(async (apiResult) => {
+        if (apiResult.success && apiResult.result) {
           await db.collection('curate_history').doc(historyRef.id).update({
             status: 'completed',
-            results: results || { output: stdout },
+            results: apiResult.result,
             completed_at: Timestamp.now(),
           });
         } else {
-          await db.collection('curate_history').doc(historyRef.id).update({
-            status: 'failed',
-            error: stderr || stdout || 'Unknown error',
-            completed_at: Timestamp.now(),
-          });
+          throw new Error(apiResult.error || 'Unknown error');
         }
-      } catch (error) {
-        console.error('Error updating history:', error);
-      }
-    });
+      })
+      .catch(async (error) => {
+        console.error('Curate API error:', error);
+        await db.collection('curate_history').doc(historyRef.id).update({
+          status: 'failed',
+          error: error.message || 'Failed to curate',
+          completed_at: Timestamp.now(),
+        });
+      });
 
     return NextResponse.json({
       id: historyRef.id,
