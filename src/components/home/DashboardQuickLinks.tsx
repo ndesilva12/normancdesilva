@@ -8,16 +8,25 @@ import {
   Lightbulb,
   Search,
   Command,
+  TrendingUp,
 } from "lucide-react";
 import { useGlobalSearch } from "../GlobalSearchProvider";
 
 const QUICK_LINKS = [
   {
+    id: "investors",
+    name: "Investor Pipeline",
+    icon: TrendingUp,
+    href: "/investors",
+    color: "#3b82f6",
+    description: "Track fundraising progress",
+  },
+  {
     id: "relationship-intel",
     name: "Relationship Intel",
     icon: Users,
     href: "/relationship-intel",
-    color: "#3b82f6",
+    color: "#6366f1",
     description: "Contact insights & history",
   },
   {
@@ -25,7 +34,7 @@ const QUICK_LINKS = [
     name: "Mission Control",
     icon: Target,
     href: "/mission",
-    color: "#6366f1",
+    color: "#8b5cf6",
     description: "Kanban task board",
   },
   {
@@ -41,7 +50,7 @@ const QUICK_LINKS = [
     name: "Recommendations",
     icon: Lightbulb,
     href: "/recommendations",
-    color: "#8b5cf6",
+    color: "#a78bfa",
     description: "Track suggestions",
   },
 ];
