@@ -4,6 +4,22 @@ import { useState, useEffect } from "react";
 import { Calendar, Search, Globe, MessageSquare, Hash, RefreshCw, ExternalLink, TrendingUp, CheckCircle, XCircle, Lightbulb, FileText } from "lucide-react";
 import { IntelToolNav } from "@/components/IntelToolNav";
 
+// Utility to clean HTML entities and tags from L3D results
+function cleanText(text: string): string {
+  if (!text) return '';
+  // Decode HTML entities
+  const txt = document.createElement('textarea');
+  txt.innerHTML = text;
+  let cleaned = txt.value;
+  // Remove HTML tags
+  cleaned = cleaned.replace(/<[^>]*>/g, '');
+  // Filter out junk patterns
+  if (cleaned.includes('No Images Produced') || cleaned.includes('file extension to')) {
+    return ''; // Skip this garbage result
+  }
+  return cleaned.trim();
+}
+
 interface ResearchResult {
   patterns: string[];
   mistakes: string[];
@@ -312,24 +328,28 @@ export default function Last30DaysPage() {
                 paddingLeft: "24px",
                 listStyle: "none",
               }}>
-                {result.patterns.map((pattern, idx) => (
-                  <li key={idx} style={{
-                    fontSize: "15px",
-                    lineHeight: "1.7",
-                    color: "#cbd5e1",
-                    marginBottom: "12px",
-                    position: "relative",
-                    paddingLeft: "8px",
-                  }}>
-                    <span style={{
-                      position: "absolute",
-                      left: "-16px",
-                      color: "#10b981",
-                      fontWeight: "bold",
-                    }}>•</span>
-                    {pattern}
-                  </li>
-                ))}
+                {result.patterns.map((pattern, idx) => {
+                  const cleaned = cleanText(pattern);
+                  if (!cleaned) return null;
+                  return (
+                    <li key={idx} style={{
+                      fontSize: "15px",
+                      lineHeight: "1.7",
+                      color: "#cbd5e1",
+                      marginBottom: "12px",
+                      position: "relative",
+                      paddingLeft: "8px",
+                    }}>
+                      <span style={{
+                        position: "absolute",
+                        left: "-16px",
+                        color: "#10b981",
+                        fontWeight: "bold",
+                      }}>•</span>
+                      {cleaned}
+                    </li>
+                  );
+                }).filter(Boolean)}
               </ul>
             </div>
           )}
@@ -376,24 +396,28 @@ export default function Last30DaysPage() {
                 paddingLeft: "24px",
                 listStyle: "none",
               }}>
-                {result.mistakes.map((mistake, idx) => (
-                  <li key={idx} style={{
-                    fontSize: "15px",
-                    lineHeight: "1.7",
-                    color: "#cbd5e1",
-                    marginBottom: "12px",
-                    position: "relative",
-                    paddingLeft: "8px",
-                  }}>
-                    <span style={{
-                      position: "absolute",
-                      left: "-16px",
-                      color: "#ef4444",
-                      fontWeight: "bold",
-                    }}>•</span>
-                    {mistake}
-                  </li>
-                ))}
+                {result.mistakes.map((mistake, idx) => {
+                  const cleaned = cleanText(mistake);
+                  if (!cleaned) return null;
+                  return (
+                    <li key={idx} style={{
+                      fontSize: "15px",
+                      lineHeight: "1.7",
+                      color: "#cbd5e1",
+                      marginBottom: "12px",
+                      position: "relative",
+                      paddingLeft: "8px",
+                    }}>
+                      <span style={{
+                        position: "absolute",
+                        left: "-16px",
+                        color: "#ef4444",
+                        fontWeight: "bold",
+                      }}>•</span>
+                      {cleaned}
+                    </li>
+                  );
+                }).filter(Boolean)}
               </ul>
             </div>
           )}
@@ -440,39 +464,43 @@ export default function Last30DaysPage() {
                 flexDirection: "column",
                 gap: "16px",
               }}>
-                {result.techniques.map((tech, idx) => (
-                  <div key={idx} style={{
-                    padding: "16px",
-                    background: "rgba(15, 23, 42, 0.4)",
-                    borderRadius: "8px",
-                    border: "1px solid rgba(148, 163, 184, 0.1)",
-                  }}>
-                    <p style={{
-                      margin: "0 0 8px 0",
-                      fontSize: "15px",
-                      lineHeight: "1.6",
-                      color: "#e2e8f0",
+                {result.techniques.map((tech, idx) => {
+                  const cleaned = cleanText(tech.technique);
+                  if (!cleaned) return null;
+                  return (
+                    <div key={idx} style={{
+                      padding: "16px",
+                      background: "rgba(15, 23, 42, 0.4)",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(148, 163, 184, 0.1)",
                     }}>
-                      {tech.technique}
-                    </p>
-                    <a
-                      href={tech.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        fontSize: "13px",
-                        color: "#3b82f6",
-                        textDecoration: "none",
-                      }}
-                    >
-                      <ExternalLink size={12} />
-                      {tech.source}
-                    </a>
-                  </div>
-                ))}
+                      <p style={{
+                        margin: "0 0 8px 0",
+                        fontSize: "15px",
+                        lineHeight: "1.6",
+                        color: "#e2e8f0",
+                      }}>
+                        {cleaned}
+                      </p>
+                      <a
+                        href={tech.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontSize: "13px",
+                          color: "#3b82f6",
+                          textDecoration: "none",
+                        }}
+                      >
+                        <ExternalLink size={12} />
+                        {tech.source}
+                      </a>
+                    </div>
+                  );
+                }).filter(Boolean)}
               </div>
             </div>
           )}
@@ -526,7 +554,7 @@ export default function Last30DaysPage() {
                 wordWrap: "break-word",
                 border: "1px solid rgba(148, 163, 184, 0.1)",
               }}>
-                {result.prompt}
+                {cleanText(result.prompt)}
               </pre>
             </div>
           )}
