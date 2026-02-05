@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
 
 export default function RelationshipIntelPage() {
   const [contacts, setContacts] = useState<any[]>([]);
@@ -29,15 +31,18 @@ export default function RelationshipIntelPage() {
   );
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1e3a8a 0%, #1e293b 50%, #0f172a 100%)',
-      padding: '40px 20px',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-    }}>
-      {/* Header */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto 40px auto' }}>
-        <Link href="/" style={{ 
+    <>
+      <TopNav />
+      <BottomNav />
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #1e293b 50%, #0f172a 100%)',
+        padding: '104px 20px 40px 20px',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}>
+        {/* Header */}
+        <div style={{ maxWidth: '1200px', margin: '0 auto 40px auto' }}>
+          <Link href="/" style={{ 
           color: '#94a3b8', 
           textDecoration: 'none',
           fontSize: '14px',
@@ -221,5 +226,6 @@ export default function RelationshipIntelPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

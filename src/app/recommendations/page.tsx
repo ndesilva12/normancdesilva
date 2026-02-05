@@ -1,5 +1,8 @@
 "use client";
 
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
@@ -30,10 +33,13 @@ export default function RecommendationsPage() {
     .filter(r => statusFilter === 'all' || r.status === statusFilter);
 
   return (
+    <>
+      <TopNav />
+      <BottomNav />
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #8b5cf6 0%, #1e293b 50%, #0f172a 100%)',
-      padding: '40px 20px',
+      padding: '104px 20px 40px 20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -155,5 +161,6 @@ export default function RecommendationsPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

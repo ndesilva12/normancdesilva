@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Command } from 'lucide-react';
+import { Search, Command } from 'lucide-react';
 
 interface SearchResult {
   id: string;
@@ -140,13 +140,13 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(8px)',
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(12px)',
             zIndex: 100,
             display: 'flex',
             alignItems: 'start',
             justifyContent: 'center',
-            paddingTop: '15vh',
+            paddingTop: '20vh',
           }}
           onClick={onClose}
         >
@@ -154,103 +154,93 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
             style={{
               width: '100%',
-              maxWidth: '700px',
-              margin: '0 16px',
+              maxWidth: '900px',
+              margin: '0 24px',
             }}
           >
-            {/* Search Container */}
+            {/* Glass Search Input */}
             <div style={{
-              background: 'rgba(30, 41, 59, 0.98)',
-              borderRadius: '16px',
-              border: '1px solid rgba(148, 163, 184, 0.2)',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-              overflow: 'hidden',
+              background: 'rgba(30, 41, 59, 0.4)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              borderRadius: '24px',
+              border: '1px solid rgba(148, 163, 184, 0.15)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
+              padding: '24px 32px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
             }}>
-              {/* Search Input */}
-              <div style={{
+              <Search size={28} style={{ color: '#94a3b8', flexShrink: 0 }} />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Search everything..."
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  color: 'white',
+                  fontSize: '22px',
+                  fontWeight: 400,
+                  outline: 'none',
+                  border: 'none',
+                  letterSpacing: '-0.01em',
+                }}
+              />
+              {loading && (
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  border: '3px solid rgba(99, 102, 241, 0.3)',
+                  borderTopColor: '#6366f1',
+                  borderRadius: '50%',
+                  animation: 'spin 0.6s linear infinite',
+                }} />
+              )}
+              <div style={{ 
+                fontSize: '13px', 
+                color: '#64748b',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                padding: '20px 24px',
-                borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+                gap: '6px',
+                flexShrink: 0,
               }}>
-                <Search size={22} style={{ color: '#94a3b8', flexShrink: 0 }} />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Search everything..."
-                  style={{
-                    flex: 1,
-                    background: 'transparent',
-                    color: 'white',
-                    fontSize: '18px',
-                    outline: 'none',
-                    border: 'none',
-                  }}
-                />
-                {loading && (
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    border: '2px solid #6366f1',
-                    borderTopColor: 'transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 0.6s linear infinite',
-                  }} />
-                )}
-                <button
-                  onClick={onClose}
-                  style={{
-                    padding: '6px',
-                    background: 'rgba(148, 163, 184, 0.1)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#94a3b8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <X size={16} />
-                </button>
+                <Command size={14} />
+                <span>K</span>
               </div>
+            </div>
 
-              {/* Results */}
-              <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-                {query.length < 2 ? (
-                  <div style={{ padding: '48px 24px', textAlign: 'center' }}>
-                    <Search size={40} style={{ color: '#475569', margin: '0 auto 16px auto', opacity: 0.5 }} />
-                    <p style={{ color: '#94a3b8', fontSize: '15px', marginBottom: '20px' }}>
-                      Search across all your data
-                    </p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px' }}>
-                      {['Contacts', 'Emails', 'Meetings', 'Search History', 'Recommendations'].map(tag => (
-                        <span key={tag} style={{
-                          padding: '6px 12px',
-                          background: 'rgba(148, 163, 184, 0.08)',
-                          borderRadius: '6px',
-                          fontSize: '13px',
-                          color: '#64748b',
-                        }}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : results.length === 0 && !loading ? (
-                  <div style={{ padding: '48px 24px', textAlign: 'center', color: '#94a3b8' }}>
-                    <p style={{ fontSize: '15px' }}>No results found for &quot;{query}&quot;</p>
+            {/* Results Panel - only show when there are results */}
+            {query.length >= 2 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: 0.1 }}
+                style={{
+                  marginTop: '16px',
+                  background: 'rgba(30, 41, 59, 0.95)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(148, 163, 184, 0.15)',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+                  maxHeight: '60vh',
+                  overflowY: 'auto',
+                }}
+              >
+                {results.length === 0 && !loading ? (
+                  <div style={{ padding: '48px 32px', textAlign: 'center', color: '#94a3b8' }}>
+                    <p style={{ fontSize: '16px' }}>No results found</p>
                   </div>
                 ) : (
-                  <div style={{ padding: '8px 0' }}>
+                  <div style={{ padding: '8px' }}>
                     {results.map((result, idx) => {
                       const isSelected = idx === selectedIndex;
                       return (
@@ -260,19 +250,20 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                           onMouseEnter={() => setSelectedIndex(idx)}
                           style={{
                             width: '100%',
-                            padding: '16px 24px',
+                            padding: '18px 20px',
                             display: 'flex',
                             alignItems: 'start',
                             gap: '16px',
                             textAlign: 'left',
                             background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
                             border: 'none',
+                            borderRadius: '12px',
                             cursor: 'pointer',
                             transition: 'background 0.15s ease',
                             color: 'white',
                           }}
                           onMouseOver={(e) => {
-                            if (!isSelected) e.currentTarget.style.background = 'rgba(148, 163, 184, 0.05)';
+                            if (!isSelected) e.currentTarget.style.background = 'rgba(148, 163, 184, 0.08)';
                           }}
                           onMouseOut={(e) => {
                             if (!isSelected) e.currentTarget.style.background = 'transparent';
@@ -280,7 +271,7 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                         >
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ 
-                              fontSize: '15px', 
+                              fontSize: '16px', 
                               fontWeight: 600, 
                               color: 'white',
                               marginBottom: '4px',
@@ -335,30 +326,8 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                     })}
                   </div>
                 )}
-              </div>
-
-              {/* Footer */}
-              {results.length > 0 && (
-                <div style={{
-                  padding: '12px 24px',
-                  borderTop: '1px solid rgba(148, 163, 184, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  fontSize: '12px',
-                  color: '#64748b',
-                }}>
-                  <div style={{ display: 'flex', gap: '16px' }}>
-                    <span>↑↓ navigate</span>
-                    <span>↵ select</span>
-                  </div>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Command size={12} />
-                    <span>K to search</span>
-                  </span>
-                </div>
-              )}
-            </div>
+              </motion.div>
+            )}
           </motion.div>
         </motion.div>
       )}
