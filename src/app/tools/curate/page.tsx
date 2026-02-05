@@ -1,24 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { Sparkles, Search, Clock, CheckCircle, XCircle } from "lucide-react";
+
+interface HistoryItem {
+  id: string;
+  query: string;
+  status: 'running' | 'completed' | 'failed';
+  timestamp: string;
+  completed_at?: string;
+  results?: any;
+  error?: string;
+}
 
 export default function CuratePage() {
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [selectedResult, setSelectedResult] = useState<HistoryItem | null>(null);
+
+  useEffect(() => {
+    loadHistory();
+    const interval = setInterval(loadHistory, 5000); // Refresh every 5s
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      const res = await fetch('/api/curate');
+      const data = await res.json();
+      setHistory(data.history || []);
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    }
+  };
 
   const handleCurate = async () => {
     if (!topic.trim()) return;
     setLoading(true);
+    
     try {
       const res = await fetch('/api/curate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic })
+        body: JSON.stringify({ query: topic }),
       });
-      const data = await res.json();
-      setResults(data);
+      
+      if (res.ok) {
+        setTopic('');
+        loadHistory();
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -44,24 +76,27 @@ export default function CuratePage() {
           ← Back to Dashboard
         </Link>
         
-        <h1 style={{ 
-          fontSize: '48px', 
-          fontWeight: 'bold', 
-          color: 'white',
-          marginTop: '24px',
-          marginBottom: '12px'
-        }}>
-          Curate
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px', marginTop: '24px' }}>
+          <Sparkles size={48} style={{ color: '#a78bfa' }} />
+          <h1 style={{ 
+            fontSize: '48px', 
+            fontWeight: 'bold', 
+            color: 'white',
+            margin: 0,
+          }}>
+            Curate
+          </h1>
+        </div>
+        
         <p style={{ fontSize: '18px', color: '#94a3b8', marginBottom: '40px' }}>
-          AI-powered content curation
+          AI-powered content curation tailored to your worldview
         </p>
 
-        {/* Input */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '40px' }}>
+        {/* Search Input */}
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '48px' }}>
           <input
             type="text"
-            placeholder="Enter a topic to curate content about..."
+            placeholder="Enter topic or 'general' for discovery..."
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleCurate()}
@@ -69,8 +104,9 @@ export default function CuratePage() {
               flex: 1,
               padding: '20px 24px',
               fontSize: '16px',
-              background: 'rgba(30, 41, 59, 0.9)',
-              border: '1px solid rgba(148, 163, 184, 0.2)',
+              background: 'rgba(30, 41, 59, 0.6)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
               borderRadius: '12px',
               color: 'white',
               outline: 'none',
@@ -88,43 +124,192 @@ export default function CuratePage() {
               fontSize: '16px',
               fontWeight: '600',
               cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
             }}
           >
+            <Search size={18} />
             {loading ? 'Curating...' : 'Curate'}
           </button>
         </div>
 
-        {/* Results */}
-        {results && (
-          <div style={{
-            background: 'rgba(30, 41, 59, 0.8)',
-            border: '1px solid rgba(148, 163, 184, 0.15)',
-            borderRadius: '16px',
-            padding: '32px',
+        {/* History */}
+        <div>
+          <h2 style={{ 
+            fontSize: '24px', 
+            fontWeight: '700', 
+            color: 'white',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
           }}>
-            <h2 style={{ fontSize: '28px', fontWeight: '700', color: 'white', marginBottom: '24px' }}>
-              Curated Content
-            </h2>
-            <div style={{ fontSize: '16px', color: '#cbd5e1', lineHeight: '1.8' }}>
-              {JSON.stringify(results, null, 2)}
-            </div>
-          </div>
-        )}
+            <Clock size={24} />
+            Curation History
+          </h2>
 
-        {!results && !loading && (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '100px 20px',
-            background: 'rgba(30, 41, 59, 0.5)',
-            borderRadius: '16px',
-            border: '1px solid rgba(148, 163, 184, 0.1)'
-          }}>
-            <h3 style={{ fontSize: '24px', color: 'white', marginBottom: '12px' }}>
-              Ready to curate
-            </h3>
-            <p style={{ color: '#94a3b8' }}>
-              Enter a topic above to discover curated content
-            </p>
+          {history.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '80px 20px',
+              background: 'rgba(30, 41, 59, 0.4)',
+              borderRadius: '16px',
+              border: '1px solid rgba(148, 163, 184, 0.1)'
+            }}>
+              <Sparkles size={48} style={{ color: '#64748b', margin: '0 auto 16px' }} />
+              <h3 style={{ fontSize: '20px', color: 'white', marginBottom: '8px' }}>
+                No curations yet
+              </h3>
+              <p style={{ color: '#94a3b8' }}>
+                Enter a topic above to start discovering content
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {history.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => item.status === 'completed' && setSelectedResult(item)}
+                  style={{
+                    background: 'rgba(30, 41, 59, 0.6)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(148, 163, 184, 0.15)',
+                    borderRadius: '12px',
+                    padding: '20px 24px',
+                    cursor: item.status === 'completed' ? 'pointer' : 'default',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (item.status === 'completed') {
+                      e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)';
+                      e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+                    e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.15)';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                        {item.status === 'running' && (
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            border: '3px solid rgba(139, 92, 246, 0.3)',
+                            borderTopColor: '#8b5cf6',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite',
+                          }} />
+                        )}
+                        {item.status === 'completed' && <CheckCircle size={20} style={{ color: '#10b981' }} />}
+                        {item.status === 'failed' && <XCircle size={20} style={{ color: '#ef4444' }} />}
+                        
+                        <h3 style={{ 
+                          fontSize: '18px', 
+                          fontWeight: '600', 
+                          color: 'white',
+                          margin: 0,
+                        }}>
+                          {item.query}
+                        </h3>
+                      </div>
+                      
+                      <div style={{ fontSize: '14px', color: '#94a3b8' }}>
+                        {new Date(item.timestamp).toLocaleString()}
+                        {item.status === 'completed' && ' • Click to view results'}
+                        {item.status === 'failed' && ` • Error: ${item.error}`}
+                      </div>
+                    </div>
+
+                    <div style={{
+                      padding: '6px 16px',
+                      background: item.status === 'running' ? 'rgba(251, 191, 36, 0.15)' : 
+                                 item.status === 'completed' ? 'rgba(16, 185, 129, 0.15)' :
+                                 'rgba(239, 68, 68, 0.15)',
+                      border: `1px solid ${item.status === 'running' ? 'rgba(251, 191, 36, 0.3)' : 
+                                           item.status === 'completed' ? 'rgba(16, 185, 129, 0.3)' :
+                                           'rgba(239, 68, 68, 0.3)'}`,
+                      borderRadius: '20px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: item.status === 'running' ? '#fbbf24' : 
+                             item.status === 'completed' ? '#10b981' :
+                             '#ef4444',
+                      textTransform: 'capitalize',
+                    }}>
+                      {item.status}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Results Modal */}
+        {selectedResult && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.85)',
+              backdropFilter: 'blur(8px)',
+              zIndex: 100,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+            }}
+            onClick={() => setSelectedResult(null)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%',
+                maxWidth: '900px',
+                maxHeight: '80vh',
+                background: 'rgba(30, 41, 59, 0.98)',
+                borderRadius: '20px',
+                border: '1px solid rgba(139, 92, 246, 0.3)',
+                padding: '32px',
+                overflowY: 'auto',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '28px', fontWeight: '700', color: 'white', margin: 0 }}>
+                  {selectedResult.query}
+                </h2>
+                <button
+                  onClick={() => setSelectedResult(null)}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'rgba(148, 163, 184, 0.1)',
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    borderRadius: '8px',
+                    color: '#cbd5e1',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+              
+              <pre style={{
+                background: 'rgba(15, 23, 42, 0.6)',
+                padding: '20px',
+                borderRadius: '12px',
+                fontSize: '14px',
+                color: '#cbd5e1',
+                whiteSpace: 'pre-wrap',
+                wordWrap: 'break-word',
+                overflow: 'auto',
+              }}>
+                {JSON.stringify(selectedResult.results, null, 2)}
+              </pre>
+            </div>
           </div>
         )}
       </div>
