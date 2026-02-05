@@ -113,22 +113,8 @@ export default function DarkSearchPage() {
           </div>
         )}
 
-        {!results && !loading && (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '100px 20px',
-            background: 'rgba(26, 26, 26, 0.5)',
-            borderRadius: '16px',
-            border: '1px solid rgba(107, 114, 128, 0.2)'
-          }}>
-            <h3 style={{ fontSize: '24px', color: '#dc2626', marginBottom: '12px' }}>
-              Ready to investigate
-            </h3>
-            <p style={{ color: '#6b7280' }}>
-              Enter a query above for deep web research
-            </p>
-          </div>
-        )}
+        {/* History */}
+        <IntelToolHistory toolName="dark-search" />
       </div>
     </div>
   );

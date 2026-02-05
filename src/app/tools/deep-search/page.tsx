@@ -113,22 +113,8 @@ export default function DeepSearchPage() {
           </div>
         )}
 
-        {!results && !loading && (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '100px 20px',
-            background: 'rgba(30, 41, 59, 0.5)',
-            borderRadius: '16px',
-            border: '1px solid rgba(148, 163, 184, 0.1)'
-          }}>
-            <h3 style={{ fontSize: '24px', color: 'white', marginBottom: '12px' }}>
-              Ready to search
-            </h3>
-            <p style={{ color: '#94a3b8' }}>
-              Enter a query above to start deep research
-            </p>
-          </div>
-        )}
+        {/* History */}
+        <IntelToolHistory toolName="deep-search" />
       </div>
     </div>
   );
