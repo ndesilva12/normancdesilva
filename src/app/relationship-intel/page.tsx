@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Users, Mail, Calendar, Clock, ChevronDown, Search, Filter } from "lucide-react";
+import { ArrowLeft, Users, Mail, Calendar, Search, Star, MessageSquare, Phone } from "lucide-react";
 
 export default function RelationshipIntelPage() {
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterTag, setFilterTag] = useState("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,66 +31,112 @@ export default function RelationshipIntelPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Header */}
-      <div className="border-b border-white/[0.08] bg-black/40 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-8 py-6">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-6">
-            <ArrowLeft size={16} />
-            Back to Dashboard
+      <div className="bg-slate-900/50 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors mb-8"
+          >
+            <ArrowLeft size={14} />
+            Dashboard
           </Link>
           
-          <div className="flex items-center justify-between">
+          <div className="flex items-end justify-between">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight mb-2">Relationship Intel</h1>
-              <p className="text-gray-400">Track and manage professional relationships</p>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                  <Users size={24} className="text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-white mb-1">Relationship Intel</h1>
+                  <p className="text-slate-400">Professional network insights</p>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="px-4 py-2 bg-white/[0.03] border border-white/[0.08] rounded-lg text-sm">
-                {contacts.length} contacts
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <div className="text-2xl font-bold text-white">{contacts.length}</div>
+                <div className="text-xs text-slate-400 uppercase tracking-wider">Contacts</div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-emerald-400">
+                  {contacts.filter(c => c.interaction_count > 5).length}
+                </div>
+                <div className="text-xs text-slate-400 uppercase tracking-wider">Active</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="border-b border-white/[0.08] bg-black/20">
-        <div className="max-w-7xl mx-auto px-8 py-4">
-          <div className="relative max-w-md">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search contacts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:border-white/20 focus:bg-white/[0.05] transition-colors"
-            />
-          </div>
+      {/* Search */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="relative">
+          <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            placeholder="Search by name, company, or role..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-14 pr-6 py-4 bg-slate-800/50 backdrop-blur border border-white/10 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:bg-slate-800/70 transition-all"
+          />
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-8 py-8">
+      <div className="max-w-7xl mx-auto px-6 pb-12">
         {loading ? (
-          <div className="text-center py-20 text-gray-500">Loading...</div>
+          <div className="flex items-center justify-center py-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          </div>
         ) : filteredContacts.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">No contacts found</div>
+          <div className="bg-slate-800/30 backdrop-blur rounded-2xl border border-white/10 p-16">
+            <div className="text-center max-w-md mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-6">
+                <Users size={28} className="text-slate-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">No contacts yet</h3>
+              <p className="text-slate-400">Start building your network by adding your first contact</p>
+            </div>
+          </div>
         ) : (
-          <div className="grid gap-3">
+          <div className="grid gap-4">
             {filteredContacts.map((contact) => (
               <div
                 key={contact.id}
                 onClick={() => setSelectedContact(contact)}
-                className="p-4 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.08] hover:border-white/[0.15] rounded-lg cursor-pointer transition-all"
+                className="group bg-slate-800/30 backdrop-blur hover:bg-slate-800/50 border border-white/10 hover:border-white/20 rounded-2xl p-6 cursor-pointer transition-all"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-medium mb-1">{contact.name}</h3>
-                    <p className="text-sm text-gray-400">{contact.email}</p>
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center flex-shrink-0 border border-white/10">
+                      <span className="text-xl font-bold text-white">
+                        {contact.name.charAt(0)}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold text-white mb-1">{contact.name}</h3>
+                      <p className="text-slate-400 text-sm mb-3">{contact.email}</p>
+                      <div className="flex items-center gap-4 text-xs text-slate-500">
+                        <span className="flex items-center gap-1.5">
+                          <MessageSquare size={14} />
+                          {contact.interaction_count || 0} interactions
+                        </span>
+                        {contact.last_seen && (
+                          <span>Last: {new Date(contact.last_seen).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {contact.interaction_count || 0} interactions
+                  <div className="flex items-center gap-2">
+                    <button className="p-2.5 bg-slate-700/50 hover:bg-slate-700 border border-white/10 rounded-xl transition-colors">
+                      <Mail size={16} className="text-slate-300" />
+                    </button>
+                    <button className="p-2.5 bg-slate-700/50 hover:bg-slate-700 border border-white/10 rounded-xl transition-colors">
+                      <Phone size={16} className="text-slate-300" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -99,21 +144,6 @@ export default function RelationshipIntelPage() {
           </div>
         )}
       </div>
-
-      {/* Contact Detail Modal */}
-      {selectedContact && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8 z-50" onClick={() => setSelectedContact(null)}>
-          <div className="bg-[#0a0a0a] border border-white/[0.08] rounded-xl max-w-3xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-[#0a0a0a] border-b border-white/[0.08] p-6">
-              <h2 className="text-2xl font-semibold mb-1">{selectedContact.name}</h2>
-              <p className="text-sm text-gray-400">{selectedContact.email}</p>
-            </div>
-            <div className="p-6">
-              <p className="text-gray-400">Contact details and interaction history would appear here.</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
