@@ -185,40 +185,40 @@ export default function RecommendationsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
       {/* Header */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-12 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm mb-6"
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 text-sm mb-8"
         >
           <ArrowLeft size={16} />
           Back to Dashboard
         </Link>
 
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
-              <Bookmark size={24} />
+        <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-500/25">
+              <Bookmark size={28} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent mb-2">
                 Recommendations
               </h1>
-              <p className="text-gray-400">Things to watch, read, and explore</p>
+              <p className="text-gray-400 text-lg">Things to watch, read, and explore</p>
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             <button
               onClick={syncFromNotion}
               disabled={syncing}
-              className="px-4 py-2 bg-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 transition-colors disabled:opacity-50"
+              className="px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 hover:border-white/20 transition-all duration-200 disabled:opacity-50"
             >
               <CloudDownload size={18} className={syncing ? 'animate-pulse' : ''} />
               {syncing ? 'Syncing...' : 'Sync Notion'}
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-5 py-2 bg-gradient-to-r from-pink-500 to-rose-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-lg hover:shadow-pink-500/20 transition-all"
+              className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-pink-500/25 hover:scale-105 transition-all duration-200"
             >
               <Plus size={20} />
               Add
@@ -228,18 +228,18 @@ export default function RecommendationsPage() {
       </div>
 
       {/* Filters */}
-      <div className="max-w-6xl mx-auto px-6 mb-6">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="max-w-7xl mx-auto px-12 mb-8">
+        <div className="flex flex-wrap items-center gap-6">
           {/* Status Tabs */}
-          <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
+          <div className="flex gap-1 backdrop-blur-xl bg-white/5 p-1.5 rounded-xl border border-white/10">
             {(['pending', 'completed', 'archived', 'all'] as const).map(status => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   statusFilter === status
-                    ? 'bg-pink-500 text-white'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/25'
+                    : 'text-gray-400 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -248,76 +248,78 @@ export default function RecommendationsPage() {
           </div>
 
           {/* Search */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-lg">
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search recommendations..."
-              className="w-full pl-11 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-pink-500"
+              className="w-full pl-11 pr-4 py-3 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 focus:bg-white/10 transition-all duration-200"
             />
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 pb-12">
+      <div className="max-w-7xl mx-auto px-12 pb-16">
         {Object.keys(groupedByType).length === 0 ? (
-          <div className="text-center py-16">
-            <Bookmark size={48} className="mx-auto mb-4 text-gray-600" />
-            <p className="text-gray-400">No recommendations found</p>
+          <div className="text-center py-20">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-pink-500/20 to-rose-600/20 flex items-center justify-center mx-auto mb-6">
+              <Bookmark size={48} className="text-gray-600" />
+            </div>
+            <p className="text-gray-400 text-lg">No recommendations found</p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-12">
             {Object.entries(groupedByType).map(([type, items]) => {
               const config = typeConfig[type] || typeConfig.other;
               const Icon = config.icon;
 
               return (
                 <div key={type}>
-                  <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-4 mb-6">
                     <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: `${config.color}20` }}
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
+                      style={{ background: `${config.color}20`, boxShadow: `0 4px 20px ${config.color}20` }}
                     >
-                      <Icon size={18} style={{ color: config.color }} />
+                      <Icon size={20} style={{ color: config.color }} />
                     </div>
-                    <h2 className="text-xl font-bold" style={{ color: config.color }}>
+                    <h2 className="text-2xl font-bold" style={{ color: config.color }}>
                       {config.label}
                     </h2>
-                    <span className="text-gray-500 text-sm">({items.length})</span>
+                    <span className="text-gray-500 text-sm font-medium">({items.length})</span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {items.map((rec) => (
                       <motion.div
                         key={rec.id}
                         layout
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="backdrop-blur-xl bg-white/5 rounded-xl border border-white/10 p-4 hover:border-white/20 transition-all"
+                        className="backdrop-blur-xl bg-white/5 rounded-xl border border-white/10 p-6 hover:border-white/20 hover:bg-white/10 transition-all duration-200 hover:scale-105"
                       >
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <h3 className="font-semibold line-clamp-2">{rec.title}</h3>
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <h3 className="font-semibold text-lg line-clamp-2">{rec.title}</h3>
                           {rec.url && (
                             <a
                               href={rec.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-1 hover:bg-white/10 rounded transition-colors flex-shrink-0"
+                              className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200 flex-shrink-0 hover:scale-110"
                             >
-                              <ExternalLink size={14} className="text-gray-400" />
+                              <ExternalLink size={14} className="text-gray-400 hover:text-white" />
                             </a>
                           )}
                         </div>
 
                         {rec.description && (
-                          <p className="text-gray-400 text-sm line-clamp-2 mb-3">{rec.description}</p>
+                          <p className="text-gray-400 text-sm line-clamp-2 mb-4">{rec.description}</p>
                         )}
 
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs text-gray-500">
+                        <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                          <div className="text-xs text-gray-500 font-medium">
                             {rec.source && <span>From {rec.source}</span>}
                             {!rec.source && <span>{formatDate(rec.createdAt)}</span>}
                           </div>
