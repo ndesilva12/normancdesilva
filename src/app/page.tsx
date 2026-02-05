@@ -23,6 +23,11 @@ import { TrendingPreview } from "@/components/TrendingPreview";
 import { StocksPreview } from "@/components/StocksPreview";
 import { SpotifyPreview } from "@/components/SpotifyPreview";
 import { AccountsPreview } from "@/components/AccountsPreview";
+import { BusinessInfoPreview } from "@/components/BusinessInfoPreview";
+import { VisualRostersPreview } from "@/components/VisualRostersPreview";
+import { CorporateInfoPreview } from "@/components/CorporateInfoPreview";
+import { ContactFinderPreview } from "@/components/ContactFinderPreview";
+import { ImageLookupPreview } from "@/components/ImageLookupPreview";
 
 export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
@@ -93,6 +98,16 @@ export default function Home() {
         return <SpotifyPreview />;
       case "accounts":
         return <AccountsPreview />;
+      case "business-info":
+        return <BusinessInfoPreview />;
+      case "visual-rosters":
+        return <VisualRostersPreview />;
+      case "corporate-info":
+        return <CorporateInfoPreview />;
+      case "contact-finder":
+        return <ContactFinderPreview />;
+      case "image-lookup":
+        return <ImageLookupPreview />;
       default:
         return (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
