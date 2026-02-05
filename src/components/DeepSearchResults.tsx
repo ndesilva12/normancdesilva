@@ -13,6 +13,49 @@ export function DeepSearchResults({ results, color }: DeepSearchResultsProps) {
   const renderSection = (title: string, content: any, sectionColor: string) => {
     if (!content) return null;
 
+    // Handle arrays of strings
+    if (Array.isArray(content) && content.every(item => typeof item === 'string')) {
+      return (
+        <div
+          style={{
+            background: `${sectionColor}10`,
+            border: `1px solid ${sectionColor}30`,
+            borderRadius: "12px",
+            padding: "20px",
+            marginBottom: "16px",
+          }}
+        >
+          <h3
+            style={{
+              fontSize: "16px",
+              fontWeight: 700,
+              color: sectionColor,
+              marginBottom: "12px",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}
+          >
+            {title}
+          </h3>
+          <ul
+            style={{
+              fontSize: "14px",
+              color: "#cbd5e1",
+              lineHeight: "1.8",
+              paddingLeft: "20px",
+              margin: 0,
+            }}
+          >
+            {content.map((item: string, idx: number) => (
+              <li key={idx} style={{ marginBottom: "8px" }}>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    }
+
     return (
       <div
         style={{
@@ -199,6 +242,7 @@ export function DeepSearchResults({ results, color }: DeepSearchResultsProps) {
 
       {/* Summary first if it exists */}
       {results.summary && renderSection("Summary", results.summary, "#8b5cf6")}
+      {results.briefOverview && renderSection("Overview", results.briefOverview, "#8b5cf6")}
 
       {/* Sections array - most important for structured output */}
       {results.sections && renderSections(results.sections)}
@@ -208,26 +252,36 @@ export function DeepSearchResults({ results, color }: DeepSearchResultsProps) {
       {results.keyTakeaways && renderSection("Key Takeaways", results.keyTakeaways, "#10b981")}
       {results.key_takeaways && renderSection("Key Takeaways", results.key_takeaways, "#10b981")}
       {results.insights && renderSection("Insights", results.insights, "#10b981")}
+      {results.hiddenMechanics && renderSection("Hidden Mechanics", results.hiddenMechanics, "#6366f1")}
+      {results.hidden_mechanics && renderSection("Hidden Mechanics", results.hidden_mechanics, "#6366f1")}
+      {results.counterintuitiveInsights && renderSection("Counterintuitive Insights", results.counterintuitiveInsights, "#06b6d4")}
       {results.counterintuitive && renderSection("Counterintuitive Insights", results.counterintuitive, "#06b6d4")}
+      {results.alternativePerspectives && renderSection("Alternative Perspectives", results.alternativePerspectives, "#06b6d4")}
       {results.alternative_perspectives && renderSection("Alternative Perspectives", results.alternative_perspectives, "#06b6d4")}
-      {results.debates && renderSection("Expert Debates", results.debates, "#f59e0b")}
+      {results.expertDebates && renderSection("Expert Debates", results.expertDebates, "#f59e0b")}
       {results.expert_debates && renderSection("Expert Debates", results.expert_debates, "#f59e0b")}
+      {results.unansweredQuestions && renderSection("Unanswered Questions", results.unansweredQuestions, "#f59e0b")}
       {results.unanswered && renderSection("Unanswered Questions", results.unanswered, "#f59e0b")}
+      {results.underreportedAngles && renderSection("Underreported Angles", results.underreportedAngles, "#ec4899")}
       {results.underreported && renderSection("Underreported Angles", results.underreported, "#ec4899")}
       {results.underreported_angles && renderSection("Underreported Angles", results.underreported_angles, "#ec4899")}
-      {results.hidden_mechanics && renderSection("Hidden Mechanics", results.hidden_mechanics, "#6366f1")}
-      
+
+      {/* Social Media & Podcasts */}
+      {results.socialMediaHighlights && renderSection("Social Media Insights", results.socialMediaHighlights, "#ec4899")}
+      {results.podcastReferences && renderSection("Podcast References", results.podcastReferences, "#f59e0b")}
+
       {/* Sources/Links */}
       {results.sources && renderLinks(results.sources)}
       {results.links && renderLinks(results.links)}
       {results.urls && renderLinks(results.urls)}
 
       {/* Fallback: display everything else */}
-      {Object.keys(results).filter(key => 
-        !['topic', 'mode', 'overview', 'summary', 'sections', 'keyTakeaways', 'key_takeaways', 'insights', 
-          'counterintuitive', 'alternative_perspectives', 'debates', 'expert_debates',
-          'unanswered', 'underreported', 'underreported_angles', 'hidden_mechanics',
-          'sources', 'links', 'urls'].includes(key)
+      {Object.keys(results).filter(key =>
+        !['topic', 'mode', 'overview', 'summary', 'briefOverview', 'sections', 'keyTakeaways', 'key_takeaways', 'insights',
+          'counterintuitive', 'counterintuitiveInsights', 'alternative_perspectives', 'alternativePerspectives',
+          'debates', 'expert_debates', 'expertDebates', 'unanswered', 'unansweredQuestions',
+          'underreported', 'underreported_angles', 'underreportedAngles', 'hidden_mechanics', 'hiddenMechanics',
+          'sources', 'links', 'urls', 'timestamp', 'socialMediaHighlights', 'podcastReferences'].includes(key)
       ).map(key => (
         renderSection(
           key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),

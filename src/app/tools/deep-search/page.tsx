@@ -21,7 +21,7 @@ export default function DeepSearchPage() {
         body: JSON.stringify({ query })
       });
       const data = await res.json();
-      setResults(data);
+      setResults(data.report || data);
     } catch (err) {
       console.error(err);
     } finally {
