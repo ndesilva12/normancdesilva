@@ -327,7 +327,7 @@ export default function RelationshipIntel() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
       {/* Header */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-[1200px] mx-auto px-8 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm mb-6"
@@ -338,9 +338,9 @@ export default function RelationshipIntel() {
 
         <div className="flex items-center gap-4 mb-3">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-            <Users size={24} />
+            <Users size={48} />
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
             Relationship Intel
           </h1>
         </div>
@@ -351,7 +351,7 @@ export default function RelationshipIntel() {
       </div>
 
       {/* Stats Grid */}
-      <div className="max-w-6xl mx-auto px-6 mb-8">
+      <div className="max-w-[1200px] mx-auto px-8 mb-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: 'Total Contacts', value: project?.contact_count || 0, icon: Users, gradient: 'from-purple-500 to-indigo-600' },
@@ -366,8 +366,8 @@ export default function RelationshipIntel() {
               transition={{ delay: i * 0.1 }}
               className="backdrop-blur-xl rounded-2xl p-5 border"
               style={{
-                background: stat.color ? `rgba(${stat.color === '#10b981' ? '16,185,129' : stat.color === '#f59e0b' ? '245,158,11' : '107,114,128'}, 0.1)` : 'rgba(255,255,255,0.05)',
-                borderColor: stat.color ? `${stat.color}33` : 'rgba(255,255,255,0.1)',
+                background: stat.color ? `rgba(${stat.color === '#10b981' ? '16,185,129' : stat.color === '#f59e0b' ? '245,158,11' : '107,114,128'}, 0.1)` : 'rgba(255, 255, 255, 0.05)',
+                borderColor: stat.color ? `${stat.color}33` : 'rgba(255, 255, 255, 0.1)',
               }}
             >
               <div className="flex items-center gap-3">
@@ -390,8 +390,8 @@ export default function RelationshipIntel() {
       </div>
 
       {/* Search & Filters */}
-      <div className="max-w-6xl mx-auto px-6 mb-6">
-        <div className="backdrop-blur-xl bg-white/5 rounded-2xl p-5 border border-white/10">
+      <div className="max-w-[1200px] mx-auto px-8 mb-6">
+        <div className="backdrop-blur-xl rounded-2xl p-5 border border-white/10" style={{ background: 'rgba(255,255,255,0.05)' }}>
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search */}
             <div className="flex-1 relative">
@@ -466,8 +466,8 @@ export default function RelationshipIntel() {
       </div>
 
       {/* Contact List */}
-      <div className="max-w-6xl mx-auto px-6 pb-12">
-        <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+      <div className="max-w-[1200px] mx-auto px-8 pb-12">
+        <div className="backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
           <div className="divide-y divide-white/5">
             {filteredContacts.map((contact, i) => {
               const status = getStatus(contact.last_seen);

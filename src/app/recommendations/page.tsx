@@ -185,7 +185,7 @@ export default function RecommendationsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
       {/* Header */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-[1200px] mx-auto px-8 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm mb-6"
@@ -197,10 +197,10 @@ export default function RecommendationsPage() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
-              <Bookmark size={24} />
+              <Bookmark size={48} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
                 Recommendations
               </h1>
               <p className="text-gray-400">Things to watch, read, and explore</p>
@@ -228,10 +228,10 @@ export default function RecommendationsPage() {
       </div>
 
       {/* Filters */}
-      <div className="max-w-6xl mx-auto px-6 mb-6">
+      <div className="max-w-[1200px] mx-auto px-8 mb-6">
         <div className="flex flex-wrap items-center gap-4">
           {/* Status Tabs */}
-          <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
+          <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
             {(['pending', 'completed', 'archived', 'all'] as const).map(status => (
               <button
                 key={status}
@@ -249,20 +249,20 @@ export default function RecommendationsPage() {
 
           {/* Search */}
           <div className="relative flex-1 max-w-md">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+            <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search recommendations..."
-              className="w-full pl-11 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-pink-500"
+              className="w-full pl-12 pr-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
             />
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 pb-12">
+      <div className="max-w-[1200px] mx-auto px-8 pb-12">
         {Object.keys(groupedByType).length === 0 ? (
           <div className="text-center py-16">
             <Bookmark size={48} className="mx-auto mb-4 text-gray-600" />
@@ -296,7 +296,8 @@ export default function RecommendationsPage() {
                         layout
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="backdrop-blur-xl bg-white/5 rounded-xl border border-white/10 p-4 hover:border-white/20 transition-all"
+                        className="backdrop-blur-xl rounded-xl border border-white/10 p-4 hover:border-white/20 transition-all"
+                        style={{ background: 'rgba(255,255,255,0.05)' }}
                       >
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <h3 className="font-semibold line-clamp-2">{rec.title}</h3>

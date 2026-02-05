@@ -204,7 +204,7 @@ export default function PeoplePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-[1200px] mx-auto px-8 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm mb-6"
@@ -216,10 +216,10 @@ export default function PeoplePage() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-              <Users size={24} />
+              <Users size={48} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
                 People Database
               </h1>
               <p className="text-gray-400">{people.length} people in your network</p>
@@ -247,7 +247,7 @@ export default function PeoplePage() {
       </div>
 
       {/* Search */}
-      <div className="max-w-7xl mx-auto px-6 mb-6">
+      <div className="max-w-[1200px] mx-auto px-8 mb-6">
         <div className="relative max-w-md">
           <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
@@ -255,14 +255,14 @@ export default function PeoplePage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search people..."
-            className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+            className="w-full pl-12 pr-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="max-w-7xl mx-auto px-6 pb-12">
-        <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+      <div className="max-w-[1200px] mx-auto px-8 pb-12">
+        <div className="backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>

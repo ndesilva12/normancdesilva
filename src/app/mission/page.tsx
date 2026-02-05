@@ -201,7 +201,7 @@ export default function MissionControl() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-[1200px] mx-auto px-8 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm mb-6"
@@ -213,10 +213,10 @@ export default function MissionControl() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Layers size={24} />
+              <Layers size={48} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
                 Mission Control
               </h1>
               <p className="text-gray-400">Track and manage your tasks and projects</p>
@@ -234,7 +234,7 @@ export default function MissionControl() {
       </div>
 
       {/* Kanban Board */}
-      <div className="max-w-7xl mx-auto px-6 pb-12">
+      <div className="max-w-[1200px] mx-auto px-8 pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Created Column */}
           <div className="backdrop-blur-xl rounded-2xl border overflow-hidden"
