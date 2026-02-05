@@ -184,11 +184,23 @@ export default function Home() {
               {/* Dashboard Quick Links */}
               <DashboardQuickLinks />
 
-              {/* Intel Tools Bar */}
-              <IntelToolsBar onToolClick={handleToolClick} />
+              {/* 2-Column Layout: Intel Tools + Systems Tools */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                gap: '24px',
+                marginBottom: '32px'
+              }}>
+                {/* Left Column: Intel Tools */}
+                <div>
+                  <IntelToolsBar onToolClick={handleToolClick} />
+                </div>
 
-              {/* Quick Access Dock */}
-              <QuickAccessDock onToolClick={handleToolClick} />
+                {/* Right Column: Systems Tools */}
+                <div>
+                  <QuickAccessDock onToolClick={handleToolClick} />
+                </div>
+              </div>
             </>
           )}
 

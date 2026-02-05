@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #030712;
-  --background-secondary: #0c1220;
+  --background: #000000;
+  --background-secondary: #0a0a0a;
   --foreground: #f0f0f5;
   --foreground-muted: #94a3b8;
   --muted: #94a3b8;
@@ -13,22 +13,22 @@
   --glass-bg: rgba(255, 255, 255, 0.02);
   --glass-border: rgba(255, 255, 255, 0.06);
   --glass-hover: rgba(255, 255, 255, 0.04);
-  --header-bg: rgba(3, 7, 18, 0.9);
-  --dropdown-bg: #0c1220;
+  --header-bg: rgba(0, 0, 0, 0.9);
+  --dropdown-bg: #0a0a0a;
 }
 
 /* Dark theme (default) */
 [data-theme="dark"] {
-  --background: #030712;
-  --background-secondary: #0c1220;
+  --background: #000000;
+  --background-secondary: #0a0a0a;
   --foreground: #f0f0f5;
   --foreground-muted: #94a3b8;
   --muted: #94a3b8;
   --glass-bg: rgba(255, 255, 255, 0.02);
   --glass-border: rgba(255, 255, 255, 0.06);
   --glass-hover: rgba(255, 255, 255, 0.04);
-  --header-bg: rgba(3, 7, 18, 0.9);
-  --dropdown-bg: #0c1220;
+  --header-bg: rgba(0, 0, 0, 0.9);
+  --dropdown-bg: #0a0a0a;
 }
 
 /* Light theme */

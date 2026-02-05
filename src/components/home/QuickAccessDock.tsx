@@ -163,7 +163,7 @@ export function QuickAccessDock({ onToolClick }: { onToolClick?: (toolId: string
             color: "var(--muted)",
           }}
         >
-          TOOLS
+          SYSTEMS
         </h2>
       </div>
       <div
