@@ -152,13 +152,9 @@ export const UNIFIED_SOURCES: UnifiedSourceConfig[] = [
   {
     id: "spotify",
     name: "Spotify",
-    description: "Music search & playback",
-    longDescription: "Control Spotify playback, browse playlists, and search for music right from your dashboard.",
-    type: "tool",
-    apiEndpoint: "/api/spotify/search",
-    usesSearchInput: true,
-    toolHref: "/tools/spotify",
-    exampleSearches: ["Taylor Swift", "90s hip hop playlist", "Lo-fi beats"],
+    description: "Spotify music search",
+    type: "web",
+    searchUrlTemplate: "https://open.spotify.com/search/{query}",
   },
   // AI sources (last)
   {

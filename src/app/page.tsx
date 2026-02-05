@@ -37,6 +37,7 @@ export default function Home() {
     name: string;
   } | null>(null);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+  const [hasSearchResults, setHasSearchResults] = useState(false); // Track if search results are showing
   const router = useRouter();
 
   useEffect(() => {
@@ -167,20 +168,32 @@ export default function Home() {
 
           {/* Search */}
           <div style={{ marginBottom: "32px" }}>
-            <MultiSourceSearch />
+            <MultiSourceSearch 
+              onResultsChange={(hasResults) => {
+                setHasSearchResults(hasResults);
+                if (hasResults) {
+                  setSelectedTool(null); // Clear tool preview when search results show
+                }
+              }}
+            />
           </div>
 
-          {/* Dashboard Quick Links */}
-          <DashboardQuickLinks />
+          {/* Hide dashboard widgets when search results are active */}
+          {!hasSearchResults && (
+            <>
+              {/* Dashboard Quick Links */}
+              <DashboardQuickLinks />
 
-          {/* Intel Tools Bar */}
-          <IntelToolsBar onToolClick={handleToolClick} />
+              {/* Intel Tools Bar */}
+              <IntelToolsBar onToolClick={handleToolClick} />
 
-          {/* Quick Access Dock */}
-          <QuickAccessDock onToolClick={handleToolClick} />
+              {/* Quick Access Dock */}
+              <QuickAccessDock onToolClick={handleToolClick} />
+            </>
+          )}
 
-          {/* Preview Section - only show if tool selected */}
-          {selectedTool && (
+          {/* Preview Section - only show if tool selected AND no search results */}
+          {!hasSearchResults && selectedTool && (
             <div
               style={{
                 marginTop: "32px",
