@@ -25,6 +25,7 @@ export function IntelToolHistory({ toolName, collectionName, onResultClick }: In
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [fullReportItem, setFullReportItem] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
     loadHistory();
@@ -126,6 +127,28 @@ export function IntelToolHistory({ toolName, collectionName, onResultClick }: In
       case 'failed': return '#ef4444';
       default: return '#6b7280';
     }
+  };
+
+  const renderSummary = (results: any) => {
+    if (!results) return "No results available";
+
+    // Handle different result structures
+    if (results.briefOverview) {
+      return results.briefOverview;
+    }
+    if (results.summary) {
+      return results.summary;
+    }
+    if (typeof results === 'string') {
+      return results.substring(0, 300) + (results.length > 300 ? '...' : '');
+    }
+    if (results.output) {
+      return results.output.substring(0, 300) + (results.output.length > 300 ? '...' : '');
+    }
+
+    // Fallback: stringify and truncate
+    const str = JSON.stringify(results);
+    return str.substring(0, 300) + (str.length > 300 ? '...' : '');
   };
 
   return (
@@ -313,18 +336,41 @@ export function IntelToolHistory({ toolName, collectionName, onResultClick }: In
                   )}
 
                   {item.status === 'completed' && item.results && (
-                    <div style={{
-                      maxHeight: '400px',
-                      overflowY: 'auto',
-                      fontSize: '13px',
-                      color: '#cbd5e1',
-                      fontFamily: 'monospace',
-                      whiteSpace: 'pre-wrap',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      padding: '12px',
-                      borderRadius: '6px',
-                    }}>
-                      {JSON.stringify(item.results, null, 2)}
+                    <div>
+                      <div style={{
+                        fontSize: '13px',
+                        color: '#cbd5e1',
+                        lineHeight: '1.6',
+                        marginBottom: '12px',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        background: 'rgba(0, 0, 0, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                      }}>
+                        {renderSummary(item.results)}
+                      </div>
+                      <button
+                        onClick={() => setFullReportItem(item)}
+                        style={{
+                          padding: '8px 16px',
+                          background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                          border: 'none',
+                          borderRadius: '6px',
+                          color: 'white',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)';
+                        }}
+                      >
+                        View Full Report →
+                      </button>
                     </div>
                   )}
 
@@ -341,6 +387,100 @@ export function IntelToolHistory({ toolName, collectionName, onResultClick }: In
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Full Report Modal */}
+      {fullReportItem && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px',
+        }}>
+          <div style={{
+            background: 'rgba(30, 41, 59, 0.95)',
+            borderRadius: '16px',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '32px',
+            backdropFilter: 'blur(20px)',
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '24px',
+            }}>
+              <div>
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  color: 'white',
+                  margin: 0,
+                  marginBottom: '4px',
+                }}>
+                  Full Report
+                </h2>
+                <p style={{
+                  fontSize: '13px',
+                  color: '#94a3b8',
+                  margin: 0,
+                }}>
+                  {fullReportItem.query}
+                </p>
+              </div>
+              <button
+                onClick={() => setFullReportItem(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '20px',
+                  width: '40px',
+                  height: '40px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{
+              fontSize: '12px',
+              color: '#cbd5e1',
+              fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              background: 'rgba(0, 0, 0, 0.4)',
+              padding: '16px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              maxHeight: '60vh',
+              overflowY: 'auto',
+            }}>
+              {JSON.stringify(fullReportItem.results, null, 2)}
+            </div>
+          </div>
         </div>
       )}
     </div>
