@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Search, Radar, RefreshCw, ExternalLink, Lightbulb, AlertTriangle, MessageSquare, Headphones } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Search, Radar, RefreshCw, ExternalLink, Lightbulb, AlertTriangle, MessageSquare, Headphones, History, Trash2, ChevronRight } from "lucide-react";
 
 interface DeepSearchReport {
   topic: string;
@@ -31,6 +32,13 @@ interface DeepSearchReport {
   }>;
 }
 
+interface HistoryItem {
+  id: string;
+  query: string;
+  results: DeepSearchReport;
+  timestamp: number;
+}
+
 export default function DeepSearchPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,12 +46,75 @@ export default function DeepSearchPage() {
   const [error, setError] = useState("");
   const [isMobile, setIsMobile] = useState(false);
 
+  // History state
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [showHistory, setShowHistory] = useState(true);
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/intel-history?tool=deep_search&limit=20');
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.history);
+      }
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    }
+    setLoadingHistory(false);
+  }, []);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  const saveToHistory = async (q: string, reportData: DeepSearchReport) => {
+    try {
+      await fetch('/api/intel-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tool: 'deep_search',
+          query: q,
+          results: reportData,
+        }),
+      });
+      loadHistory();
+    } catch (err) {
+      console.error('Failed to save to history:', err);
+    }
+  };
+
+  const deleteHistoryItem = async (id: string) => {
+    try {
+      await fetch(`/api/intel-history?tool=deep_search&id=${id}`, { method: 'DELETE' });
+      setHistory(prev => prev.filter(h => h.id !== id));
+    } catch (err) {
+      console.error('Failed to delete history item:', err);
+    }
+  };
+
+  const loadFromHistory = (item: HistoryItem) => {
+    setQuery(item.query);
+    setReport(item.results);
+  };
+
+  const formatDate = (ts: number) => {
+    const date = new Date(ts);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / 86400000);
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   const handleSearch = async () => {
     if (!query.trim()) {
@@ -69,6 +140,11 @@ export default function DeepSearchPage() {
 
       const data = await response.json();
       setReport(data.report);
+
+      // Save to history
+      if (data.report) {
+        await saveToHistory(query.trim(), data.report);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -77,650 +153,235 @@ export default function DeepSearchPage() {
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #0f0a1a 0%, #1a1a2e 50%, #16213e 100%)",
-      color: "#ffffff",
-      padding: isMobile ? "16px" : "32px",
-    }}>
-      {/* Header */}
-      <div style={{
-        maxWidth: "1200px",
-        margin: "0 auto",
-        marginBottom: "48px",
-      }}>
-        <Link 
-          href="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            color: "#9ca3af",
-            textDecoration: "none",
-            fontSize: "14px",
-            marginBottom: "24px",
-            transition: "color 0.2s",
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.color = "#ffffff"}
-          onMouseLeave={(e) => e.currentTarget.style.color = "#9ca3af"}
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
-
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
-          marginBottom: "12px",
-        }}>
-          <div style={{
-            width: "48px",
-            height: "48px",
-            borderRadius: "12px",
-            background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            <Radar size={24} />
-          </div>
-          <h1 style={{
-            fontSize: isMobile ? "32px" : "48px",
-            fontWeight: "800",
-            margin: 0,
-            background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}>
-            Deep Search
-          </h1>
-        </div>
-        
-        <p style={{
-          fontSize: isMobile ? "14px" : "18px",
-          color: "#9ca3af",
-          margin: 0,
-          lineHeight: "1.6",
-        }}>
-          Multi-source deep research with hidden mechanics and expert insights.
-          <br />
-          <span style={{ fontSize: "14px", color: "#6b7280" }}>
-            Uncover what others miss — the full story behind any topic.
-          </span>
-        </p>
-      </div>
-
-      {/* Search Interface */}
-      <div style={{
-        maxWidth: "1200px",
-        margin: "0 auto",
-        marginBottom: "48px",
-      }}>
-        <div style={{
-          background: "rgba(255, 255, 255, 0.05)",
-          backdropFilter: "blur(10px)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          borderRadius: "16px",
-          padding: isMobile ? "20px" : "32px",
-        }}>
-          <div>
-            <label style={{
-              display: "block",
-              fontSize: "14px",
-              fontWeight: "600",
-              color: "#9ca3af",
-              marginBottom: "8px",
-            }}>
-              What do you want to research deeply?
-            </label>
-            <div style={{
-              position: "relative",
-            }}>
-              <Search 
-                size={20} 
-                style={{
-                  position: "absolute",
-                  left: "16px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#6b7280",
-                }}
-              />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="e.g., Quantum computing applications, AI regulation..."
-                style={{
-                  width: "100%",
-                  padding: "16px 16px 16px 48px",
-                  fontSize: "16px",
-                  background: "rgba(0, 0, 0, 0.3)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: "12px",
-                  color: "#ffffff",
-                  outline: "none",
-                  transition: "all 0.2s",
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#3b82f6";
-                  e.target.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "rgba(255, 255, 255, 0.1)";
-                  e.target.style.boxShadow = "none";
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSearch();
-                }}
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={handleSearch}
-            disabled={loading}
-            style={{
-              width: "100%",
-              marginTop: "16px",
-              padding: "16px",
-              fontSize: "16px",
-              fontWeight: "700",
-              background: loading 
-                ? "linear-gradient(135deg, #475569 0%, #334155 100%)"
-                : "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-              border: "none",
-              borderRadius: "12px",
-              color: "#ffffff",
-              cursor: loading ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "12px",
-              transition: "all 0.2s",
-              opacity: loading ? 0.6 : 1,
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 8px 24px rgba(59, 130, 246, 0.4)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            {loading ? (
-              <>
-                <RefreshCw size={20} className="animate-spin" />
-                Researching...
-              </>
-            ) : (
-              <>
-                <Radar size={20} />
-                Deep Search
-              </>
-            )}
-          </button>
-
-          {error && (
-            <div style={{
-              marginTop: "16px",
-              padding: "12px 16px",
-              background: "rgba(239, 68, 68, 0.1)",
-              border: "1px solid rgba(239, 68, 68, 0.3)",
-              borderRadius: "8px",
-              color: "#fca5a5",
-              fontSize: "14px",
-            }}>
-              {error}
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#0f0a1a] via-[#1a1a2e] to-[#16213e] text-white">
+      <div className="flex">
+        {/* History Sidebar */}
+        <AnimatePresence>
+          {showHistory && !isMobile && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 320, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              className="h-screen sticky top-0 border-r border-white/10 overflow-hidden"
+            >
+              <div className="w-80 h-full flex flex-col bg-black/20">
+                <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <History size={18} className="text-blue-400" />
+                    <span className="font-semibold">Search History</span>
+                  </div>
+                  <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-white/10 rounded">
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {loadingHistory ? (
+                    <div className="p-4 text-center text-gray-400">
+                      <RefreshCw size={20} className="animate-spin mx-auto" />
+                    </div>
+                  ) : history.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">No search history yet</div>
+                  ) : (
+                    <div className="p-2 space-y-1">
+                      {history.map((item) => (
+                        <div
+                          key={item.id}
+                          className="group p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
+                          onClick={() => loadFromHistory(item)}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{item.query}</div>
+                              <div className="text-xs text-gray-500 mt-1">{formatDate(item.timestamp)}</div>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteHistoryItem(item.id); }}
+                              className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 rounded transition-all"
+                            >
+                              <Trash2 size={14} className="text-red-400" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           )}
-        </div>
-      </div>
+        </AnimatePresence>
 
-      {/* Results */}
-      {report && (
-        <div style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-        }}>
-          {/* Brief Overview */}
-          <div style={{
-            background: "rgba(255, 255, 255, 0.05)",
-            backdropFilter: "blur(10px)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-            borderRadius: "16px",
-            padding: isMobile ? "20px" : "32px",
-            marginBottom: "24px",
-          }}>
-            <h2 style={{
-              fontSize: isMobile ? "20px" : "24px",
-              fontWeight: "700",
-              color: "#3b82f6",
-              marginBottom: "16px",
-            }}>
-              Overview
-            </h2>
-            <p style={{
-              fontSize: "15px",
-              lineHeight: "1.7",
-              color: "#cbd5e1",
-              margin: 0,
-            }}>
-              {report.briefOverview}
+        {/* Main Content */}
+        <div className="flex-1 p-6 md:p-8">
+          {!showHistory && !isMobile && (
+            <button onClick={() => setShowHistory(true)} className="fixed left-4 top-1/2 -translate-y-1/2 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-10">
+              <History size={20} />
+            </button>
+          )}
+
+          {/* Header */}
+          <div className="max-w-5xl mx-auto mb-12">
+            <Link href="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm mb-6">
+              <ArrowLeft size={16} /> Back to Dashboard
+            </Link>
+
+            <div className="flex items-center gap-4 mb-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+                <Radar size={24} />
+              </div>
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+                Deep Search
+              </h1>
+            </div>
+
+            <p className="text-gray-400 text-lg">
+              Multi-source deep research with hidden mechanics and expert insights.
             </p>
           </div>
 
-          {/* Hidden Mechanics */}
-          {report.hiddenMechanics && report.hiddenMechanics.length > 0 && (
-            <div style={{
-              background: "rgba(255, 255, 255, 0.05)",
-              backdropFilter: "blur(10px)",
-              border: "1px solid rgba(168, 85, 247, 0.2)",
-              borderRadius: "16px",
-              padding: isMobile ? "20px" : "32px",
-              marginBottom: "24px",
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                marginBottom: "20px",
-              }}>
-                <div style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  background: "rgba(168, 85, 247, 0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#a855f7",
-                }}>
-                  <Lightbulb size={18} />
-                </div>
-                <h2 style={{
-                  fontSize: isMobile ? "18px" : "22px",
-                  fontWeight: "700",
-                  margin: 0,
-                  color: "#a855f7",
-                }}>
-                  Hidden Mechanics
-                </h2>
+          {/* Search Interface */}
+          <div className="max-w-5xl mx-auto mb-12">
+            <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 md:p-8">
+              <label className="block text-sm font-semibold text-gray-400 mb-2">What do you want to research deeply?</label>
+              <div className="relative mb-4">
+                <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="e.g., Quantum computing applications, AI regulation..."
+                  className="w-full pl-12 pr-4 py-4 bg-black/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                  onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+                />
               </div>
-              <ul style={{
-                margin: 0,
-                paddingLeft: "24px",
-                listStyle: "none",
-              }}>
-                {report.hiddenMechanics.map((mechanic, idx) => (
-                  <li key={idx} style={{
-                    fontSize: "15px",
-                    lineHeight: "1.7",
-                    color: "#cbd5e1",
-                    marginBottom: "12px",
-                    position: "relative",
-                    paddingLeft: "8px",
-                  }}>
-                    <span style={{
-                      position: "absolute",
-                      left: "-16px",
-                      color: "#a855f7",
-                      fontWeight: "bold",
-                    }}>•</span>
-                    {mechanic}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
 
-          {/* Counterintuitive Insights */}
-          {report.counterintuitiveInsights && report.counterintuitiveInsights.length > 0 && (
-            <div style={{
-              background: "rgba(255, 255, 255, 0.05)",
-              backdropFilter: "blur(10px)",
-              border: "1px solid rgba(245, 158, 11, 0.2)",
-              borderRadius: "16px",
-              padding: isMobile ? "20px" : "32px",
-              marginBottom: "24px",
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                marginBottom: "20px",
-              }}>
-                <div style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  background: "rgba(245, 158, 11, 0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#f59e0b",
-                }}>
-                  <AlertTriangle size={18} />
-                </div>
-                <h2 style={{
-                  fontSize: isMobile ? "18px" : "22px",
-                  fontWeight: "700",
-                  margin: 0,
-                  color: "#f59e0b",
-                }}>
-                  Counterintuitive Insights
-                </h2>
-              </div>
-              <ul style={{
-                margin: 0,
-                paddingLeft: "24px",
-                listStyle: "none",
-              }}>
-                {report.counterintuitiveInsights.map((insight, idx) => (
-                  <li key={idx} style={{
-                    fontSize: "15px",
-                    lineHeight: "1.7",
-                    color: "#cbd5e1",
-                    marginBottom: "12px",
-                    position: "relative",
-                    paddingLeft: "8px",
-                  }}>
-                    <span style={{
-                      position: "absolute",
-                      left: "-16px",
-                      color: "#f59e0b",
-                      fontWeight: "bold",
-                    }}>•</span>
-                    {insight}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+              <button
+                onClick={handleSearch}
+                disabled={loading}
+                className="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-700 rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-lg hover:shadow-blue-500/30 transition-all disabled:opacity-50"
+              >
+                {loading ? (<><RefreshCw size={20} className="animate-spin" /> Researching...</>) : (<><Radar size={20} /> Deep Search</>)}
+              </button>
 
-          {/* Expert Debates */}
-          {report.expertDebates && report.expertDebates.length > 0 && (
-            <div style={{
-              background: "rgba(255, 255, 255, 0.05)",
-              backdropFilter: "blur(10px)",
-              border: "1px solid rgba(239, 68, 68, 0.2)",
-              borderRadius: "16px",
-              padding: isMobile ? "20px" : "32px",
-              marginBottom: "24px",
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                marginBottom: "20px",
-              }}>
-                <div style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  background: "rgba(239, 68, 68, 0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#ef4444",
-                }}>
-                  <MessageSquare size={18} />
-                </div>
-                <h2 style={{
-                  fontSize: isMobile ? "18px" : "22px",
-                  fontWeight: "700",
-                  margin: 0,
-                  color: "#ef4444",
-                }}>
-                  Expert Debates
-                </h2>
-              </div>
-              <ul style={{
-                margin: 0,
-                paddingLeft: "24px",
-                listStyle: "none",
-              }}>
-                {report.expertDebates.map((debate, idx) => (
-                  <li key={idx} style={{
-                    fontSize: "15px",
-                    lineHeight: "1.7",
-                    color: "#cbd5e1",
-                    marginBottom: "12px",
-                    position: "relative",
-                    paddingLeft: "8px",
-                  }}>
-                    <span style={{
-                      position: "absolute",
-                      left: "-16px",
-                      color: "#ef4444",
-                      fontWeight: "bold",
-                    }}>•</span>
-                    {debate}
-                  </li>
-                ))}
-              </ul>
+              {error && <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 text-sm">{error}</div>}
             </div>
-          )}
-
-          {/* Social Media Highlights */}
-          {report.socialMediaHighlights && report.socialMediaHighlights.length > 0 && (
-            <div style={{
-              background: "rgba(255, 255, 255, 0.05)",
-              backdropFilter: "blur(10px)",
-              border: "1px solid rgba(59, 130, 246, 0.2)",
-              borderRadius: "16px",
-              padding: isMobile ? "20px" : "32px",
-              marginBottom: "24px",
-            }}>
-              <h3 style={{
-                fontSize: isMobile ? "16px" : "18px",
-                fontWeight: "700",
-                margin: "0 0 16px 0",
-                color: "#3b82f6",
-              }}>
-                Social Media Highlights
-              </h3>
-              <div style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-              }}>
-                {report.socialMediaHighlights.map((highlight, idx) => (
-                  <a
-                    key={idx}
-                    href={highlight.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "block",
-                      padding: "16px",
-                      background: "rgba(0, 0, 0, 0.3)",
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      textDecoration: "none",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = "#3b82f6";
-                      e.currentTarget.style.background = "rgba(0, 0, 0, 0.5)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.1)";
-                      e.currentTarget.style.background = "rgba(0, 0, 0, 0.3)";
-                    }}
-                  >
-                    <div style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginBottom: "8px",
-                    }}>
-                      <span style={{
-                        fontSize: "12px",
-                        fontWeight: "600",
-                        color: "#3b82f6",
-                        textTransform: "uppercase",
-                      }}>
-                        {highlight.platform}
-                      </span>
-                      <ExternalLink size={14} style={{ color: "#6b7280" }} />
-                    </div>
-                    <p style={{
-                      fontSize: "14px",
-                      color: "#e2e8f0",
-                      lineHeight: "1.5",
-                      margin: "0 0 8px 0",
-                    }}>
-                      {highlight.content}
-                    </p>
-                    <p style={{
-                      fontSize: "12px",
-                      color: "#6b7280",
-                      margin: 0,
-                    }}>
-                      — {highlight.author}
-                    </p>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Podcast References */}
-          {report.podcastReferences && report.podcastReferences.length > 0 && (
-            <div style={{
-              background: "rgba(255, 255, 255, 0.05)",
-              backdropFilter: "blur(10px)",
-              border: "1px solid rgba(139, 92, 246, 0.2)",
-              borderRadius: "16px",
-              padding: isMobile ? "20px" : "32px",
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                marginBottom: "16px",
-              }}>
-                <Headphones size={18} style={{ color: "#8b5cf6" }} />
-                <h3 style={{
-                  fontSize: isMobile ? "16px" : "18px",
-                  fontWeight: "700",
-                  margin: 0,
-                  color: "#8b5cf6",
-                }}>
-                  Podcast References
-                </h3>
-              </div>
-              <div style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-              }}>
-                {report.podcastReferences.map((podcast, idx) => (
-                  <a
-                    key={idx}
-                    href={podcast.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "block",
-                      padding: "16px",
-                      background: "rgba(0, 0, 0, 0.3)",
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      textDecoration: "none",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = "#8b5cf6";
-                      e.currentTarget.style.background = "rgba(0, 0, 0, 0.5)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.1)";
-                      e.currentTarget.style.background = "rgba(0, 0, 0, 0.3)";
-                    }}
-                  >
-                    <div style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginBottom: "8px",
-                    }}>
-                      <h4 style={{
-                        fontSize: "15px",
-                        fontWeight: "600",
-                        color: "#e2e8f0",
-                        margin: 0,
-                      }}>
-                        {podcast.title}
-                      </h4>
-                      <ExternalLink size={14} style={{ color: "#6b7280" }} />
-                    </div>
-                    <p style={{
-                      fontSize: "13px",
-                      color: "#8b5cf6",
-                      margin: "0 0 8px 0",
-                    }}>
-                      {podcast.episode}
-                      {podcast.timestamp && ` • ${podcast.timestamp}`}
-                    </p>
-                    <p style={{
-                      fontSize: "14px",
-                      color: "#94a3b8",
-                      lineHeight: "1.5",
-                      margin: 0,
-                    }}>
-                      {podcast.summary}
-                    </p>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && !report && (
-        <div style={{
-          maxWidth: "600px",
-          margin: "64px auto",
-          textAlign: "center",
-        }}>
-          <div style={{
-            width: "80px",
-            height: "80px",
-            borderRadius: "20px",
-            background: "linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(29, 78, 216, 0.2) 100%)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 24px",
-          }}>
-            <Radar size={40} style={{ color: "#3b82f6" }} />
           </div>
-          <h3 style={{
-            fontSize: "24px",
-            fontWeight: "700",
-            color: "#ffffff",
-            marginBottom: "12px",
-          }}>
-            Ready to Research
-          </h3>
-          <p style={{
-            fontSize: "16px",
-            color: "#9ca3af",
-            lineHeight: "1.6",
-          }}>
-            Enter any topic to get a comprehensive deep search report with hidden mechanics, expert insights, and social context.
-          </p>
+
+          {/* Results */}
+          {report && (
+            <div className="max-w-5xl mx-auto space-y-6">
+              {/* Overview */}
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 md:p-8">
+                <h2 className="text-2xl font-bold text-blue-400 mb-4">Overview</h2>
+                <p className="text-gray-300 leading-relaxed">{report.briefOverview}</p>
+              </div>
+
+              {/* Hidden Mechanics */}
+              {report.hiddenMechanics?.length > 0 && (
+                <div className="backdrop-blur-xl bg-white/5 border border-purple-500/20 rounded-2xl p-6 md:p-8">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                      <Lightbulb size={18} className="text-purple-400" />
+                    </div>
+                    <h2 className="text-xl font-bold text-purple-400">Hidden Mechanics</h2>
+                  </div>
+                  <ul className="space-y-3">
+                    {report.hiddenMechanics.map((m, i) => (
+                      <li key={i} className="text-gray-300 leading-relaxed pl-6 relative before:content-['•'] before:absolute before:left-0 before:text-purple-400 before:font-bold">{m}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Counterintuitive Insights */}
+              {report.counterintuitiveInsights?.length > 0 && (
+                <div className="backdrop-blur-xl bg-white/5 border border-amber-500/20 rounded-2xl p-6 md:p-8">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                      <AlertTriangle size={18} className="text-amber-400" />
+                    </div>
+                    <h2 className="text-xl font-bold text-amber-400">Counterintuitive Insights</h2>
+                  </div>
+                  <ul className="space-y-3">
+                    {report.counterintuitiveInsights.map((insight, i) => (
+                      <li key={i} className="text-gray-300 leading-relaxed pl-6 relative before:content-['•'] before:absolute before:left-0 before:text-amber-400 before:font-bold">{insight}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Expert Debates */}
+              {report.expertDebates?.length > 0 && (
+                <div className="backdrop-blur-xl bg-white/5 border border-red-500/20 rounded-2xl p-6 md:p-8">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                      <MessageSquare size={18} className="text-red-400" />
+                    </div>
+                    <h2 className="text-xl font-bold text-red-400">Expert Debates</h2>
+                  </div>
+                  <ul className="space-y-3">
+                    {report.expertDebates.map((debate, i) => (
+                      <li key={i} className="text-gray-300 leading-relaxed pl-6 relative before:content-['•'] before:absolute before:left-0 before:text-red-400 before:font-bold">{debate}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Social Media Highlights */}
+              {report.socialMediaHighlights?.length > 0 && (
+                <div className="backdrop-blur-xl bg-white/5 border border-blue-500/20 rounded-2xl p-6 md:p-8">
+                  <h3 className="text-lg font-bold text-blue-400 mb-4">Social Media Highlights</h3>
+                  <div className="space-y-3">
+                    {report.socialMediaHighlights.map((h, i) => (
+                      <a key={i} href={h.url} target="_blank" rel="noopener noreferrer" className="block p-4 bg-black/30 rounded-lg border border-white/10 hover:border-blue-500 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-blue-400 uppercase">{h.platform}</span>
+                          <ExternalLink size={14} className="text-gray-500" />
+                        </div>
+                        <p className="text-gray-200 text-sm leading-relaxed mb-2">{h.content}</p>
+                        <p className="text-xs text-gray-500">— {h.author}</p>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Podcast References */}
+              {report.podcastReferences?.length > 0 && (
+                <div className="backdrop-blur-xl bg-white/5 border border-violet-500/20 rounded-2xl p-6 md:p-8">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Headphones size={18} className="text-violet-400" />
+                    <h3 className="text-lg font-bold text-violet-400">Podcast References</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {report.podcastReferences.map((p, i) => (
+                      <a key={i} href={p.url} target="_blank" rel="noopener noreferrer" className="block p-4 bg-black/30 rounded-lg border border-white/10 hover:border-violet-500 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-gray-200">{p.title}</h4>
+                          <ExternalLink size={14} className="text-gray-500" />
+                        </div>
+                        <p className="text-sm text-violet-400 mb-2">{p.episode}{p.timestamp && ` • ${p.timestamp}`}</p>
+                        <p className="text-sm text-gray-400 leading-relaxed">{p.summary}</p>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && !report && (
+            <div className="max-w-lg mx-auto text-center py-16">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-700/20 flex items-center justify-center mx-auto mb-6">
+                <Radar size={40} className="text-blue-400" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3">Ready to Research</h3>
+              <p className="text-gray-400">Enter any topic to get a comprehensive deep search report with hidden mechanics, expert insights, and social context.</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

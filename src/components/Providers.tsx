@@ -9,6 +9,7 @@ import { NewsSourcesProvider } from "@/contexts/NewsSourcesContext";
 import { RecentSearchesProvider } from "@/contexts/RecentSearchesContext";
 import { SearchReportsProvider } from "@/contexts/SearchReportsContext";
 import { SettingsPopup } from "@/components/SettingsPopup";
+import GlobalSearchProvider from "@/components/GlobalSearchProvider";
 
 interface ProvidersProps {
   children: ReactNode;
@@ -23,8 +24,10 @@ export function Providers({ children }: ProvidersProps) {
             <RemindersProvider>
               <NewsSourcesProvider>
                 <LayoutProvider>
-                  {children}
-                  <SettingsPopup />
+                  <GlobalSearchProvider>
+                    {children}
+                    <SettingsPopup />
+                  </GlobalSearchProvider>
                 </LayoutProvider>
               </NewsSourcesProvider>
             </RemindersProvider>

@@ -5,6 +5,7 @@ import { BottomNav } from "@/components/navigation/BottomNav";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
 import { IntelToolsBar } from "@/components/home/IntelToolsBar";
 import { QuickAccessDock } from "@/components/home/QuickAccessDock";
+import { DashboardQuickLinks } from "@/components/home/DashboardQuickLinks";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -32,7 +33,6 @@ export default function Home() {
     name: string;
   } | null>(null);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
-  const [hasSearchResults, setHasSearchResults] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -77,6 +77,7 @@ export default function Home() {
       case "files":
         return <FilesPreview isGoogleConnected={isGoogleConnected} onConnectGoogle={handleConnectGoogle} />;
       case "notes":
+      case "notion-browser":
         return <NotesPreview />;
       case "raindrop":
         return <RaindropPreview />;
@@ -155,19 +156,20 @@ export default function Home() {
 
           {/* Search */}
           <div style={{ marginBottom: "32px" }}>
-            <MultiSourceSearch 
-              onResultsChange={setHasSearchResults}
-            />
+            <MultiSourceSearch />
           </div>
 
-          {/* Intel Tools Bar - hidden when search results present */}
-          {!hasSearchResults && <IntelToolsBar onToolClick={handleToolClick} />}
+          {/* Dashboard Quick Links */}
+          <DashboardQuickLinks />
 
-          {/* Quick Access Dock - hidden when search results present */}
-          {!hasSearchResults && <QuickAccessDock onToolClick={handleToolClick} />}
+          {/* Intel Tools Bar */}
+          <IntelToolsBar onToolClick={handleToolClick} />
 
-          {/* Preview Section - hidden when search results present */}
-          {!hasSearchResults && <div
+          {/* Quick Access Dock */}
+          <QuickAccessDock onToolClick={handleToolClick} />
+
+          {/* Preview Section */}
+          <div
             style={{
               marginTop: "32px",
               background: "rgba(255, 255, 255, 0.03)",
@@ -243,7 +245,7 @@ export default function Home() {
             <div style={{ padding: "24px", minHeight: "400px" }}>
               {renderPreview()}
             </div>
-          </div>}
+          </div>
         </div>
       </div>
     </>
