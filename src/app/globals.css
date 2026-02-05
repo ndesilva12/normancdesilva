@@ -6,10 +6,10 @@
   --foreground: #f0f0f5;
   --foreground-muted: #8a8a95;
   --muted: #8a8a95;
-  --accent: #00d4ff;
-  --accent-rgb: 0, 212, 255;
-  --accent-light: #22d3ee;
-  --accent-dark: #0891b2;
+  --accent: #6366f1;
+  --accent-rgb: 99, 102, 241;
+  --accent-light: #818cf8;
+  --accent-dark: #4f46e5;
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-hover: rgba(255, 255, 255, 0.06);

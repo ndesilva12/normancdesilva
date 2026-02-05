@@ -15,15 +15,15 @@ import { useGlobalSearch } from "../GlobalSearchProvider";
 const QUICK_LINKS = [
   {
     id: "investors",
-    name: "Investor Pipeline",
+    name: "Investors",
     icon: TrendingUp,
     href: "/investors",
     color: "#3b82f6",
-    description: "Track fundraising progress",
+    description: "Track fundraising pipeline",
   },
   {
     id: "relationship-intel",
-    name: "Relationship Intel",
+    name: "Relationships",
     icon: Users,
     href: "/relationship-intel",
     color: "#6366f1",
@@ -31,7 +31,7 @@ const QUICK_LINKS = [
   },
   {
     id: "mission",
-    name: "Mission Control",
+    name: "Mission",
     icon: Target,
     href: "/mission",
     color: "#8b5cf6",
@@ -39,11 +39,11 @@ const QUICK_LINKS = [
   },
   {
     id: "people",
-    name: "People Database",
+    name: "People",
     icon: UserSquare2,
     href: "/people",
     color: "#10b981",
-    description: "Sync & manage contacts",
+    description: "Manage contacts",
   },
   {
     id: "recommendations",
@@ -82,70 +82,6 @@ export function DashboardQuickLinks() {
           gap: "12px",
         }}
       >
-        {/* Global Search Button */}
-        <div
-          className="card"
-          style={{
-            padding: "16px 20px",
-            cursor: "pointer",
-            transition: "all 0.2s",
-            position: "relative",
-            overflow: "hidden",
-            background: "linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1))",
-            border: "1px solid rgba(139, 92, 246, 0.3)",
-          }}
-          onClick={openSearch}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-4px)";
-            e.currentTarget.style.boxShadow = "0 8px 30px rgba(139, 92, 246, 0.2)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "none";
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "8px",
-                background: "linear-gradient(135deg, #8b5cf6, #3b82f6)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Search style={{ width: "18px", height: "18px", color: "#fff" }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  fontSize: "15px",
-                  fontWeight: 700,
-                  color: "var(--foreground)",
-                  marginBottom: "2px",
-                }}
-              >
-                Global Search
-              </div>
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "var(--muted)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                <Command size={12} />
-                <span>+ K</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Links */}
         {QUICK_LINKS.map((link) => {
           const Icon = link.icon;
           return (
