@@ -204,7 +204,7 @@ export default function PeoplePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-12 py-12">
+      <div className="max-w-[1200px] mx-auto px-12 py-12">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 text-sm mb-8"
@@ -230,14 +230,14 @@ export default function PeoplePage() {
             <button
               onClick={syncFromNotion}
               disabled={syncing}
-              className="px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 hover:border-white/20 transition-all duration-200 disabled:opacity-50"
+              className="px-8 py-3 backdrop-blur-xl bg-white/10 border border-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 hover:border-white/20 transition-all duration-200 disabled:opacity-50"
             >
               <CloudDownload size={18} className={syncing ? 'animate-pulse' : ''} />
               {syncing ? 'Syncing...' : 'Sync Notion'}
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-violet-500/25 hover:scale-105 transition-all duration-200"
+              className="px-8 py-3 bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-violet-500/25 hover:scale-105 transition-all duration-200"
             >
               <Plus size={20} />
               Add Person
@@ -247,7 +247,7 @@ export default function PeoplePage() {
       </div>
 
       {/* Search */}
-      <div className="max-w-7xl mx-auto px-12 mb-8">
+      <div className="max-w-[1200px] mx-auto px-12 mb-8">
         <div className="relative max-w-lg">
           <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
@@ -261,7 +261,7 @@ export default function PeoplePage() {
       </div>
 
       {/* Table */}
-      <div className="max-w-7xl mx-auto px-12 pb-16">
+      <div className="max-w-[1200px] mx-auto px-12 pb-16">
         <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full">

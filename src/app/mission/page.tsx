@@ -201,7 +201,7 @@ export default function MissionControl() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] text-white">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-12 py-12">
+      <div className="max-w-[1200px] mx-auto px-12 py-12">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 text-sm mb-8"
@@ -225,7 +225,7 @@ export default function MissionControl() {
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-105 transition-all duration-200"
+            className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-105 transition-all duration-200"
           >
             <Plus size={20} />
             Add Item
@@ -234,7 +234,7 @@ export default function MissionControl() {
       </div>
 
       {/* Kanban Board */}
-      <div className="max-w-7xl mx-auto px-12 pb-16">
+      <div className="max-w-[1200px] mx-auto px-12 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Created Column */}
           <div className="backdrop-blur-xl rounded-2xl border overflow-hidden"

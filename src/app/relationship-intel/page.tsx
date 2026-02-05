@@ -175,7 +175,7 @@ export default function RelationshipIntel() {
           <button
             onClick={syncData}
             disabled={syncing}
-            className="px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 hover:border-white/20 transition-all duration-200 disabled:opacity-50"
+            className="px-8 py-3 backdrop-blur-xl bg-white/10 border border-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 hover:border-white/20 transition-all duration-200 disabled:opacity-50"
           >
             <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
             {syncing ? 'Syncing...' : 'Sync Gmail'}

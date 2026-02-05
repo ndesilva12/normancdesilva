@@ -211,14 +211,14 @@ export default function RecommendationsPage() {
             <button
               onClick={syncFromNotion}
               disabled={syncing}
-              className="px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 hover:border-white/20 transition-all duration-200 disabled:opacity-50"
+              className="px-8 py-3 backdrop-blur-xl bg-white/10 border border-white/10 rounded-xl font-medium flex items-center gap-2 hover:bg-white/20 hover:border-white/20 transition-all duration-200 disabled:opacity-50"
             >
               <CloudDownload size={18} className={syncing ? 'animate-pulse' : ''} />
               {syncing ? 'Syncing...' : 'Sync Notion'}
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-pink-500/25 hover:scale-105 transition-all duration-200"
+              className="px-8 py-3 bg-gradient-to-r from-pink-500 to-rose-600 rounded-xl font-semibold flex items-center gap-2 hover:shadow-xl hover:shadow-pink-500/25 hover:scale-105 transition-all duration-200"
             >
               <Plus size={20} />
               Add
