@@ -21,34 +21,42 @@ if (getApps().length === 0) {
 const db = getFirestore();
 
 // Helper to find clawdbot executable
-function findClawdbot(): string {
-  const { accessSync, constants } = require('fs');
-  const possiblePaths = [
-    // Environment override
-    process.env.CLAWDBOT_PATH,
-    // Real resolved path (not symlink)
-    '/home/ubuntu/.npm-global/lib/node_modules/clawdbot/dist/entry.js',
-    // Ubuntu npm global symlink
-    '/home/ubuntu/.npm-global/bin/clawdbot',
-    // Root npm global
-    '/root/.npm-global/bin/clawdbot',
-    // System-wide paths
-    '/usr/local/bin/clawdbot',
-    '/usr/bin/clawdbot',
-  ].filter(Boolean);
+function findClawdbot(): { command: string; args: string[] } {
+  const { existsSync } = require('fs');
 
-  for (const path of possiblePaths) {
-    try {
-      accessSync(path, constants.X_OK);
+  // Check for the real npm package location first
+  const jsPath = '/home/ubuntu/.npm-global/lib/node_modules/clawdbot/dist/entry.js';
+  if (existsSync(jsPath)) {
+    console.log(`[Jimmy API] Found clawdbot JS at: ${jsPath}`);
+    return { command: 'node', args: [jsPath] };
+  }
+
+  // Check for symlink
+  const symlinkPath = '/home/ubuntu/.npm-global/bin/clawdbot';
+  if (existsSync(symlinkPath)) {
+    console.log(`[Jimmy API] Found clawdbot symlink at: ${symlinkPath}`);
+    return { command: symlinkPath, args: [] };
+  }
+
+  // Fallback to root npm global
+  const rootPath = '/root/.npm-global/bin/clawdbot';
+  if (existsSync(rootPath)) {
+    console.log(`[Jimmy API] Found clawdbot at root: ${rootPath}`);
+    return { command: rootPath, args: [] };
+  }
+
+  // Last resort: try system paths
+  const systemPaths = ['/usr/local/bin/clawdbot', '/usr/bin/clawdbot'];
+  for (const path of systemPaths) {
+    if (existsSync(path)) {
       console.log(`[Jimmy API] Found clawdbot at: ${path}`);
-      return path;
-    } catch {
-      // Continue to next path
+      return { command: path, args: [] };
     }
   }
 
-  console.warn('[Jimmy API] Could not find clawdbot at any location, using default:', possiblePaths[0]);
-  return possiblePaths[0] || '/home/ubuntu/.npm-global/lib/node_modules/clawdbot/dist/entry.js';
+  // If nothing found, return node + js path as best attempt
+  console.warn(`[Jimmy API] Could not find clawdbot, attempting with node + ${jsPath}`);
+  return { command: 'node', args: [jsPath] };
 }
 
 // Use Clawdbot agent command to communicate with Jimmy
@@ -70,9 +78,9 @@ export async function POST(request: NextRequest) {
     const escapedQuery = query.replace(/'/g, "'\\''");
 
     // Find the clawdbot executable
-    const clawdbotPath = findClawdbot();
+    const { command, args: initialArgs } = findClawdbot();
 
-    console.log("[Jimmy API] Sending message to Clawdbot:", { userId, convId, queryLength: query.length, clawdbotPath });
+    console.log("[Jimmy API] Sending message to Clawdbot:", { userId, convId, queryLength: query.length, command, initialArgs });
 
     try {
       // Use spawn instead of exec to avoid shell issues
@@ -86,7 +94,8 @@ export async function POST(request: NextRequest) {
           process.kill(proc.pid!);
         }, 35000);
 
-        const proc = spawn(clawdbotPath, [
+        const proc = spawn(command, [
+          ...initialArgs,
           'agent',
           '--session-id',
           convId,
