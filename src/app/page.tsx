@@ -3,7 +3,7 @@
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Sparkles,
@@ -149,7 +149,7 @@ const TOOL_CATEGORIES = [
   },
 ];
 
-export default function Home() {
+function DashboardContent() {
   const [isMobile, setIsMobile] = useState(false);
   const [hasSearchResults, setHasSearchResults] = useState(false);
   const router = useRouter();
@@ -165,158 +165,165 @@ export default function Home() {
   }, []);
 
   return (
-    <>
-      <TopNav />
-      <BottomNav />
-
+    <div
+      style={{
+        minHeight: "100vh",
+        paddingTop: "64px",
+        paddingBottom: isMobile ? "88px" : "24px",
+        padding: isMobile ? "64px 12px 88px 12px" : "64px 24px 24px 24px",
+      }}
+    >
       <div
+        className="container"
         style={{
-          minHeight: "100vh",
-          paddingTop: "64px",
-          paddingBottom: isMobile ? "88px" : "24px",
-          padding: isMobile ? "64px 12px 88px 12px" : "64px 24px 24px 24px",
+          maxWidth: "1400px",
+          margin: "0 auto",
         }}
       >
-        <div
-          className="container"
-          style={{
-            maxWidth: "1400px",
-            margin: "0 auto",
-          }}
-        >
-          {/* Search */}
-          <div style={{ marginBottom: "32px" }}>
-            <MultiSourceSearch
-              initialQuery={initialQuery}
-              initialSource={initialSource}
-              onResultsChange={(hasResults) => {
-                setHasSearchResults(hasResults);
-              }}
-            />
-          </div>
+        {/* Search */}
+        <div style={{ marginBottom: "32px" }}>
+          <MultiSourceSearch
+            initialQuery={initialQuery}
+            initialSource={initialSource}
+            onResultsChange={(hasResults) => {
+              setHasSearchResults(hasResults);
+            }}
+          />
+        </div>
 
-          {/* Hide dashboard when search results are active */}
-          {!hasSearchResults && (
-            <>
-              {/* All Tools - Unified Presentation */}
-              <div>
-                <h2
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                    color: "var(--muted)",
-                    marginBottom: "32px",
-                  }}
-                >
-                  TOOLS
-                </h2>
+        {/* Hide dashboard when search results are active */}
+        {!hasSearchResults && (
+          <>
+            {/* All Tools - Unified Presentation */}
+            <div>
+              <h2
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  color: "var(--muted)",
+                  marginBottom: "32px",
+                }}
+              >
+                TOOLS
+              </h2>
 
-                {TOOL_CATEGORIES.map((category) => (
-                  <div key={category.name} style={{ marginBottom: "32px" }}>
-                    <h3
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.1em",
-                        color: "var(--muted)",
-                        marginBottom: "12px",
-                        opacity: 0.7,
-                      }}
-                    >
-                      {category.name}
-                    </h3>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(200px, 1fr))",
-                        gap: "12px",
-                      }}
-                    >
-                      {category.tools.map((tool) => {
-                        const Icon = tool.icon;
-                        return (
+              {TOOL_CATEGORIES.map((category) => (
+                <div key={category.name} style={{ marginBottom: "32px" }}>
+                  <h3
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                      color: "var(--muted)",
+                      marginBottom: "12px",
+                      opacity: 0.7,
+                    }}
+                  >
+                    {category.name}
+                  </h3>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(200px, 1fr))",
+                      gap: "12px",
+                    }}
+                  >
+                    {category.tools.map((tool) => {
+                      const Icon = tool.icon;
+                      return (
+                        <div
+                          key={tool.id}
+                          className="card"
+                          style={{
+                            padding: "14px 16px",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            position: "relative",
+                            overflow: "hidden",
+                          }}
+                          onClick={() => router.push(tool.href)}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-4px)";
+                            e.currentTarget.style.borderColor = tool.color;
+                            const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
+                            if (overlay) overlay.style.opacity = "0.08";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.borderColor = "var(--glass-border)";
+                            const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
+                            if (overlay) overlay.style.opacity = "0";
+                          }}
+                        >
                           <div
-                            key={tool.id}
-                            className="card"
+                            className="tool-overlay"
                             style={{
-                              padding: "14px 16px",
-                              cursor: "pointer",
-                              transition: "all 0.2s",
-                              position: "relative",
-                              overflow: "hidden",
+                              position: "absolute",
+                              inset: 0,
+                              background: tool.color,
+                              opacity: 0,
+                              transition: "opacity 0.2s",
+                              pointerEvents: "none",
                             }}
-                            onClick={() => router.push(tool.href)}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = "translateY(-4px)";
-                              e.currentTarget.style.borderColor = tool.color;
-                              const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
-                              if (overlay) overlay.style.opacity = "0.08";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = "translateY(0)";
-                              e.currentTarget.style.borderColor = "var(--glass-border)";
-                              const overlay = e.currentTarget.querySelector(".tool-overlay") as HTMLElement;
-                              if (overlay) overlay.style.opacity = "0";
-                            }}
-                          >
-                            <div
-                              className="tool-overlay"
-                              style={{
-                                position: "absolute",
-                                inset: 0,
-                                background: tool.color,
-                                opacity: 0,
-                                transition: "opacity 0.2s",
-                                pointerEvents: "none",
-                              }}
-                            />
-                            <div style={{ position: "relative", zIndex: 1 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          />
+                          <div style={{ position: "relative", zIndex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                              <div
+                                style={{
+                                  width: "36px",
+                                  height: "36px",
+                                  borderRadius: "8px",
+                                  background: `${tool.color}20`,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Icon style={{ width: "18px", height: "18px", color: tool.color }} />
+                              </div>
+                              <div>
                                 <div
                                   style={{
-                                    width: "36px",
-                                    height: "36px",
-                                    borderRadius: "8px",
-                                    background: `${tool.color}20`,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    flexShrink: 0,
+                                    fontSize: "15px",
+                                    fontWeight: 700,
+                                    color: "var(--foreground)",
+                                    marginBottom: "2px",
                                   }}
                                 >
-                                  <Icon style={{ width: "18px", height: "18px", color: tool.color }} />
+                                  {tool.name}
                                 </div>
-                                <div>
-                                  <div
-                                    style={{
-                                      fontSize: "15px",
-                                      fontWeight: 700,
-                                      color: "var(--foreground)",
-                                      marginBottom: "2px",
-                                    }}
-                                  >
-                                    {tool.name}
-                                  </div>
-                                  <div style={{ fontSize: "12px", color: "var(--muted)" }}>
-                                    {tool.description}
-                                  </div>
+                                <div style={{ fontSize: "12px", color: "var(--muted)" }}>
+                                  {tool.description}
                                 </div>
                               </div>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
+    </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <>
+      <TopNav />
+      <BottomNav />
+      <Suspense fallback={<div style={{ minHeight: "100vh", paddingTop: "64px" }} />}>
+        <DashboardContent />
+      </Suspense>
     </>
   );
 }
