@@ -1,31 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const TELEGRAM_BOT_TOKEN = "8273394016:AAEv-Kj_aBEqwb4Kixs6I3rg9j471fSaMsk";
-const TELEGRAM_USERNAME = "normancdesilva"; // Your Telegram username
+const TELEGRAM_USER_ID = "8209045699"; // Your Telegram user ID
 const TELEGRAM_API = "https://api.telegram.org";
-
-// Get user ID from username
-async function getUserIdFromUsername(username: string): Promise<string | null> {
-  try {
-    // Try to get the user ID by sending a message and checking updates
-    const response = await fetch(
-      `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/getUpdates`
-    );
-    const data = await response.json();
-
-    if (data.result && data.result.length > 0) {
-      // Get the most recent message's chat ID
-      const chatId = data.result[0]?.message?.chat?.id;
-      if (chatId) {
-        return String(chatId);
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error("[Telegram] Error getting user ID:", error);
-    return null;
-  }
-}
 
 // Send message via Telegram bot
 async function sendTelegramMessage(chatId: string, text: string): Promise<void> {
@@ -94,14 +71,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get chat ID (cache this in production)
-    const chatId = await getUserIdFromUsername(TELEGRAM_USERNAME);
-    if (!chatId) {
-      return NextResponse.json(
-        { error: "Could not find Telegram chat ID. Send a message to @jimmy_desilva_bot first." },
-        { status: 400 }
-      );
-    }
+    // Use the configured user ID
+    const chatId = TELEGRAM_USER_ID;
 
     console.log("[Telegram Chat] Sending message:", { chatId, message });
 
