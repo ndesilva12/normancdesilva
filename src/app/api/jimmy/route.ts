@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exec } from "child_process";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
+import WebSocket from "ws";
 
 // Initialize Firebase Admin
 if (getApps().length === 0) {
@@ -23,46 +20,75 @@ if (getApps().length === 0) {
 
 const db = getFirestore();
 
-// Helper to find clawdbot executable
-function findClawdbot(): { command: string; args: string[] } {
-  const { existsSync } = require('fs');
+// Gateway configuration
+const GATEWAY_URL = 'ws://100.120.206.86:18789';
+const GATEWAY_PASSWORD = process.env.GATEWAY_PASSWORD || 'HowardRoark12!';
+const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || '01c11d12ea993efba6e4796e8e914db50bbab121913da457';
 
-  // Check for the real npm package location first
-  const jsPath = '/home/ubuntu/.npm-global/lib/node_modules/clawdbot/dist/entry.js';
-  if (existsSync(jsPath)) {
-    console.log(`[Jimmy API] Found clawdbot JS at: ${jsPath}`);
-    return { command: 'node', args: [jsPath] };
-  }
+// Helper to connect to Jimmy gateway and send message
+function connectToJimmyGateway(query: string, sessionKey: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(GATEWAY_URL);
+    let responseReceived = false;
+    let timeoutHandle: NodeJS.Timeout;
 
-  // Check for symlink
-  const symlinkPath = '/home/ubuntu/.npm-global/bin/clawdbot';
-  if (existsSync(symlinkPath)) {
-    console.log(`[Jimmy API] Found clawdbot symlink at: ${symlinkPath}`);
-    return { command: symlinkPath, args: [] };
-  }
+    // Set a timeout of 35 seconds for the entire operation
+    timeoutHandle = setTimeout(() => {
+      if (!responseReceived) {
+        ws.close();
+        reject(new Error('Gateway request timeout after 35 seconds'));
+      }
+    }, 35000);
 
-  // Fallback to root npm global
-  const rootPath = '/root/.npm-global/bin/clawdbot';
-  if (existsSync(rootPath)) {
-    console.log(`[Jimmy API] Found clawdbot at root: ${rootPath}`);
-    return { command: rootPath, args: [] };
-  }
+    ws.on('error', (error) => {
+      clearTimeout(timeoutHandle);
+      console.error('[Jimmy Gateway] WebSocket error:', error);
+      reject(new Error(`Gateway connection error: ${error.message}`));
+    });
 
-  // Last resort: try system paths
-  const systemPaths = ['/usr/local/bin/clawdbot', '/usr/bin/clawdbot'];
-  for (const path of systemPaths) {
-    if (existsSync(path)) {
-      console.log(`[Jimmy API] Found clawdbot at: ${path}`);
-      return { command: path, args: [] };
-    }
-  }
+    ws.on('open', () => {
+      console.log('[Jimmy Gateway] Connected to gateway, sending message');
 
-  // If nothing found, return node + js path as best attempt
-  console.warn(`[Jimmy API] Could not find clawdbot, attempting with node + ${jsPath}`);
-  return { command: 'node', args: [jsPath] };
+      // Send the message to Jimmy
+      ws.send(JSON.stringify({
+        action: 'send',
+        agent: 'code-jimmy',
+        message: query,
+        sessionKey: sessionKey,
+      }));
+    });
+
+    ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        console.log('[Jimmy Gateway] Received message:', { type: message.type, done: message.done });
+
+        // Check if this is a response message
+        if (message.type === 'message' && message.content) {
+          responseReceived = true;
+          clearTimeout(timeoutHandle);
+
+          // Close the connection
+          ws.close();
+
+          // Resolve with the content
+          resolve(message.content);
+        }
+      } catch (error) {
+        console.error('[Jimmy Gateway] Failed to parse message:', error, data.toString());
+      }
+    });
+
+    ws.on('close', () => {
+      if (!responseReceived) {
+        clearTimeout(timeoutHandle);
+        reject(new Error('Gateway connection closed without receiving response'));
+      }
+    });
+  });
 }
 
-// Use Clawdbot agent command to communicate with Jimmy
+// Use gateway WebSocket to communicate with Jimmy
 export async function POST(request: NextRequest) {
   try {
     const { query, userId, conversationId } = await request.json();
@@ -76,132 +102,68 @@ export async function POST(request: NextRequest) {
 
     // Use a consistent conversation ID
     const convId = conversationId || `webchat-${userId || 'anonymous'}-${Date.now()}`;
+    const sessionKey = `dashboard-${userId || 'anonymous'}`;
 
-    // Escape single quotes for shell
-    const escapedQuery = query.replace(/'/g, "'\\''");
-
-    // Find the clawdbot executable - just get the path as a string
-    const { existsSync } = require('fs');
-
-    // Try to find clawdbot in common locations
-    let clawdbotPath = '/home/ubuntu/.npm-global/bin/clawdbot';
-    if (!existsSync(clawdbotPath)) {
-      clawdbotPath = '/root/.npm-global/bin/clawdbot';
-    }
-    if (!existsSync(clawdbotPath)) {
-      clawdbotPath = 'clawdbot'; // Fallback to PATH
-    }
-
-    // Build the command as a shell string for proper execution
-    const commandStr = `${clawdbotPath} agent --session-id '${convId}' --message '${escapedQuery}' --json --timeout 30`;
-
-    console.log("[Jimmy API] Sending message to Clawdbot:", { userId, convId, queryLength: query.length, clawdbotPath });
+    console.log("[Jimmy API] Sending message via gateway:", { userId, convId, queryLength: query.length });
 
     try {
-      // Use exec which properly handles shell interpretation and PATH resolution
-      const { stdout, stderr } = await execAsync(commandStr, {
-        cwd: '/home/ubuntu',
-        timeout: 35000,
-        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-      });
+      // Connect to gateway and get response
+      const content = await connectToJimmyGateway(query, sessionKey);
 
-      if (stderr) {
-        console.error("[Jimmy API] Clawdbot stderr:", stderr);
-      }
+      console.log("[Jimmy API] Response received:", content.substring(0, 100));
 
-      // Parse the JSON response
+      // Save to Firestore
       try {
-        const response = JSON.parse(stdout.trim());
+        if (userId) {
+          const conversationRef = db.collection('users').doc(userId).collection('jimmy_conversations').doc(convId);
 
-        // Check if the response was successful
-        if (response.status !== "ok") {
-          throw new Error(`Agent returned status: ${response.status}`);
-        }
-
-        // Extract the text from the first payload
-        const content = response.result?.payloads?.[0]?.text || "No response from Jimmy";
-
-        console.log("[Jimmy API] Response received:", content.substring(0, 100));
-
-        // Save to Firestore
-        try {
-          if (userId) {
-            const conversationRef = db.collection('users').doc(userId).collection('jimmy_conversations').doc(convId);
-
-            // Update conversation with new messages
-            await conversationRef.update({
+          // Update conversation with new messages
+          await conversationRef.update({
+            lastUpdated: Timestamp.now(),
+            jimmyMessage: content,
+          }).catch(async () => {
+            // Create if doesn't exist
+            await conversationRef.set({
+              conversationId: convId,
+              createdAt: Timestamp.now(),
               lastUpdated: Timestamp.now(),
-              messages: response.result?.payloads || [],
-            }).catch(async () => {
-              // Create if doesn't exist
-              await conversationRef.set({
-                conversationId: convId,
-                createdAt: Timestamp.now(),
-                lastUpdated: Timestamp.now(),
-                userMessage: query,
-                assistantMessage: content,
-                messages: response.result?.payloads || [],
-                status: 'completed',
-              });
+              userMessage: query,
+              jimmyMessage: content,
+              status: 'completed',
             });
-          }
-        } catch (firestoreError) {
-          console.error("[Jimmy API] Failed to save to Firestore:", firestoreError);
-          // Don't fail the request if Firestore fails
+          });
         }
-
-        return NextResponse.json({
-          content: content,
-          conversationId: convId,
-          meta: response.result?.meta,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (parseError) {
-        console.error("[Jimmy API] Failed to parse response:", parseError);
-        console.error("[Jimmy API] Raw output:", stdout);
-
-        return NextResponse.json(
-          { error: "Received invalid response from Jimmy" },
-          { status: 500 }
-        );
+      } catch (firestoreError) {
+        console.error("[Jimmy API] Failed to save to Firestore:", firestoreError);
+        // Don't fail the request if Firestore fails
       }
-    } catch (execError: any) {
-      console.error("[Jimmy API] Clawdbot exec error:", execError);
-      console.error("[Jimmy API] Error details:", {
-        message: execError.message,
-        code: execError.code,
-        signal: execError.signal,
-        killed: execError.killed,
-        stdout: execError.stdout?.toString?.(),
-        stderr: execError.stderr?.toString?.(),
+
+      return NextResponse.json({
+        content: content,
+        conversationId: convId,
+        timestamp: new Date().toISOString(),
       });
+    } catch (gatewayError: any) {
+      console.error("[Jimmy API] Gateway error:", gatewayError);
 
       // Check if it's a timeout
-      if (execError.killed && execError.signal === 'SIGTERM') {
+      if (gatewayError.message?.includes('timeout')) {
         return NextResponse.json(
           { error: "Request timed out. Jimmy is taking too long to respond." },
           { status: 504 }
         );
       }
 
-      // Check if clawdbot command was not found
-      if (execError.code === 127 || execError.message?.includes('not found')) {
+      // Check if it's a connection error
+      if (gatewayError.message?.includes('connection')) {
         return NextResponse.json(
-          { error: "ClawdBot command not found at /home/ubuntu/.npm-global/bin/clawdbot. Please verify installation." },
-          { status: 500 }
-        );
-      }
-
-      // Check if it's a permission issue
-      if (execError.code === 13 || execError.message?.includes('Permission denied')) {
-        return NextResponse.json(
-          { error: "Permission denied accessing ClawdBot. Check file permissions on /home/ubuntu/.npm-global/bin/clawdbot" },
-          { status: 500 }
+          { error: "Failed to connect to Jimmy gateway. Please try again." },
+          { status: 503 }
         );
       }
 
       return NextResponse.json(
-        { error: `Error communicating with Jimmy: ${execError.message}` },
+        { error: `Error communicating with Jimmy: ${gatewayError.message}` },
         { status: 500 }
       );
     }
