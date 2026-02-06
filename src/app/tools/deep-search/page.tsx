@@ -33,7 +33,7 @@ export default function DeepSearchPage() {
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #6366f1 0%, #1e293b 50%, #0f172a 100%)',
-      padding: '40px 20px',
+      padding: '104px 20px 40px 20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>

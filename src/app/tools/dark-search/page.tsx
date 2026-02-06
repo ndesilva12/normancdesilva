@@ -33,7 +33,7 @@ export default function DarkSearchPage() {
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #000000 100%)',
-      padding: '40px 20px',
+      padding: '104px 20px 40px 20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>

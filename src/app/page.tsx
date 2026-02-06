@@ -232,30 +232,16 @@ function DashboardContent() {
           <>
             {/* All Tools - Unified Presentation */}
             <div>
-              <h2
-                style={{
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  color: "var(--muted)",
-                  marginBottom: "32px",
-                }}
-              >
-                TOOLS
-              </h2>
-
               {displayCategories.map((category) => (
                 <div key={category.name} style={{ marginBottom: "32px" }}>
                   <h3
                     style={{
-                      fontSize: "11px",
+                      fontSize: "14px",
                       fontWeight: 700,
                       textTransform: "uppercase",
                       letterSpacing: "0.1em",
                       color: "var(--muted)",
                       marginBottom: "12px",
-                      opacity: 0.7,
                     }}
                   >
                     {category.name}
