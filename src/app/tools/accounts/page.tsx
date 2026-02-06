@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PlaidLinkButton } from "@/components/PlaidLink";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 
 interface Account {
   accountId: string;
