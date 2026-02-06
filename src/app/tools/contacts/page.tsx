@@ -201,7 +201,7 @@ export default function ContactsPage() {
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#0a0a0a", width: "100%" }}>
       <Header />
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
-        <div style={{ maxWidth: "1400px", width: "90%", margin: "0 auto", padding: "32px 20px" }}>
+        <div style={{ maxWidth: "1200px", width: "90%", margin: "0 auto", padding: "32px 20px" }}>
           <RemindersBanner />
 
           <ProductivityToolNav current="contacts" />

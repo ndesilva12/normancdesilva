@@ -83,7 +83,7 @@ export default function InoreaderPage() {
       <Header />
 
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto", padding: isMobile ? "16px" : "20px" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: isMobile ? "16px" : "20px" }}>
           <RemindersBanner />
 
           <ProductivityToolNav current="inoreader" />

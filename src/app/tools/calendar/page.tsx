@@ -752,7 +752,7 @@ export default function CalendarPage() {
         <div
           style={{
             width: "100%",
-            maxWidth: "1400px",
+            maxWidth: "1200px",
             margin: "0 auto",
             padding: "32px 24px 100px 24px",
           }}

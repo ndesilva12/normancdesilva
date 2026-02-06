@@ -207,7 +207,7 @@ export default function MarketPage() {
         <Header />
 
         <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
-          <div style={{ width: "100%", maxWidth: "1400px", margin: "0 auto", padding: "24px 24px 100px 24px" }}>
+          <div style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "24px 24px 100px 24px" }}>
             <RemindersBanner />
 
             <ProductivityToolNav current="market" />
