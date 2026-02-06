@@ -21,9 +21,8 @@ if (getApps().length === 0) {
 const db = getFirestore();
 
 // Gateway configuration
-const GATEWAY_URL = process.env.GATEWAY_URL || 'ws://localhost:18789';
+const GATEWAY_URL = process.env.GATEWAY_URL || 'ws://3.128.31.231:18789';
 const GATEWAY_PASSWORD = process.env.GATEWAY_PASSWORD || 'HowardRoark12!';
-const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || '01c11d12ea993efba6e4796e8e914db50bbab121913da457';
 
 // Helper to connect to Jimmy gateway and send message
 function connectToJimmyGateway(query: string, sessionKey: string): Promise<string> {
@@ -32,6 +31,8 @@ function connectToJimmyGateway(query: string, sessionKey: string): Promise<strin
     const ws = new WebSocket(GATEWAY_URL);
     let responseReceived = false;
     let timeoutHandle: NodeJS.Timeout;
+    let authenticated = false;
+    let nonce: string | null = null;
 
     // Set a timeout of 35 seconds for the entire operation
     timeoutHandle = setTimeout(() => {
@@ -56,34 +57,59 @@ function connectToJimmyGateway(query: string, sessionKey: string): Promise<strin
     });
 
     ws.on('open', () => {
-      console.log('[Jimmy Gateway] Connected to gateway successfully, sending message');
-
-      // Send the message to Jimmy
-      const payload = {
-        action: 'send',
-        agent: 'code-jimmy',
-        message: query,
-        sessionKey: sessionKey,
-      };
-      console.log('[Jimmy Gateway] Sending payload:', payload);
-      ws.send(JSON.stringify(payload));
+      console.log('[Jimmy Gateway] Connected to gateway, waiting for auth challenge');
     });
 
     ws.on('message', (data) => {
       try {
         const message = JSON.parse(data.toString());
-        console.log('[Jimmy Gateway] Received message:', { type: message.type, content: message.content?.substring(0, 50), done: message.done });
+        console.log('[Jimmy Gateway] Received message:', { type: message.type, event: message.event });
 
-        // Check if this is a response message
-        if (message.type === 'message' && message.content) {
+        // Handle auth challenge
+        if (message.type === 'event' && message.event === 'connect.challenge') {
+          nonce = message.payload?.nonce;
+          console.log('[Jimmy Gateway] Received auth challenge, sending password auth');
+          ws.send(JSON.stringify({
+            type: 'auth',
+            method: 'password',
+            password: GATEWAY_PASSWORD,
+            nonce: nonce,
+          }));
+          return;
+        }
+
+        // Handle auth success
+        if (message.type === 'auth' && message.payload?.success) {
+          authenticated = true;
+          console.log('[Jimmy Gateway] Authenticated successfully, sending RPC call');
+
+          // Send the message via RPC
+          const rpcPayload = {
+            type: 'rpc',
+            method: 'agent.message',
+            params: {
+              agent: 'code-jimmy',
+              message: query,
+            },
+            id: Date.now(),
+          };
+          console.log('[Jimmy Gateway] Sending RPC payload:', { method: rpcPayload.method, params: rpcPayload.params });
+          ws.send(JSON.stringify(rpcPayload));
+          return;
+        }
+
+        // Handle RPC response
+        if (message.type === 'rpc' && message.result && !responseReceived) {
           responseReceived = true;
           clearTimeout(timeoutHandle);
+          console.log('[Jimmy Gateway] Received RPC response');
 
           // Close the connection
           ws.close();
 
-          // Resolve with the content
-          resolve(message.content);
+          // Resolve with the content - the result should be the response from Jimmy
+          const content = message.result?.message || message.result || 'No response content';
+          resolve(content);
         }
       } catch (error) {
         console.error('[Jimmy Gateway] Failed to parse message:', error, data.toString());
@@ -91,10 +117,14 @@ function connectToJimmyGateway(query: string, sessionKey: string): Promise<strin
     });
 
     ws.on('close', (code, reason) => {
-      console.log('[Jimmy Gateway] Connection closed:', { code, reason: reason?.toString() });
+      console.log('[Jimmy Gateway] Connection closed:', { code, reason: reason?.toString(), authenticated, responseReceived });
       if (!responseReceived) {
         clearTimeout(timeoutHandle);
-        reject(new Error(`Gateway connection closed (code: ${code}) without receiving response`));
+        if (!authenticated) {
+          reject(new Error('Failed to authenticate with gateway'));
+        } else {
+          reject(new Error(`Gateway connection closed (code: ${code}) without receiving response`));
+        }
       }
     });
   });
