@@ -1794,7 +1794,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
               gap: "8px",
               flexShrink: 0,
               borderRadius: "10px",
-              background: isSearching ? "rgba(255, 255, 255, 0.1)" : "linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)",
+              background: isSearching ? "rgba(255, 255, 255, 0.1)" : "linear-gradient(135deg, #00aaff 0%, #33ccff 100%)",
               padding: "12px 32px",
               fontSize: "15px",
               fontWeight: 600,
@@ -1853,12 +1853,12 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                   padding: isMobile ? "10px 14px" : "8px 14px",
                   fontSize: "13px",
                   fontWeight: 600,
-                  border: "none",
+                  border: "2px solid #00aaff",
                   borderRadius: "8px",
                   cursor: "pointer",
                   transition: "all 0.15s",
-                  background: "linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)",
-                  color: "#ffffff",
+                  background: "transparent",
+                  color: "#00aaff",
                   whiteSpace: "nowrap",
                 }}
               >
@@ -1892,28 +1892,28 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                         fontSize: "13px",
                         fontWeight: isSelected || isMetaSource ? 600 : 500,
                         border: isSelected
-                          ? "none"
+                          ? "2px solid #00aaff"
                           : isHighlighted
-                          ? "2px solid rgba(var(--accent-rgb), 0.5)"
+                          ? "2px solid rgba(0, 170, 255, 0.5)"
                           : "1px solid var(--glass-border)",
                         borderRadius: "8px",
                         cursor: "pointer",
                         transition: "all 0.15s",
                         background: isSelected
-                          ? "linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)"
+                          ? "transparent"
                           : isHighlighted
-                          ? "rgba(var(--accent-rgb), 0.08)"
+                          ? "rgba(0, 170, 255, 0.08)"
                           : "rgba(255, 255, 255, 0.03)",
                         color: isSelected
-                          ? "#ffffff"
+                          ? "#00aaff"
                           : isHighlighted
-                          ? "var(--accent)"
+                          ? "#00aaff"
                           : "var(--foreground-muted)",
                         whiteSpace: "nowrap",
                       }}
                       onMouseEnter={(e) => {
                         if (!isSelected && !isHighlighted) {
-                          e.currentTarget.style.borderColor = "rgba(var(--accent-rgb), 0.3)";
+                          e.currentTarget.style.borderColor = "rgba(0, 170, 255, 0.3)";
                           e.currentTarget.style.color = "var(--foreground)";
                         }
                       }}

@@ -133,8 +133,10 @@ export function IntelToolNav({ current }: IntelToolNavProps) {
               style={{
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: "8px",
                 padding: "10px 16px",
+                minWidth: "140px",
                 borderRadius: "10px",
                 textDecoration: "none",
                 fontSize: "14px",
