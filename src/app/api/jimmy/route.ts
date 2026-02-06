@@ -21,7 +21,7 @@ if (getApps().length === 0) {
 const db = getFirestore();
 
 // Gateway configuration
-const GATEWAY_URL = process.env.GATEWAY_URL || 'wss://ip-172-31-15-64.tailf5ae1d.ts.net:18789';
+const GATEWAY_URL = process.env.GATEWAY_URL || 'ws://3.128.31.231:18789';
 const GATEWAY_PASSWORD = process.env.GATEWAY_PASSWORD || 'HowardRoark12!';
 const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || '01c11d12ea993efba6e4796e8e914db50bbab121913da457';
 
