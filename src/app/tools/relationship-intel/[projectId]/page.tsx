@@ -109,11 +109,31 @@ export default function ProjectDetailPage() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      // TODO: Implement sync endpoint
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Placeholder
-      loadData();
+      const response = await fetch(
+        `/api/relationship-intel/projects/${projectId}/sync`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ daysBack: 60 }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(
+          `Sync complete!\n\n` +
+          `Gmail: ${data.results.gmailProcessed} contacts\n` +
+          `Calendar: ${data.results.calendarProcessed} contacts\n` +
+          `Interactions: ${data.results.interactionsAdded} added`
+        );
+        loadData();
+      } else {
+        alert(`Sync failed: ${data.error || "Unknown error"}`);
+      }
     } catch (error) {
       console.error("Sync failed:", error);
+      alert("Sync failed. Check console for details.");
     } finally {
       setSyncing(false);
     }
