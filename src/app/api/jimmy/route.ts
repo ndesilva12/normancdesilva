@@ -26,7 +26,9 @@ function findClawdbot(): string {
   const possiblePaths = [
     // Environment override
     process.env.CLAWDBOT_PATH,
-    // Ubuntu npm global
+    // Real resolved path (not symlink)
+    '/home/ubuntu/.npm-global/lib/node_modules/clawdbot/dist/entry.js',
+    // Ubuntu npm global symlink
     '/home/ubuntu/.npm-global/bin/clawdbot',
     // Root npm global
     '/root/.npm-global/bin/clawdbot',
@@ -46,7 +48,7 @@ function findClawdbot(): string {
   }
 
   console.warn('[Jimmy API] Could not find clawdbot at any location, using default:', possiblePaths[0]);
-  return possiblePaths[0] || '/home/ubuntu/.npm-global/bin/clawdbot';
+  return possiblePaths[0] || '/home/ubuntu/.npm-global/lib/node_modules/clawdbot/dist/entry.js';
 }
 
 // Use Clawdbot agent command to communicate with Jimmy
