@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 
 interface TreeNode {
   id: string;
@@ -942,30 +943,18 @@ function NotionBrowserContent() {
   const displayTree = searchQuery ? searchResults : tree;
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)", display: "flex", flexDirection: "column" }}>
       <Header />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingTop: isMobile ? "56px" : "64px" }}>
-        {/* Back Link */}
+        {/* Navigation */}
         <div style={{
-          padding: isMobile ? "12px 16px 0" : "16px 24px 0",
-          backgroundColor: "var(--background)",
+          maxWidth: "1200px",
+          width: "100%",
+          margin: "0 auto",
+          padding: isMobile ? "12px 16px" : "16px 24px",
         }}>
-          <Link
-            href="/"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: isMobile ? "10px 14px" : "8px 12px",
-              borderRadius: "6px",
-              color: "var(--foreground-muted)",
-              textDecoration: "none",
-              fontSize: "14px",
-            }}
-          >
-            <ArrowLeft style={{ width: "16px", height: "16px" }} />
-            {!isMobile && <span>Back to Dashboard</span>}
-          </Link>
+          <RemindersBanner />
+          <ProductivityToolNav current="notes" />
         </div>
 
         {/* Top bar with title and breadcrumbs */}

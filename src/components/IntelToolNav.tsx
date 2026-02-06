@@ -120,6 +120,7 @@ export function IntelToolNav({ current }: IntelToolNavProps) {
           gap: "8px",
           marginTop: "0px",
           flexWrap: "wrap",
+          justifyContent: "center",
         }}
       >
         {TOOLS.map((tool) => {

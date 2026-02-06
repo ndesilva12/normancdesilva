@@ -156,6 +156,7 @@ export function ProductivityToolNav({ current }: ProductivityToolNavProps) {
           gap: "8px",
           marginTop: "0px",
           flexWrap: "wrap",
+          justifyContent: "center",
         }}
       >
         {TOOLS.map((tool) => {
