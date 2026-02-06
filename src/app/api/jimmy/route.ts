@@ -20,6 +20,35 @@ if (getApps().length === 0) {
 
 const db = getFirestore();
 
+// Helper to find clawdbot executable
+function findClawdbot(): string {
+  const { accessSync, constants } = require('fs');
+  const possiblePaths = [
+    // Environment override
+    process.env.CLAWDBOT_PATH,
+    // Ubuntu npm global
+    '/home/ubuntu/.npm-global/bin/clawdbot',
+    // Root npm global
+    '/root/.npm-global/bin/clawdbot',
+    // System-wide paths
+    '/usr/local/bin/clawdbot',
+    '/usr/bin/clawdbot',
+  ].filter(Boolean);
+
+  for (const path of possiblePaths) {
+    try {
+      accessSync(path, constants.X_OK);
+      console.log(`[Jimmy API] Found clawdbot at: ${path}`);
+      return path;
+    } catch {
+      // Continue to next path
+    }
+  }
+
+  console.warn('[Jimmy API] Could not find clawdbot at any location, using default:', possiblePaths[0]);
+  return possiblePaths[0] || '/home/ubuntu/.npm-global/bin/clawdbot';
+}
+
 // Use Clawdbot agent command to communicate with Jimmy
 export async function POST(request: NextRequest) {
   try {
@@ -38,11 +67,10 @@ export async function POST(request: NextRequest) {
     // Escape single quotes in the message for shell
     const escapedQuery = query.replace(/'/g, "'\\''");
 
-    // Use full path to clawdbot which is already installed globally for ubuntu user
-    // This avoids npm trying to create cache directories for the current process user
-    const command = `/home/ubuntu/.npm-global/bin/clawdbot agent --session-id "${convId}" --message '${escapedQuery}' --json --timeout 30`;
+    // Find the clawdbot executable
+    const clawdbotPath = findClawdbot();
 
-    console.log("[Jimmy API] Sending message to Clawdbot:", { userId, convId, queryLength: query.length });
+    console.log("[Jimmy API] Sending message to Clawdbot:", { userId, convId, queryLength: query.length, clawdbotPath });
 
     try {
       // Use spawn instead of exec to avoid shell issues
@@ -56,7 +84,7 @@ export async function POST(request: NextRequest) {
           process.kill(proc.pid!);
         }, 35000);
 
-        const proc = spawn('/home/ubuntu/.npm-global/bin/clawdbot', [
+        const proc = spawn(clawdbotPath, [
           'agent',
           '--session-id',
           convId,
