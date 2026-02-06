@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
+import { spawn } from "child_process";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
-
-const execPromise = promisify(exec);
 
 // Initialize Firebase Admin
 if (getApps().length === 0) {
@@ -48,12 +45,57 @@ export async function POST(request: NextRequest) {
     console.log("[Jimmy API] Sending message to Clawdbot:", { userId, convId, queryLength: query.length });
 
     try {
-      const { stdout, stderr } = await execPromise(command, {
-        timeout: 35000, // 35 second timeout (5s more than agent timeout)
-        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-        cwd: '/home/ubuntu', // Run from ubuntu's home directory
-        uid: 0, // Run as root to avoid permission issues
+      // Use spawn instead of exec to avoid shell issues
+      const spawnPromise = new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+        let stdout = '';
+        let stderr = '';
+        let timedOut = false;
+
+        const timeout = setTimeout(() => {
+          timedOut = true;
+          process.kill(proc.pid!);
+        }, 35000);
+
+        const proc = spawn('/home/ubuntu/.npm-global/bin/clawdbot', [
+          'agent',
+          '--session-id',
+          convId,
+          '--message',
+          query,
+          '--json',
+          '--timeout',
+          '30',
+        ], {
+          cwd: '/home/ubuntu',
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+
+        proc.stdout!.on('data', (data) => {
+          stdout += data.toString();
+        });
+
+        proc.stderr!.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        proc.on('close', (code) => {
+          clearTimeout(timeout);
+          if (timedOut) {
+            reject(new Error('Process timeout'));
+          } else if (code !== 0) {
+            reject(new Error(`Process exited with code ${code}: ${stderr}`));
+          } else {
+            resolve({ stdout, stderr });
+          }
+        });
+
+        proc.on('error', (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
       });
+
+      const { stdout, stderr } = await spawnPromise;
 
       if (stderr) {
         console.error("[Jimmy API] Clawdbot stderr:", stderr);
