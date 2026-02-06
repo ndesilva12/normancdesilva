@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import {
-  ArrowLeft,
   Search,
   User,
   Target,
@@ -32,6 +30,7 @@ import { db } from "@/lib/firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
+import { IntelToolNav } from "@/components/IntelToolNav";
 import {
   SearchType,
   AISource,
@@ -681,25 +680,7 @@ export default function ContactFinderPage() {
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px" }}>
           <RemindersBanner />
-          {/* Back Link */}
-          <div style={{ marginBottom: "24px" }}>
-            <Link
-              href="/"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                color: "var(--foreground-muted)",
-                textDecoration: "none",
-                fontSize: "14px",
-              }}
-            >
-              <ArrowLeft style={{ width: "16px", height: "16px" }} />
-              <span>Back to Dashboard</span>
-            </Link>
-          </div>
+          <IntelToolNav current="contact-finder" />
 
           {/* Page Header */}
           <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>

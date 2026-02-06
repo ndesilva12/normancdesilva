@@ -4,6 +4,7 @@ import { useEffect, useRef, memo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, TrendingUp, ExternalLink } from "lucide-react";
 import { Header } from "@/components/Header";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { SwipeNavigation } from "@/components/SwipeNavigation";
 
@@ -209,25 +210,7 @@ export default function MarketPage() {
           <div style={{ width: "100%", maxWidth: "1400px", margin: "0 auto", padding: "24px 24px 100px 24px" }}>
             <RemindersBanner />
 
-            {/* Back Link */}
-            <div style={{ marginBottom: "24px" }}>
-              <Link
-                href="/"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  color: "var(--foreground-muted)",
-                  textDecoration: "none",
-                  fontSize: "14px",
-                }}
-              >
-                <ArrowLeft style={{ width: "16px", height: "16px" }} />
-                Back to Dashboard
-              </Link>
-            </div>
+            <ProductivityToolNav current="market" />
 
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>

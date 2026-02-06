@@ -25,6 +25,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { Header } from "@/components/Header";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { League, LEAGUES, TeamRoster, Player, TeamProfile } from "@/types/roster";
 
@@ -820,22 +821,7 @@ export default function VisualRostersPage() {
         >
           <RemindersBanner />
 
-          {/* Back Link */}
-          <Link
-            href="/"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              color: "var(--foreground-muted)",
-              fontSize: "14px",
-              textDecoration: "none",
-              marginBottom: "24px",
-            }}
-          >
-            <ArrowLeft style={{ width: "16px", height: "16px" }} />
-            Back to Dashboard
-          </Link>
+          <ProductivityToolNav current="visual-rosters" />
 
           {/* Page Header */}
           <motion.div

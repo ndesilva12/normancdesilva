@@ -16,6 +16,7 @@ import {
   Tag,
 } from "lucide-react";
 import { Header } from "@/components/Header";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { OpenSourceButton } from "@/components/OpenSourceButton";
 
@@ -216,26 +217,8 @@ export default function RaindropPage() {
       <Header />
       <div style={{ maxWidth: "1200px", margin: "0 auto", paddingTop: "64px" }}>
         <RemindersBanner />
+        <ProductivityToolNav current="raindrop" />
         <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingTop: "24px" }}>
-          {/* Back Link */}
-          <div>
-            <Link
-              href="/"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                color: "var(--foreground-muted)",
-                textDecoration: "none",
-                fontSize: "14px",
-              }}
-            >
-              <ArrowLeft style={{ width: "16px", height: "16px" }} />
-              <span>Back to Dashboard</span>
-            </Link>
-          </div>
 
           {/* Title */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

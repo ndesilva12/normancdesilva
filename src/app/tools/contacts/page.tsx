@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Loader2, RefreshCw, Search, Mail, Calendar, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { GoogleContact } from "@/lib/google-services";
 import { Header } from "@/components/Header";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
 interface EmailInteraction {
@@ -202,27 +203,8 @@ export default function ContactsPage() {
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ maxWidth: "1400px", width: "90%", margin: "0 auto", padding: "32px 20px" }}>
           <RemindersBanner />
-          
-          {/* Back Link */}
-          <Link
-            href="/"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 0",
-              color: "#71717a",
-              textDecoration: "none",
-              fontSize: "14px",
-              marginBottom: "24px",
-              transition: "color 0.2s",
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.color = "#a1a1aa"}
-            onMouseLeave={(e) => e.currentTarget.style.color = "#71717a"}
-          >
-            <ArrowLeft style={{ width: "16px", height: "16px" }} />
-            Dashboard
-          </Link>
+
+          <ProductivityToolNav current="contacts" />
 
           {/* Page Header */}
           <div style={{ marginBottom: "32px" }}>

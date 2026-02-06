@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
 interface SpotifyTrack {
@@ -365,43 +366,7 @@ export default function SpotifyPage() {
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ width: "80%", maxWidth: "1200px", margin: "0 auto", padding: "32px 24px 100px 24px" }}>
           <RemindersBanner />
-          {/* Back Link */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{ marginBottom: "32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-          >
-            <Link
-              href="/"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                color: "var(--foreground-muted)",
-                textDecoration: "none",
-                fontSize: "14px",
-              }}
-            >
-              <ArrowLeft style={{ width: "16px", height: "16px" }} />
-              <span>Back to Dashboard</span>
-            </Link>
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "1px solid var(--glass-border)",
-                backgroundColor: "transparent",
-                color: "var(--foreground-muted)",
-                fontSize: "13px",
-                cursor: "pointer",
-              }}
-            >
-              Disconnect
-            </button>
-          </motion.div>
+          <ProductivityToolNav current="spotify" />
 
           {/* Error Toast */}
           {error && (
