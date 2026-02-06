@@ -744,11 +744,12 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
     setIsSearching(true);
 
     try {
-      const response = await fetch("/api/telegram-chat", {
+      const response = await fetch("/api/jimmy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: message,
+          query: message,
+          userId: user?.uid,
         }),
       });
 
