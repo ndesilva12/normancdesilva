@@ -42,6 +42,8 @@ interface MultiSourceSearchProps {
   onToolActive?: (isActive: boolean) => void;
   widgetsCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  initialQuery?: string;
+  initialSource?: UnifiedSourceId;
 }
 
 interface ConversationMessage {
@@ -331,12 +333,12 @@ function DarkSearchResults({ report }: { report: DarkSearchReportType }) {
   );
 }
 
-export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive, widgetsCollapsed, onToggleCollapse }: MultiSourceSearchProps) {
+export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive, widgetsCollapsed, onToggleCollapse, initialQuery, initialSource }: MultiSourceSearchProps) {
   const { settings, updateSettings } = useSettings();
   const { getRecentSearches, addRecentSearch } = useRecentSearches();
   const { user } = useAuth();
   const { layout } = useLayout();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery || "");
   const [isSearching, setIsSearching] = useState(false);
   const [toolResult, setToolResult] = useState<ToolResult | null>(null);
   const [trends, setTrends] = useState<TrendingSearch[]>([]);
@@ -383,7 +385,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
   const defaultSource = (settings.searchSources?.defaultSourceShort as UnifiedSourceId) || DEFAULT_SOURCE;
 
   // Selected source (single select only now)
-  const [selectedSource, setSelectedSource] = useState<UnifiedSourceId>(defaultSource);
+  const [selectedSource, setSelectedSource] = useState<UnifiedSourceId>(initialSource || defaultSource);
 
   // AI follow-up conversation
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);

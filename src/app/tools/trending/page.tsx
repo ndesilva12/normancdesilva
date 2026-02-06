@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, TrendingUp, ExternalLink, RefreshCw, Hash, Globe } from "lucide-react";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
@@ -16,6 +17,7 @@ interface TrendingTopic {
 type TrendingSource = "all" | "x" | "google";
 
 export default function TrendingPage() {
+  const router = useRouter();
   const [xTopics, setXTopics] = useState<TrendingTopic[]>([]);
   const [googleTopics, setGoogleTopics] = useState<TrendingTopic[]>([]);
   const [isLoadingX, setIsLoadingX] = useState(true);
@@ -24,6 +26,13 @@ export default function TrendingPage() {
   const [errorGoogle, setErrorGoogle] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<TrendingSource>("all");
   const [isMobile, setIsMobile] = useState(false);
+
+  // Handle trending topic click - navigate to home with search params
+  const handleTrendingClick = (e: React.MouseEvent<HTMLAnchorElement>, topic: TrendingTopic) => {
+    e.preventDefault();
+    const encodedQuery = encodeURIComponent(topic.topic);
+    router.push(`/?q=${encodedQuery}&source=news`);
+  };
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -355,9 +364,8 @@ export default function TrendingPage() {
             {filteredTopics.map((topic, idx) => (
               <a
                 key={`${topic.source}-${idx}`}
-                href={getTopicUrl(topic)}
-                target="_blank"
-                rel="noopener noreferrer"
+                href="#"
+                onClick={(e) => handleTrendingClick(e, topic)}
                 style={{
                   display: "block",
                   background: "rgba(255, 255, 255, 0.05)",
@@ -369,6 +377,7 @@ export default function TrendingPage() {
                   transition: "all 0.2s",
                   position: "relative",
                   overflow: "hidden",
+                  cursor: "pointer",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = getSourceColor(topic.source);
