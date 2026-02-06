@@ -21,7 +21,7 @@ if (getApps().length === 0) {
 const db = getFirestore();
 
 // Gateway configuration
-const GATEWAY_URL = process.env.GATEWAY_URL || 'ws://3.128.31.231:18789';
+const GATEWAY_URL = process.env.GATEWAY_URL || 'ws://100.120.206.86:18789';
 const GATEWAY_PASSWORD = process.env.GATEWAY_PASSWORD || 'HowardRoark12!';
 
 // Helper to connect to Jimmy gateway and send message
