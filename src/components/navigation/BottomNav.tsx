@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, Settings, MessageSquare } from "lucide-react";
+import { Search, Settings } from "lucide-react";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -32,14 +32,13 @@ export function BottomNav() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
+          gridTemplateColumns: "repeat(2, 1fr)",
           height: "100%",
-          maxWidth: "600px",
+          maxWidth: "400px",
           margin: "0 auto",
         }}
       >
         <NavItem href="/" icon={Search} label="Home" active={isActive("/")} />
-        <NavItem href="/jimmy" icon={MessageSquare} label="Jimmy" active={isActive("/jimmy")} />
         <NavItem href="/settings" icon={Settings} label="Settings" active={isActive("/settings")} />
       </div>
 

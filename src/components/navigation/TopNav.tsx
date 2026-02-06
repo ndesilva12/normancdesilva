@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Home, Search, MessageSquare, Settings } from "lucide-react";
+import { Home, Search, Settings } from "lucide-react";
 import { useGlobalSearch } from "../GlobalSearchProvider";
 
 export function TopNav() {
@@ -102,7 +102,6 @@ export function TopNav() {
               <Search style={{ width: "18px", height: "18px" }} />
               <span>Search</span>
             </button>
-            <NavLink href="/jimmy" icon={MessageSquare} label="Jimmy" active={isActive("/jimmy")} />
             <NavLink href="/settings" icon={Settings} label="Settings" active={isActive("/settings")} />
           </div>
         )}
