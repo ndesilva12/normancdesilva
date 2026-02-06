@@ -525,6 +525,7 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
 
   const handleTrendClick = (trend: TrendingSearch) => {
     setQuery(trend.title);
+    setSelectedSource("news");
   };
 
   // Handle tool input change
@@ -1852,12 +1853,12 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                   padding: isMobile ? "10px 14px" : "8px 14px",
                   fontSize: "13px",
                   fontWeight: 600,
-                  border: "2px solid var(--accent)",
+                  border: "none",
                   borderRadius: "8px",
                   cursor: "pointer",
                   transition: "all 0.15s",
-                  backgroundColor: "rgba(var(--accent-rgb), 0.15)",
-                  color: "var(--accent)",
+                  background: "linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)",
+                  color: "#ffffff",
                   whiteSpace: "nowrap",
                 }}
               >
@@ -1891,19 +1892,21 @@ export function MultiSourceSearch({ onResultsChange, onToolResult, onToolActive,
                         fontSize: "13px",
                         fontWeight: isSelected || isMetaSource ? 600 : 500,
                         border: isSelected
-                          ? "2px solid var(--accent)"
+                          ? "none"
                           : isHighlighted
                           ? "2px solid rgba(var(--accent-rgb), 0.5)"
                           : "1px solid var(--glass-border)",
                         borderRadius: "8px",
                         cursor: "pointer",
                         transition: "all 0.15s",
-                        backgroundColor: isSelected
-                          ? "rgba(var(--accent-rgb), 0.15)"
+                        background: isSelected
+                          ? "linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)"
                           : isHighlighted
                           ? "rgba(var(--accent-rgb), 0.08)"
                           : "rgba(255, 255, 255, 0.03)",
-                        color: isSelected || isHighlighted
+                        color: isSelected
+                          ? "#ffffff"
+                          : isHighlighted
                           ? "var(--accent)"
                           : "var(--foreground-muted)",
                         whiteSpace: "nowrap",
