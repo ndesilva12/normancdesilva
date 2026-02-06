@@ -3,7 +3,7 @@
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { MultiSourceSearch } from "@/components/MultiSourceSearch";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Sparkles,
@@ -166,7 +166,7 @@ function DashboardContent() {
   }, []);
 
   // Load tool settings from localStorage and apply visibility/ordering
-  useEffect(() => {
+  const loadToolConfig = useCallback(() => {
     const storedConfig = localStorage.getItem('tools-config-global');
     if (storedConfig) {
       try {
@@ -199,6 +199,29 @@ function DashboardContent() {
       }
     }
   }, []);
+
+  // Load config on mount
+  useEffect(() => {
+    loadToolConfig();
+  }, [loadToolConfig]);
+
+  // Reload config when window gains focus (user returns from settings)
+  useEffect(() => {
+    const handleFocus = () => loadToolConfig();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loadToolConfig]);
+
+  // Listen for custom storage events from settings page
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'tools-config-global') {
+        loadToolConfig();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [loadToolConfig]);
 
   return (
     <div

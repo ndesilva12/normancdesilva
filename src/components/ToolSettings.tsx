@@ -91,29 +91,39 @@ export function ToolSettings() {
   };
 
   const moveUp = (category: string, toolId: string) => {
-    const tools_arr = tools[category];
+    const tools_arr = [...tools[category]].sort((a, b) => a.order - b.order);
     const currentIndex = tools_arr.findIndex(t => t.id === toolId);
     if (currentIndex > 0) {
-      const newTools = [...tools_arr];
-      [newTools[currentIndex].order, newTools[currentIndex - 1].order] =
-        [newTools[currentIndex - 1].order, newTools[currentIndex].order];
+      // Swap order values
+      const currentOrder = tools_arr[currentIndex].order;
+      const prevOrder = tools_arr[currentIndex - 1].order;
+
       setTools(prev => ({
         ...prev,
-        [category]: newTools
+        [category]: prev[category].map(t => {
+          if (t.id === toolId) return { ...t, order: prevOrder };
+          if (t.id === tools_arr[currentIndex - 1].id) return { ...t, order: currentOrder };
+          return t;
+        })
       }));
     }
   };
 
   const moveDown = (category: string, toolId: string) => {
-    const tools_arr = tools[category];
+    const tools_arr = [...tools[category]].sort((a, b) => a.order - b.order);
     const currentIndex = tools_arr.findIndex(t => t.id === toolId);
     if (currentIndex < tools_arr.length - 1) {
-      const newTools = [...tools_arr];
-      [newTools[currentIndex].order, newTools[currentIndex + 1].order] =
-        [newTools[currentIndex + 1].order, newTools[currentIndex].order];
+      // Swap order values
+      const currentOrder = tools_arr[currentIndex].order;
+      const nextOrder = tools_arr[currentIndex + 1].order;
+
       setTools(prev => ({
         ...prev,
-        [category]: newTools
+        [category]: prev[category].map(t => {
+          if (t.id === toolId) return { ...t, order: nextOrder };
+          if (t.id === tools_arr[currentIndex + 1].id) return { ...t, order: currentOrder };
+          return t;
+        })
       }));
     }
   };
@@ -167,30 +177,34 @@ export function ToolSettings() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-        {Object.entries(tools).map(([category, categoryTools]) => (
-          <div
-            key={category}
-            style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: "12px",
-              padding: "16px",
-            }}
-          >
-            <h4 style={{
-              fontSize: "12px",
-              fontWeight: "700",
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: "var(--foreground-muted)",
-              marginBottom: "12px",
-              opacity: 0.8,
-            }}>
-              {category}
-            </h4>
+        {Object.entries(tools).map(([category, categoryTools]) => {
+          // Sort tools by order before displaying
+          const sortedTools = [...categoryTools].sort((a, b) => a.order - b.order);
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {categoryTools.map((tool) => (
+          return (
+            <div
+              key={category}
+              style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "12px",
+                padding: "16px",
+              }}
+            >
+              <h4 style={{
+                fontSize: "12px",
+                fontWeight: "700",
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: "var(--foreground-muted)",
+                marginBottom: "12px",
+                opacity: 0.8,
+              }}>
+                {category}
+              </h4>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {sortedTools.map((tool, index) => (
                 <div
                   key={tool.id}
                   style={{
@@ -276,17 +290,17 @@ export function ToolSettings() {
                   <div style={{ display: "flex", gap: "4px" }}>
                     <button
                       onClick={() => moveUp(category, tool.id)}
-                      disabled={tools[category].findIndex(t => t.id === tool.id) === 0}
+                      disabled={index === 0}
                       style={{
                         padding: "6px 8px",
                         background: "rgba(255, 255, 255, 0.05)",
                         border: "1px solid rgba(255, 255, 255, 0.1)",
                         borderRadius: "4px",
                         color: "var(--foreground-muted)",
-                        cursor: tools[category].findIndex(t => t.id === tool.id) === 0 ? "not-allowed" : "pointer",
+                        cursor: index === 0 ? "not-allowed" : "pointer",
                         display: "flex",
                         alignItems: "center",
-                        opacity: tools[category].findIndex(t => t.id === tool.id) === 0 ? 0.3 : 1,
+                        opacity: index === 0 ? 0.3 : 1,
                       }}
                       title="Move up"
                     >
@@ -294,17 +308,17 @@ export function ToolSettings() {
                     </button>
                     <button
                       onClick={() => moveDown(category, tool.id)}
-                      disabled={tools[category].findIndex(t => t.id === tool.id) === tools[category].length - 1}
+                      disabled={index === sortedTools.length - 1}
                       style={{
                         padding: "6px 8px",
                         background: "rgba(255, 255, 255, 0.05)",
                         border: "1px solid rgba(255, 255, 255, 0.1)",
                         borderRadius: "4px",
                         color: "var(--foreground-muted)",
-                        cursor: tools[category].findIndex(t => t.id === tool.id) === tools[category].length - 1 ? "not-allowed" : "pointer",
+                        cursor: index === sortedTools.length - 1 ? "not-allowed" : "pointer",
                         display: "flex",
                         alignItems: "center",
-                        opacity: tools[category].findIndex(t => t.id === tool.id) === tools[category].length - 1 ? 0.3 : 1,
+                        opacity: index === sortedTools.length - 1 ? 0.3 : 1,
                       }}
                       title="Move down"
                     >
@@ -333,7 +347,8 @@ export function ToolSettings() {
               ))}
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );
