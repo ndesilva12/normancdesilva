@@ -28,6 +28,7 @@ const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || '01c11d12ea993efba6e4796e8e91
 // Helper to connect to Jimmy gateway and send message
 function connectToJimmyGateway(query: string, sessionKey: string): Promise<string> {
   return new Promise((resolve, reject) => {
+    console.log('[Jimmy Gateway] Attempting to connect to:', GATEWAY_URL);
     const ws = new WebSocket(GATEWAY_URL);
     let responseReceived = false;
     let timeoutHandle: NodeJS.Timeout;
@@ -35,33 +36,43 @@ function connectToJimmyGateway(query: string, sessionKey: string): Promise<strin
     // Set a timeout of 35 seconds for the entire operation
     timeoutHandle = setTimeout(() => {
       if (!responseReceived) {
+        console.warn('[Jimmy Gateway] Request timeout, closing connection');
         ws.close();
         reject(new Error('Gateway request timeout after 35 seconds'));
       }
     }, 35000);
 
-    ws.on('error', (error) => {
+    ws.on('error', (error: any) => {
       clearTimeout(timeoutHandle);
-      console.error('[Jimmy Gateway] WebSocket error:', error);
-      reject(new Error(`Gateway connection error: ${error.message}`));
+      console.error('[Jimmy Gateway] WebSocket connection error:', {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        address: error.address,
+        port: error.port,
+      });
+      reject(new Error(`Gateway connection error: ${error.message || 'Unknown error'}`));
     });
 
     ws.on('open', () => {
-      console.log('[Jimmy Gateway] Connected to gateway, sending message');
+      console.log('[Jimmy Gateway] Connected to gateway successfully, sending message');
 
       // Send the message to Jimmy
-      ws.send(JSON.stringify({
+      const payload = {
         action: 'send',
         agent: 'code-jimmy',
         message: query,
         sessionKey: sessionKey,
-      }));
+      };
+      console.log('[Jimmy Gateway] Sending payload:', payload);
+      ws.send(JSON.stringify(payload));
     });
 
     ws.on('message', (data) => {
       try {
         const message = JSON.parse(data.toString());
-        console.log('[Jimmy Gateway] Received message:', { type: message.type, done: message.done });
+        console.log('[Jimmy Gateway] Received message:', { type: message.type, content: message.content?.substring(0, 50), done: message.done });
 
         // Check if this is a response message
         if (message.type === 'message' && message.content) {
@@ -79,10 +90,11 @@ function connectToJimmyGateway(query: string, sessionKey: string): Promise<strin
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', (code, reason) => {
+      console.log('[Jimmy Gateway] Connection closed:', { code, reason: reason?.toString() });
       if (!responseReceived) {
         clearTimeout(timeoutHandle);
-        reject(new Error('Gateway connection closed without receiving response'));
+        reject(new Error(`Gateway connection closed (code: ${code}) without receiving response`));
       }
     });
   });
