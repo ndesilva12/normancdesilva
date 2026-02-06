@@ -117,13 +117,11 @@ export function useJimmyChat(
       setIsLoading(true);
 
       try {
-        const response = await fetch("/api/jimmy/chat", {
+        const response = await fetch("/api/telegram-chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: messageText.trim(),
-            userId,
-            sessionId,
           }),
         });
 
@@ -131,12 +129,6 @@ export function useJimmyChat(
 
         if (!response.ok) {
           throw new Error(data.error || `Request failed with status ${response.status}`);
-        }
-
-        // Update session ID if provided
-        if (data.sessionId && data.sessionId !== sessionId) {
-          setSessionId(data.sessionId);
-          onSessionChange?.(data.sessionId);
         }
 
         // Add assistant response
