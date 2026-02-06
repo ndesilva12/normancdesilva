@@ -117,7 +117,8 @@ export function useJimmyChat(
       setIsLoading(true);
 
       try {
-        const response = await fetch("/api/jimmy/chat", {
+        const apiUrl = process.env.NEXT_PUBLIC_JIMMY_API_URL || "/api/jimmy";
+        const response = await fetch(`${apiUrl}/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
