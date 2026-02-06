@@ -507,25 +507,7 @@ export default function AccountsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(to bottom, #0f172a 0%, #1e293b 100%)", padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-      {/* Back Link */}
-      <div style={{ marginBottom: "24px" }}>
-        <Link
-          href="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "8px 12px",
-            borderRadius: "6px",
-            color: "var(--foreground-muted)",
-            textDecoration: "none",
-            fontSize: "14px",
-          }}
-        >
-          <ArrowLeft style={{ width: "16px", height: "16px" }} />
-          <span>Back to Dashboard</span>
-        </Link>
-      </div>
+      <ProductivityToolNav current="accounts" />
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>

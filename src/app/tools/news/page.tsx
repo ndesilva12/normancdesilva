@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Newspaper, ExternalLink, Loader2, RefreshCw, Clock, Tag, X, Plus, Trash2, Rss } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 import { useNewsSources, CustomNewsSource } from "@/contexts/NewsSourcesContext";
 
@@ -217,30 +218,7 @@ export default function NewsPage() {
           }}
         >
           <RemindersBanner />
-          {/* Back Link */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{ marginBottom: "32px" }}
-          >
-            <Link
-              href="/"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                color: "var(--foreground-muted)",
-                textDecoration: "none",
-                fontSize: "14px",
-              }}
-            >
-              <ArrowLeft style={{ width: "16px", height: "16px" }} />
-              <span>Back to Dashboard</span>
-            </Link>
-          </motion.div>
+          <ProductivityToolNav current="news" />
 
           {/* Title */}
           <motion.div

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, FileText, Loader2, RefreshCw, ExternalLink } from "lucide-react";
 import { DriveFile, getDriveFileIcon, getDriveFileType } from "@/lib/google-services";
 import { Header } from "@/components/Header";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
 export default function FilesPage() {
@@ -80,25 +81,8 @@ export default function FilesPage() {
       <main style={{ flex: 1, width: "100%", paddingTop: "64px" }}>
         <div style={{ maxWidth: "1200px", width: "80%", margin: "0 auto", padding: "20px" }}>
           <RemindersBanner />
-          {/* Back Link */}
-          <div style={{ marginBottom: "24px" }}>
-            <Link
-              href="/"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                color: "var(--foreground-muted)",
-                textDecoration: "none",
-                fontSize: "14px",
-              }}
-            >
-              <ArrowLeft style={{ width: "16px", height: "16px" }} />
-              <span>Back to Dashboard</span>
-            </Link>
-          </div>
+
+          <ProductivityToolNav current="files" />
 
           {/* Page Header */}
           <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>

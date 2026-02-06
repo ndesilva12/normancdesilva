@@ -161,24 +161,7 @@ export default function TrendingPage() {
           margin: "0 auto",
           marginBottom: "48px",
         }}>
-        <Link 
-          href="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            color: "#9ca3af",
-            textDecoration: "none",
-            fontSize: "14px",
-            marginBottom: "24px",
-            transition: "color 0.2s",
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.color = "#ffffff"}
-          onMouseLeave={(e) => e.currentTarget.style.color = "#9ca3af"}
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
+        <ProductivityToolNav current="trending" />
 
         <div style={{
           display: "flex",

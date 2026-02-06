@@ -11,6 +11,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Header } from "@/components/Header";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 import { RemindersBanner } from "@/components/RemindersBanner";
 
 interface RSSArticle {
@@ -85,30 +86,7 @@ export default function InoreaderPage() {
         <div style={{ maxWidth: "1400px", margin: "0 auto", padding: isMobile ? "16px" : "20px" }}>
           <RemindersBanner />
 
-          {/* Back Link */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{ marginBottom: "24px" }}
-          >
-            <Link
-              href="/"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                color: "var(--foreground-muted)",
-                textDecoration: "none",
-                fontSize: "14px",
-              }}
-            >
-              <ArrowLeft style={{ width: "16px", height: "16px" }} />
-              <span>Back to Dashboard</span>
-            </Link>
-          </motion.div>
+          <ProductivityToolNav current="inoreader" />
 
           {/* Page Header */}
           <motion.div
