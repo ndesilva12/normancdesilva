@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { GripVertical, Eye, EyeOff, Pencil, Copy } from "lucide-react";
+import { GripVertical, Eye, EyeOff, Pencil, Copy, ChevronUp, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ToolConfig {
@@ -20,29 +20,30 @@ const ALL_TOOLS: { [key: string]: ToolConfig[] } = {
     { id: "l3d", name: "L3D", visible: true, order: 1, color: "#10b981", category: "Intelligence" },
     { id: "deep", name: "Deep Search", visible: true, order: 2, color: "#6366f1", category: "Intelligence" },
     { id: "dark", name: "Dark Search", visible: true, order: 3, color: "#dc2626", category: "Intelligence" },
+    { id: "image-lookup", name: "Image Lookup", visible: true, order: 4, color: "#a78bfa", category: "Intelligence" },
+    { id: "contact-finder", name: "Contact Finder", visible: true, order: 5, color: "#6366f1", category: "Intelligence" },
+    { id: "relationship-intel", name: "Relationships", visible: true, order: 6, color: "#14b8a6", category: "Intelligence" },
+    { id: "mission", name: "Mission", visible: true, order: 7, color: "#f59e0b", category: "Intelligence" },
+    { id: "investors", name: "Investors", visible: true, order: 8, color: "#3b82f6", category: "Intelligence" },
+    { id: "business-info", name: "Business Info", visible: true, order: 9, color: "#8b5cf6", category: "Intelligence" },
+    { id: "corporate-info", name: "Corporate", visible: true, order: 10, color: "#10b981", category: "Intelligence" },
   ],
-  Communication: [
-    { id: "emails", name: "Emails", visible: true, order: 0, color: "#3b82f6", category: "Communication" },
-    { id: "calendar", name: "Calendar", visible: true, order: 1, color: "#10b981", category: "Communication" },
-    { id: "contacts", name: "Contacts", visible: true, order: 2, color: "#8b5cf6", category: "Communication" },
-  ],
-  Content: [
-    { id: "files", name: "Files", visible: true, order: 0, color: "#6366f1", category: "Content" },
-    { id: "notes", name: "Notes", visible: true, order: 1, color: "#a78bfa", category: "Content" },
-    { id: "raindrop", name: "Bookmarks", visible: true, order: 2, color: "#06b6d4", category: "Content" },
-    { id: "news", name: "News", visible: true, order: 3, color: "#64748b", category: "Content" },
-    { id: "inoreader", name: "RSS", visible: true, order: 4, color: "#10b981", category: "Content" },
-    { id: "spotify", name: "Spotify", visible: true, order: 5, color: "#1DB954", category: "Content" },
-  ],
-  "Business Intelligence": [
-    { id: "accounts", name: "Accounts", visible: true, order: 0, color: "#64748b", category: "Business Intelligence" },
-    { id: "market", name: "Market", visible: true, order: 1, color: "#3b82f6", category: "Business Intelligence" },
-    { id: "trending", name: "Trending", visible: true, order: 2, color: "#14b8a6", category: "Business Intelligence" },
-    { id: "business-info", name: "Business Info", visible: true, order: 3, color: "#8b5cf6", category: "Business Intelligence" },
-    { id: "corporate-info", name: "Corporate", visible: true, order: 4, color: "#10b981", category: "Business Intelligence" },
-    { id: "contact-finder", name: "Contact Finder", visible: true, order: 5, color: "#6366f1", category: "Business Intelligence" },
-    { id: "visual-rosters", name: "Rosters", visible: true, order: 6, color: "#3b82f6", category: "Business Intelligence" },
-    { id: "image-lookup", name: "Image Lookup", visible: true, order: 7, color: "#a78bfa", category: "Business Intelligence" },
+  Productivity: [
+    { id: "emails", name: "Emails", visible: true, order: 0, color: "#3b82f6", category: "Productivity" },
+    { id: "calendar", name: "Calendar", visible: true, order: 1, color: "#10b981", category: "Productivity" },
+    { id: "contacts", name: "Contacts", visible: true, order: 2, color: "#8b5cf6", category: "Productivity" },
+    { id: "people", name: "People", visible: true, order: 3, color: "#06b6d4", category: "Productivity" },
+    { id: "recommendations", name: "Recommendations", visible: true, order: 4, color: "#ec4899", category: "Productivity" },
+    { id: "news", name: "News", visible: true, order: 5, color: "#64748b", category: "Productivity" },
+    { id: "inoreader", name: "RSS", visible: true, order: 6, color: "#10b981", category: "Productivity" },
+    { id: "raindrop", name: "Bookmarks", visible: true, order: 7, color: "#06b6d4", category: "Productivity" },
+    { id: "market", name: "Market", visible: true, order: 8, color: "#3b82f6", category: "Productivity" },
+    { id: "notes", name: "Notes", visible: true, order: 9, color: "#a78bfa", category: "Productivity" },
+    { id: "files", name: "Files", visible: true, order: 10, color: "#6366f1", category: "Productivity" },
+    { id: "spotify", name: "Spotify", visible: true, order: 11, color: "#1DB954", category: "Productivity" },
+    { id: "accounts", name: "Accounts", visible: true, order: 12, color: "#64748b", category: "Productivity" },
+    { id: "trending", name: "Trending", visible: true, order: 13, color: "#14b8a6", category: "Productivity" },
+    { id: "visual-rosters", name: "Rosters", visible: true, order: 14, color: "#3b82f6", category: "Productivity" },
   ],
 };
 
@@ -54,10 +55,9 @@ export function ToolSettings() {
   const [editColor, setEditColor] = useState("");
   const [saved, setSaved] = useState(false);
 
-  // Load from Firebase/localStorage
+  // Load from localStorage
   useEffect(() => {
-    if (!user) return;
-    const key = `tools-config-${user.uid}`;
+    const key = 'tools-config-global';
     const stored = localStorage.getItem(key);
     if (stored) {
       try {
@@ -66,17 +66,16 @@ export function ToolSettings() {
         console.error("Failed to load tool config", e);
       }
     }
-  }, [user]);
+  }, []);
 
   // Save to localStorage whenever tools change
   useEffect(() => {
-    if (!user) return;
-    const key = `tools-config-${user.uid}`;
+    const key = 'tools-config-global';
     localStorage.setItem(key, JSON.stringify(tools));
     setSaved(true);
     const timer = setTimeout(() => setSaved(false), 2000);
     return () => clearTimeout(timer);
-  }, [tools, user]);
+  }, [tools]);
 
   const updateTool = (category: string, toolId: string, updates: Partial<ToolConfig>) => {
     setTools(prev => ({
@@ -89,6 +88,34 @@ export function ToolSettings() {
 
   const toggleVisibility = (category: string, toolId: string) => {
     updateTool(category, toolId, { visible: !tools[category].find(t => t.id === toolId)?.visible });
+  };
+
+  const moveUp = (category: string, toolId: string) => {
+    const tools_arr = tools[category];
+    const currentIndex = tools_arr.findIndex(t => t.id === toolId);
+    if (currentIndex > 0) {
+      const newTools = [...tools_arr];
+      [newTools[currentIndex].order, newTools[currentIndex - 1].order] =
+        [newTools[currentIndex - 1].order, newTools[currentIndex].order];
+      setTools(prev => ({
+        ...prev,
+        [category]: newTools
+      }));
+    }
+  };
+
+  const moveDown = (category: string, toolId: string) => {
+    const tools_arr = tools[category];
+    const currentIndex = tools_arr.findIndex(t => t.id === toolId);
+    if (currentIndex < tools_arr.length - 1) {
+      const newTools = [...tools_arr];
+      [newTools[currentIndex].order, newTools[currentIndex + 1].order] =
+        [newTools[currentIndex + 1].order, newTools[currentIndex].order];
+      setTools(prev => ({
+        ...prev,
+        [category]: newTools
+      }));
+    }
   };
 
   const startEdit = (category: string, toolId: string) => {
@@ -244,6 +271,46 @@ export function ToolSettings() {
                       <Pencil size={14} />
                     </button>
                   )}
+
+                  {/* Ordering buttons */}
+                  <div style={{ display: "flex", gap: "4px" }}>
+                    <button
+                      onClick={() => moveUp(category, tool.id)}
+                      disabled={tools[category].findIndex(t => t.id === tool.id) === 0}
+                      style={{
+                        padding: "6px 8px",
+                        background: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        borderRadius: "4px",
+                        color: "var(--foreground-muted)",
+                        cursor: tools[category].findIndex(t => t.id === tool.id) === 0 ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        opacity: tools[category].findIndex(t => t.id === tool.id) === 0 ? 0.3 : 1,
+                      }}
+                      title="Move up"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                    <button
+                      onClick={() => moveDown(category, tool.id)}
+                      disabled={tools[category].findIndex(t => t.id === tool.id) === tools[category].length - 1}
+                      style={{
+                        padding: "6px 8px",
+                        background: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        borderRadius: "4px",
+                        color: "var(--foreground-muted)",
+                        cursor: tools[category].findIndex(t => t.id === tool.id) === tools[category].length - 1 ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        opacity: tools[category].findIndex(t => t.id === tool.id) === tools[category].length - 1 ? 0.3 : 1,
+                      }}
+                      title="Move down"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  </div>
 
                   {/* Visibility toggle */}
                   <button

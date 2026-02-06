@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
+import { exec } from "child_process";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 // Initialize Firebase Admin
 if (getApps().length === 0) {
@@ -74,67 +77,33 @@ export async function POST(request: NextRequest) {
     // Use a consistent conversation ID
     const convId = conversationId || `webchat-${userId || 'anonymous'}-${Date.now()}`;
 
-    // Escape single quotes in the message for shell
+    // Escape single quotes for shell
     const escapedQuery = query.replace(/'/g, "'\\''");
 
-    // Find the clawdbot executable
-    const { command, args: initialArgs } = findClawdbot();
+    // Find the clawdbot executable - just get the path as a string
+    const { existsSync } = require('fs');
 
-    console.log("[Jimmy API] Sending message to Clawdbot:", { userId, convId, queryLength: query.length, command, initialArgs });
+    // Try to find clawdbot in common locations
+    let clawdbotPath = '/home/ubuntu/.npm-global/bin/clawdbot';
+    if (!existsSync(clawdbotPath)) {
+      clawdbotPath = '/root/.npm-global/bin/clawdbot';
+    }
+    if (!existsSync(clawdbotPath)) {
+      clawdbotPath = 'clawdbot'; // Fallback to PATH
+    }
+
+    // Build the command as a shell string for proper execution
+    const commandStr = `${clawdbotPath} agent --session-id '${convId}' --message '${escapedQuery}' --json --timeout 30`;
+
+    console.log("[Jimmy API] Sending message to Clawdbot:", { userId, convId, queryLength: query.length, clawdbotPath });
 
     try {
-      // Use spawn instead of exec to avoid shell issues
-      const spawnPromise = new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-        let stdout = '';
-        let stderr = '';
-        let timedOut = false;
-
-        const timeout = setTimeout(() => {
-          timedOut = true;
-          process.kill(proc.pid!);
-        }, 35000);
-
-        const proc = spawn(command, [
-          ...initialArgs,
-          'agent',
-          '--session-id',
-          convId,
-          '--message',
-          query,
-          '--json',
-          '--timeout',
-          '30',
-        ], {
-          cwd: '/home/ubuntu',
-          stdio: ['ignore', 'pipe', 'pipe'],
-        });
-
-        proc.stdout!.on('data', (data) => {
-          stdout += data.toString();
-        });
-
-        proc.stderr!.on('data', (data) => {
-          stderr += data.toString();
-        });
-
-        proc.on('close', (code) => {
-          clearTimeout(timeout);
-          if (timedOut) {
-            reject(new Error('Process timeout'));
-          } else if (code !== 0) {
-            reject(new Error(`Process exited with code ${code}: ${stderr}`));
-          } else {
-            resolve({ stdout, stderr });
-          }
-        });
-
-        proc.on('error', (err) => {
-          clearTimeout(timeout);
-          reject(err);
-        });
+      // Use exec which properly handles shell interpretation and PATH resolution
+      const { stdout, stderr } = await execAsync(commandStr, {
+        cwd: '/home/ubuntu',
+        timeout: 35000,
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       });
-
-      const { stdout, stderr } = await spawnPromise;
 
       if (stderr) {
         console.error("[Jimmy API] Clawdbot stderr:", stderr);
