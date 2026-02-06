@@ -2,116 +2,152 @@
 
 import Link from "next/link";
 import {
-  Sparkles,
+  Mail,
+  Calendar,
+  Users,
+  User,
+  Handshake,
+  Newspaper,
+  BookOpen,
+  Droplets,
+  DollarSign,
+  StickyNote,
+  FolderOpen,
+  Music,
+  Globe,
   TrendingUp,
-  Search,
-  Lock,
-  Image,
-  UserSearch,
-  Network,
-  Target,
-  TrendingDown,
-  Building2,
-  Briefcase,
+  BarChart3,
   ArrowLeft,
 } from "lucide-react";
 
-interface IntelToolNavProps {
+interface ProductivityToolNavProps {
   current:
-    | "curate"
-    | "l3d"
-    | "deep"
-    | "dark"
-    | "image-lookup"
-    | "contact-finder"
-    | "relationship-intel"
-    | "mission"
-    | "investors"
-    | "business-info"
-    | "corporate-info";
+    | "emails"
+    | "calendar"
+    | "contacts"
+    | "people"
+    | "recommendations"
+    | "news"
+    | "inoreader"
+    | "raindrop"
+    | "market"
+    | "notes"
+    | "files"
+    | "spotify"
+    | "accounts"
+    | "trending"
+    | "visual-rosters";
 }
 
 const TOOLS = [
   {
-    id: "curate",
-    name: "Curate",
-    href: "/tools/curate",
-    icon: Sparkles,
-    color: "#8b5cf6",
-  },
-  {
-    id: "l3d",
-    name: "L3D",
-    href: "/tools/l3d",
-    icon: TrendingUp,
-    color: "#10b981",
-  },
-  {
-    id: "deep",
-    name: "Deep Search",
-    href: "/tools/deep-search",
-    icon: Search,
-    color: "#6366f1",
-  },
-  {
-    id: "dark",
-    name: "Dark Search",
-    href: "/tools/dark-search",
-    icon: Lock,
-    color: "#dc2626",
-  },
-  {
-    id: "image-lookup",
-    name: "Image Lookup",
-    href: "/tools/image-lookup",
-    icon: Image,
-    color: "#a78bfa",
-  },
-  {
-    id: "contact-finder",
-    name: "Contact Finder",
-    href: "/tools/contact-finder",
-    icon: UserSearch,
-    color: "#6366f1",
-  },
-  {
-    id: "relationship-intel",
-    name: "Relationships",
-    href: "/tools/relationship-intel",
-    icon: Network,
-    color: "#14b8a6",
-  },
-  {
-    id: "mission",
-    name: "Mission",
-    href: "/tools/mission",
-    icon: Target,
-    color: "#f59e0b",
-  },
-  {
-    id: "investors",
-    name: "Investors",
-    href: "/tools/investors",
-    icon: TrendingDown,
+    id: "emails",
+    name: "Emails",
+    href: "/tools/emails",
+    icon: Mail,
     color: "#3b82f6",
   },
   {
-    id: "business-info",
-    name: "Business Info",
-    href: "/tools/business-info",
-    icon: Building2,
+    id: "calendar",
+    name: "Calendar",
+    href: "/tools/calendar",
+    icon: Calendar,
+    color: "#10b981",
+  },
+  {
+    id: "contacts",
+    name: "Contacts",
+    href: "/tools/contacts",
+    icon: Users,
     color: "#8b5cf6",
   },
   {
-    id: "corporate-info",
-    name: "Corporate",
-    href: "/tools/company-politics",
-    icon: Briefcase,
+    id: "people",
+    name: "People",
+    href: "/tools/people",
+    icon: User,
+    color: "#06b6d4",
+  },
+  {
+    id: "recommendations",
+    name: "Recommendations",
+    href: "/tools/recommendations",
+    icon: Handshake,
+    color: "#ec4899",
+  },
+  {
+    id: "news",
+    name: "News",
+    href: "/tools/news",
+    icon: Newspaper,
+    color: "#64748b",
+  },
+  {
+    id: "inoreader",
+    name: "RSS",
+    href: "/tools/inoreader",
+    icon: BookOpen,
     color: "#10b981",
+  },
+  {
+    id: "raindrop",
+    name: "Bookmarks",
+    href: "/tools/raindrop",
+    icon: Droplets,
+    color: "#06b6d4",
+  },
+  {
+    id: "market",
+    name: "Market",
+    href: "/tools/market",
+    icon: DollarSign,
+    color: "#3b82f6",
+  },
+  {
+    id: "notes",
+    name: "Notes",
+    href: "/tools/notes",
+    icon: StickyNote,
+    color: "#a78bfa",
+  },
+  {
+    id: "files",
+    name: "Files",
+    href: "/tools/files",
+    icon: FolderOpen,
+    color: "#6366f1",
+  },
+  {
+    id: "spotify",
+    name: "Spotify",
+    href: "/tools/spotify",
+    icon: Music,
+    color: "#1DB954",
+  },
+  {
+    id: "accounts",
+    name: "Accounts",
+    href: "/tools/accounts",
+    icon: Globe,
+    color: "#64748b",
+  },
+  {
+    id: "trending",
+    name: "Trending",
+    href: "/tools/trending",
+    icon: TrendingUp,
+    color: "#14b8a6",
+  },
+  {
+    id: "visual-rosters",
+    name: "Rosters",
+    href: "/tools/visual-rosters",
+    icon: BarChart3,
+    color: "#3b82f6",
   },
 ];
 
-export function IntelToolNav({ current }: IntelToolNavProps) {
+export function ProductivityToolNav({ current }: ProductivityToolNavProps) {
   return (
     <div style={{ marginBottom: "32px" }}>
       {/* Back to Dashboard */}
@@ -131,7 +167,7 @@ export function IntelToolNav({ current }: IntelToolNavProps) {
         Dashboard
       </Link>
 
-      {/* Intel Tools Navigation */}
+      {/* Productivity Tools Navigation */}
       <div
         style={{
           display: "flex",

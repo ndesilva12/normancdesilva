@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
-import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, ExternalLink, Trash2, Search, Inbox, Send, Archive, FileEdit } from "lucide-react";
+import { Mail, Loader2, RefreshCw, ChevronDown, UserPlus, X, Users, Plus, ExternalLink, Trash2, Search, Inbox, Send, Archive, FileEdit } from "lucide-react";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 
 type EmailFolder = "inbox" | "sent" | "archived" | "trash" | "drafts";
 
@@ -454,25 +454,7 @@ function EmailsPageContent() {
         <div style={{ maxWidth: isMobile ? "100%" : "1200px", width: isMobile ? "100%" : "80%", margin: "0 auto", padding: isMobile ? "12px 16px" : "20px" }}>
           <RemindersBanner />
 
-          {/* Back Link */}
-          <div style={{ marginBottom: "24px" }}>
-            <Link
-              href="/"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: isMobile ? "10px 14px" : "8px 12px",
-                borderRadius: "6px",
-                color: "var(--foreground-muted)",
-                textDecoration: "none",
-                fontSize: "14px",
-              }}
-            >
-              <ArrowLeft style={{ width: "16px", height: "16px" }} />
-              {!isMobile && <span>Back to Dashboard</span>}
-            </Link>
-          </div>
+          <ProductivityToolNav current="emails" />
 
           {/* Page Header */}
           <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? "12px" : "16px", marginBottom: isMobile ? "16px" : "24px" }}>

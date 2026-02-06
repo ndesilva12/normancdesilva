@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft,
   Store,
   Search,
   Loader2,
@@ -20,9 +19,9 @@ import {
   Globe,
   Mail,
 } from "lucide-react";
-import Link from "next/link";
 import { Header } from "@/components/Header";
 import { RemindersBanner } from "@/components/RemindersBanner";
+import { IntelToolNav } from "@/components/IntelToolNav";
 import { BusinessSearchResult, BusinessAnalysis } from "@/types/business";
 
 // US States for dropdown
@@ -148,22 +147,7 @@ export default function BusinessInfoPage() {
         >
           <RemindersBanner />
 
-          {/* Back Link */}
-          <Link
-            href="/"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              color: "var(--foreground-muted)",
-              fontSize: "14px",
-              textDecoration: "none",
-              marginBottom: "24px",
-            }}
-          >
-            <ArrowLeft style={{ width: "16px", height: "16px" }} />
-            Back to Dashboard
-          </Link>
+          <IntelToolNav current="business-info" />
 
           {/* Page Header */}
           <motion.div
