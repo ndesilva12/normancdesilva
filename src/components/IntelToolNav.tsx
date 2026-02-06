@@ -13,7 +13,6 @@ import {
   TrendingDown,
   Building2,
   Briefcase,
-  ArrowLeft,
 } from "lucide-react";
 
 interface IntelToolNavProps {
@@ -114,29 +113,12 @@ const TOOLS = [
 export function IntelToolNav({ current }: IntelToolNavProps) {
   return (
     <div style={{ marginBottom: "32px" }}>
-      {/* Back to Dashboard */}
-      <Link
-        href="/"
-        style={{
-          color: "#94a3b8",
-          textDecoration: "none",
-          fontSize: "14px",
-          marginBottom: "16px",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "6px",
-        }}
-      >
-        <ArrowLeft style={{ width: "16px", height: "16px" }} />
-        Dashboard
-      </Link>
-
       {/* Intel Tools Navigation */}
       <div
         style={{
           display: "flex",
           gap: "8px",
-          marginTop: "16px",
+          marginTop: "0px",
           flexWrap: "wrap",
         }}
       >
