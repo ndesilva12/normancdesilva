@@ -44,11 +44,9 @@ export default function JimmyPage() {
     if (!user) return;
     setLoadingHistory(true);
     try {
-      const response = await fetch(`/api/jimmy?userId=${user.uid}&limit=20`);
-      const data = await response.json();
-      if (response.ok) {
-        setConversations(data.conversations || []);
-      }
+      // Telegram integration doesn't support history queries
+      // History is maintained in Telegram itself
+      setConversations([]);
     } catch (error) {
       console.error("Failed to load conversation history:", error);
     } finally {
@@ -93,13 +91,11 @@ export default function JimmyPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/jimmy", {
+      const response = await fetch("/api/telegram-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: message,
-          userId: user?.uid,
-          conversationId: currentConversationId,
+          message: message,
         }),
       });
 
