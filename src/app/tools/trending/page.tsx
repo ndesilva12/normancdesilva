@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, TrendingUp, ExternalLink, RefreshCw, Hash, Globe } from "lucide-react";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
+import { ProductivityToolNav } from "@/components/ProductivityToolNav";
 
 interface TrendingTopic {
   topic: string;
