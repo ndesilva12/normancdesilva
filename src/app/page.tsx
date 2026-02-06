@@ -152,6 +152,7 @@ const TOOL_CATEGORIES = [
 function DashboardContent() {
   const [isMobile, setIsMobile] = useState(false);
   const [hasSearchResults, setHasSearchResults] = useState(false);
+  const [displayCategories, setDisplayCategories] = useState(TOOL_CATEGORIES);
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQuery = searchParams?.get("q") || undefined;
@@ -162,6 +163,41 @@ function DashboardContent() {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Load tool settings from localStorage and apply visibility/ordering
+  useEffect(() => {
+    const storedConfig = localStorage.getItem('tools-config-global');
+    if (storedConfig) {
+      try {
+        const toolsConfig = JSON.parse(storedConfig);
+
+        // Apply visibility and ordering to categories
+        const updatedCategories = TOOL_CATEGORIES.map(category => ({
+          ...category,
+          tools: category.tools
+            .filter(tool => {
+              const config = toolsConfig[category.name]?.find((t: any) => t.id === tool.id);
+              return config ? config.visible : true;
+            })
+            .map(tool => {
+              const config = toolsConfig[category.name]?.find((t: any) => t.id === tool.id);
+              return config ? { ...tool, name: config.name, color: config.color } : tool;
+            })
+            .sort((a, b) => {
+              const configA = toolsConfig[category.name]?.find((t: any) => t.id === a.id);
+              const configB = toolsConfig[category.name]?.find((t: any) => t.id === b.id);
+              const orderA = configA?.order ?? TOOL_CATEGORIES.find(c => c.name === category.name)?.tools.findIndex(t => t.id === a.id) ?? 0;
+              const orderB = configB?.order ?? TOOL_CATEGORIES.find(c => c.name === category.name)?.tools.findIndex(t => t.id === b.id) ?? 0;
+              return orderA - orderB;
+            })
+        }));
+
+        setDisplayCategories(updatedCategories);
+      } catch (e) {
+        console.error("Failed to load tool config", e);
+      }
+    }
   }, []);
 
   return (
@@ -209,7 +245,7 @@ function DashboardContent() {
                 TOOLS
               </h2>
 
-              {TOOL_CATEGORIES.map((category) => (
+              {displayCategories.map((category) => (
                 <div key={category.name} style={{ marginBottom: "32px" }}>
                   <h3
                     style={{
