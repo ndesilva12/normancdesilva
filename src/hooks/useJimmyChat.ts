@@ -117,13 +117,13 @@ export function useJimmyChat(
       setIsLoading(true);
 
       try {
-        const response = await fetch("/api/jimmy/chat", {
+        const response = await fetch("/api/jimmy", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            message: messageText.trim(),
+            query: messageText.trim(),
             userId,
-            sessionId,
+            conversationId: sessionId,
           }),
         });
 
@@ -133,10 +133,10 @@ export function useJimmyChat(
           throw new Error(data.error || `Request failed with status ${response.status}`);
         }
 
-        // Update session ID if provided
-        if (data.sessionId && data.sessionId !== sessionId) {
-          setSessionId(data.sessionId);
-          onSessionChange?.(data.sessionId);
+        // Update conversation ID if provided
+        if (data.conversationId && data.conversationId !== sessionId) {
+          setSessionId(data.conversationId);
+          onSessionChange?.(data.conversationId);
         }
 
         // Add assistant response
