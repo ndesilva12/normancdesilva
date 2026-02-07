@@ -1,6 +1,6 @@
 // Firestore helper functions for Relationship Intel
 
-import { db } from "./firebase-admin";
+import { adminDb as db } from "./firebase-admin";
 import { Project, Contact, Interaction, ProjectMetadata } from "@/types/relationship-intel";
 
 const COLLECTION_ROOT = "dashboard/relationshipIntel/projects";

@@ -3,7 +3,7 @@ import { getProject } from "@/lib/relationship-intel-db";
 import { syncGmailForProject } from "@/lib/gmail-sync";
 import { syncCalendarForProject } from "@/lib/calendar-sync";
 import { createOrUpdateContact, addInteraction } from "@/lib/relationship-intel-db";
-import { db } from "@/lib/firebase-admin";
+import { adminDb as db } from "@/lib/firebase-admin";
 
 export async function POST(
   request: NextRequest,
