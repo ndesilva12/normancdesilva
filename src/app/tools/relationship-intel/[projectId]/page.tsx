@@ -109,32 +109,68 @@ export default function ProjectDetailPage() {
   const handleSync = async () => {
     setSyncing(true);
     try {
+      // Send sync request to Jimmy via Telegram
       const response = await fetch(
         `/api/relationship-intel/projects/${projectId}/sync`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ daysBack: 60 }),
+          body: JSON.stringify({ daysBack: 60, freshSync: false }),
         }
       );
 
       const data = await response.json();
 
-      if (response.ok) {
-        alert(
-          `Sync complete!\n\n` +
-          `Gmail: ${data.results.gmailProcessed} contacts\n` +
-          `Calendar: ${data.results.calendarProcessed} contacts\n` +
-          `Interactions: ${data.results.interactionsAdded} added`
-        );
-        loadData();
-      } else {
+      if (!response.ok) {
         alert(`Sync failed: ${data.error || "Unknown error"}`);
+        setSyncing(false);
+        return;
       }
+
+      // Start polling for completion
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(
+            `/api/relationship-intel/projects/${projectId}/sync/status`
+          );
+          const statusData = await statusRes.json();
+
+          if (statusData.status === 'complete') {
+            clearInterval(pollInterval);
+            setSyncing(false);
+            alert(
+              `✅ Sync complete!\n\n` +
+              `Contacts found: ${statusData.contactCount || 0}\n` +
+              `Interactions: ${statusData.interactionCount || 0}\n\n` +
+              `Check Telegram for details from Jimmy.`
+            );
+            loadData();
+          } else if (statusData.status === 'failed') {
+            clearInterval(pollInterval);
+            setSyncing(false);
+            alert(`Sync failed: ${statusData.error || "Unknown error"}`);
+          }
+        } catch (error) {
+          console.error("Failed to check sync status:", error);
+        }
+      }, 5000); // Poll every 5 seconds
+
+      // Timeout after 10 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (syncing) {
+          setSyncing(false);
+          alert(
+            "Sync is taking longer than expected.\n" +
+            "Check Telegram for updates from Jimmy.\n" +
+            "Refresh the page manually when complete."
+          );
+        }
+      }, 600000);
+
     } catch (error) {
       console.error("Sync failed:", error);
       alert("Sync failed. Check console for details.");
-    } finally {
       setSyncing(false);
     }
   };
@@ -203,7 +239,7 @@ export default function ProjectDetailPage() {
               }}
             >
               <RefreshCw style={{ width: "16px", height: "16px", animation: syncing ? "spin 1s linear infinite" : "none" }} />
-              {syncing ? "Syncing..." : "Sync"}
+              {syncing ? "Jimmy is syncing..." : "Sync"}
             </button>
           </div>
 
