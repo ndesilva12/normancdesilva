@@ -13,6 +13,18 @@ function getDb() {
   return db;
 }
 
+// Helper to convert Firestore Timestamp or Date to Date
+function toDate(value: any): Date {
+  if (!value) return new Date();
+  if (value instanceof Date) return value;
+  if (typeof value.toDate === 'function') return value.toDate();
+  if (value._seconds) {
+    // Firestore Timestamp object
+    return new Date(value._seconds * 1000);
+  }
+  return new Date();
+}
+
 // Project operations
 export async function listProjects(): Promise<Project[]> {
   try {
@@ -31,8 +43,8 @@ export async function listProjects(): Promise<Project[]> {
       projects.push({
         id: doc.id,
         name: metadataData?.name || doc.id,
-        createdAt: metadataData?.createdAt?.toDate() || new Date(),
-        updatedAt: metadataData?.updatedAt?.toDate() || new Date(),
+        createdAt: toDate(metadataData?.createdAt),
+        updatedAt: toDate(metadataData?.updatedAt),
         keywords: metadataData?.keywords || [],
         tags: metadataData?.tags || [],
         contactCount: contactsSnapshot.size,
@@ -50,26 +62,31 @@ export async function getProject(projectId: string): Promise<Project | null> {
   try {
     const db = getDb();
     const projectRef = db.collection(COLLECTION_ROOT).doc(projectId);
+
+    console.log(`[getProject] Looking for project: ${projectId}`);
     const metadataDoc = await projectRef.collection("metadata").doc("info").get();
 
     if (!metadataDoc.exists) {
+      console.log(`[getProject] Metadata not found for project: ${projectId}`);
       return null;
     }
 
     const metadataData = metadataDoc.data() as ProjectMetadata;
+    console.log(`[getProject] Found project: ${metadataData.name}`);
+
     const contactsSnapshot = await projectRef.collection("contacts").get();
 
     return {
       id: projectId,
       name: metadataData.name,
-      createdAt: metadataData.createdAt?.toDate() || new Date(),
-      updatedAt: metadataData.updatedAt?.toDate() || new Date(),
+      createdAt: toDate(metadataData.createdAt),
+      updatedAt: toDate(metadataData.updatedAt),
       keywords: metadataData.keywords || [],
       tags: metadataData.tags || [],
       contactCount: contactsSnapshot.size,
     };
   } catch (error) {
-    console.error("Error getting project:", error);
+    console.error(`[getProject] Error getting project ${projectId}:`, error);
     return null;
   }
 }
