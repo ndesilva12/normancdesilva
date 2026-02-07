@@ -92,24 +92,35 @@ export async function getProject(projectId: string): Promise<Project | null> {
 }
 
 export async function createProject(name: string, keywords: string[], tags: string[]): Promise<string> {
-  const db = getDb();
-  const projectId = name.toLowerCase().replace(/\s+/g, "-");
-  const projectRef = db.collection(COLLECTION_ROOT).doc(projectId);
+  try {
+    const db = getDb();
+    const projectId = name.toLowerCase().replace(/\s+/g, "-");
+    const projectRef = db.collection(COLLECTION_ROOT).doc(projectId);
 
-  const metadata: ProjectMetadata = {
-    name,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    keywords,
-    tags,
-  };
+    console.log(`[createProject] Creating project: ${name} (ID: ${projectId})`);
 
-  // Create the project document (placeholder so it shows up in queries)
-  await projectRef.set({ created: new Date() });
+    const metadata: ProjectMetadata = {
+      name,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      keywords,
+      tags,
+    };
 
-  // Store metadata in subcollection
-  await projectRef.collection("metadata").doc("info").set(metadata);
-  return projectId;
+    // Create the project document (placeholder so it shows up in queries)
+    console.log(`[createProject] Writing project document...`);
+    await projectRef.set({ created: new Date() });
+
+    // Store metadata in subcollection
+    console.log(`[createProject] Writing metadata...`);
+    await projectRef.collection("metadata").doc("info").set(metadata);
+
+    console.log(`[createProject] Project created successfully: ${projectId}`);
+    return projectId;
+  } catch (error) {
+    console.error(`[createProject] Error creating project:`, error);
+    throw error;
+  }
 }
 
 // Contact operations
