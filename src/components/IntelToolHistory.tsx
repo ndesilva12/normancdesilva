@@ -129,6 +129,168 @@ export function IntelToolHistory({ toolName, collectionName, onResultClick }: In
     }
   };
 
+  const renderFullResults = (results: any) => {
+    if (!results) return <div style={{ color: '#64748b' }}>No results available</div>;
+
+    // Curate results
+    if (results.sections && Array.isArray(results.sections) && results.sections[0]?.sources) {
+      return (
+        <div>
+          {results.summary && (
+            <div style={{ marginBottom: '24px', padding: '16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+              <div style={{ fontSize: '14px', lineHeight: '1.7', color: '#e2e8f0' }}>{results.summary}</div>
+            </div>
+          )}
+          {results.sections.map((section: any, idx: number) => (
+            <div key={idx} style={{ marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#3b82f6', marginBottom: '8px' }}>{section.title}</h3>
+              {section.description && <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '12px' }}>{section.description}</p>}
+              {section.sources && section.sources.map((source: any, sidx: number) => (
+                <div key={sidx} style={{ marginBottom: '12px', padding: '12px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <a href={source.url} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', fontWeight: '600', fontSize: '14px', textDecoration: 'none' }}>
+                    {source.title}
+                  </a>
+                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', textTransform: 'uppercase' }}>{source.type}</div>
+                  {source.annotation && <div style={{ fontSize: '13px', color: '#cbd5e1', marginTop: '8px' }}>{source.annotation}</div>}
+                </div>
+              ))}
+            </div>
+          ))}
+          {results.keyTakeaways && results.keyTakeaways.length > 0 && (
+            <div style={{ marginTop: '24px', padding: '16px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#10b981', marginBottom: '8px' }}>Key Takeaways</h3>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {results.keyTakeaways.map((takeaway: string, idx: number) => (
+                  <li key={idx} style={{ fontSize: '13px', color: '#cbd5e1', marginBottom: '6px' }}>{takeaway}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // L3D results
+    if (results.recentDevelopments) {
+      return (
+        <div>
+          {results.summary && (
+            <div style={{ marginBottom: '24px', padding: '16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+              <div style={{ fontSize: '14px', lineHeight: '1.7', color: '#e2e8f0' }}>{results.summary}</div>
+            </div>
+          )}
+          {results.recentDevelopments.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#3b82f6', marginBottom: '12px' }}>Recent Developments</h3>
+              {results.recentDevelopments.map((dev: any, idx: number) => (
+                <div key={idx} style={{ marginBottom: '16px', padding: '14px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#60a5fa', margin: 0 }}>{dev.title}</h4>
+                    {dev.date && <span style={{ fontSize: '11px', color: '#64748b' }}>{dev.date}</span>}
+                  </div>
+                  <p style={{ fontSize: '13px', color: '#cbd5e1', marginBottom: '8px', lineHeight: '1.6' }}>{dev.description}</p>
+                  {dev.url && (
+                    <a href={dev.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#3b82f6', textDecoration: 'none' }}>
+                      {dev.source || 'Read more →'}
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {results.keyTrends && results.keyTrends.length > 0 && (
+            <div style={{ marginTop: '20px', padding: '14px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#10b981', marginBottom: '8px' }}>Key Trends</h3>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {results.keyTrends.map((trend: string, idx: number) => (
+                  <li key={idx} style={{ fontSize: '13px', color: '#cbd5e1', marginBottom: '6px' }}>{trend}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Deep/Dark Search results
+    if (results.briefOverview || results.hiddenMechanics || results.keyTakeaways || results.alternativePerspectives) {
+      return (
+        <div>
+          {(results.briefOverview || results.summary) && (
+            <div style={{ marginBottom: '24px', padding: '16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+              <div style={{ fontSize: '14px', lineHeight: '1.7', color: '#e2e8f0' }}>{results.briefOverview || results.summary}</div>
+            </div>
+          )}
+          {results.sections && results.sections.map((section: any, idx: number) => (
+            <div key={idx} style={{ marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#3b82f6', marginBottom: '10px' }}>{section.title}</h3>
+              <div style={{ fontSize: '13px', lineHeight: '1.7', color: '#cbd5e1', marginBottom: '12px', whiteSpace: 'pre-wrap' }}>{section.content}</div>
+            </div>
+          ))}
+          {results.hiddenMechanics && results.hiddenMechanics.length > 0 && (
+            <div style={{ marginTop: '20px', padding: '14px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#a78bfa', marginBottom: '8px' }}>Hidden Mechanics</h3>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {results.hiddenMechanics.map((item: string, idx: number) => (
+                  <li key={idx} style={{ fontSize: '13px', color: '#cbd5e1', marginBottom: '6px' }}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {results.counterintuitiveInsights && results.counterintuitiveInsights.length > 0 && (
+            <div style={{ marginTop: '20px', padding: '14px', background: 'rgba(251, 146, 60, 0.1)', borderRadius: '8px', border: '1px solid rgba(251, 146, 60, 0.3)' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#fb923c', marginBottom: '8px' }}>Counterintuitive Insights</h3>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {results.counterintuitiveInsights.map((item: string, idx: number) => (
+                  <li key={idx} style={{ fontSize: '13px', color: '#cbd5e1', marginBottom: '6px' }}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {results.keyTakeaways && results.keyTakeaways.length > 0 && (
+            <div style={{ marginTop: '20px', padding: '14px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#10b981', marginBottom: '8px' }}>Key Takeaways</h3>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {results.keyTakeaways.map((item: string, idx: number) => (
+                  <li key={idx} style={{ fontSize: '13px', color: '#cbd5e1', marginBottom: '6px' }}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {results.alternativePerspectives && results.alternativePerspectives.length > 0 && (
+            <div style={{ marginTop: '20px', padding: '14px', background: 'rgba(236, 72, 153, 0.1)', borderRadius: '8px', border: '1px solid rgba(236, 72, 153, 0.3)' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ec4899', marginBottom: '8px' }}>Alternative Perspectives</h3>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {results.alternativePerspectives.map((item: string, idx: number) => (
+                  <li key={idx} style={{ fontSize: '13px', color: '#cbd5e1', marginBottom: '6px' }}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {results.links && results.links.length > 0 && (
+            <div style={{ marginTop: '20px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#3b82f6', marginBottom: '10px' }}>Sources</h3>
+              {results.links.map((link: any, idx: number) => (
+                <div key={idx} style={{ marginBottom: '8px' }}>
+                  <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', fontSize: '13px', textDecoration: 'none' }}>
+                    {link.title} <span style={{ color: '#64748b', fontSize: '11px' }}>({link.type})</span>
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Fallback: Show as formatted JSON
+    return (
+      <div style={{ fontFamily: 'monospace', fontSize: '12px', whiteSpace: 'pre-wrap', color: '#94a3b8' }}>
+        {JSON.stringify(results, null, 2)}
+      </div>
+    );
+  };
+
   const renderSummary = (results: any) => {
     if (!results) return "No results available";
 
@@ -467,18 +629,13 @@ export function IntelToolHistory({ toolName, collectionName, onResultClick }: In
             </div>
 
             <div style={{
-              fontSize: '12px',
+              fontSize: '14px',
               color: '#cbd5e1',
-              fontFamily: 'monospace',
-              whiteSpace: 'pre-wrap',
-              background: 'rgba(0, 0, 0, 0.4)',
-              padding: '16px',
-              borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              lineHeight: '1.8',
               maxHeight: '60vh',
               overflowY: 'auto',
             }}>
-              {JSON.stringify(fullReportItem.results, null, 2)}
+              {renderFullResults(fullReportItem.results)}
             </div>
           </div>
         </div>
