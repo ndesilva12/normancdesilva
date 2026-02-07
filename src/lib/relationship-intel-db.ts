@@ -87,6 +87,10 @@ export async function createProject(name: string, keywords: string[], tags: stri
     tags,
   };
 
+  // Create the project document (placeholder so it shows up in queries)
+  await projectRef.set({ created: new Date() });
+
+  // Store metadata in subcollection
   await projectRef.collection("metadata").doc("info").set(metadata);
   return projectId;
 }
