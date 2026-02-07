@@ -1,13 +1,22 @@
 // Firestore helper functions for Relationship Intel
 
-import { adminDb as db } from "./firebase-admin";
+import { getAdminFirestore } from "./firebase-admin";
 import { Project, Contact, Interaction, ProjectMetadata } from "@/types/relationship-intel";
 
 const COLLECTION_ROOT = "dashboard/relationshipIntel/projects";
 
+function getDb() {
+  const db = getAdminFirestore();
+  if (!db) {
+    throw new Error("Firebase Admin is not initialized. Check your environment variables.");
+  }
+  return db;
+}
+
 // Project operations
 export async function listProjects(): Promise<Project[]> {
   try {
+    const db = getDb();
     const projectsRef = db.collection(COLLECTION_ROOT);
     const snapshot = await projectsRef.get();
 
@@ -39,6 +48,7 @@ export async function listProjects(): Promise<Project[]> {
 
 export async function getProject(projectId: string): Promise<Project | null> {
   try {
+    const db = getDb();
     const projectRef = db.collection(COLLECTION_ROOT).doc(projectId);
     const metadataDoc = await projectRef.collection("metadata").doc("info").get();
 
@@ -65,6 +75,7 @@ export async function getProject(projectId: string): Promise<Project | null> {
 }
 
 export async function createProject(name: string, keywords: string[], tags: string[]): Promise<string> {
+  const db = getDb();
   const projectId = name.toLowerCase().replace(/\s+/g, "-");
   const projectRef = db.collection(COLLECTION_ROOT).doc(projectId);
 
@@ -88,6 +99,7 @@ export async function listContacts(
   sortBy: "name" | "lastContact" | "interactionCount" = "lastContact"
 ): Promise<Contact[]> {
   try {
+    const db = getDb();
     const contactsRef = db.collection(COLLECTION_ROOT).doc(projectId).collection("contacts");
     let query = contactsRef.limit(1000);
 
@@ -144,6 +156,7 @@ export async function listContacts(
 
 export async function getContact(projectId: string, email: string): Promise<Contact | null> {
   try {
+    const db = getDb();
     const contactRef = db.collection(COLLECTION_ROOT)
       .doc(projectId)
       .collection("contacts")
@@ -175,6 +188,7 @@ export async function createOrUpdateContact(
   email: string,
   data: Partial<Contact>
 ): Promise<void> {
+  const db = getDb();
   const contactRef = db.collection(COLLECTION_ROOT)
     .doc(projectId)
     .collection("contacts")
@@ -206,6 +220,7 @@ export async function listInteractions(
   email: string
 ): Promise<Interaction[]> {
   try {
+    const db = getDb();
     const interactionsRef = db.collection(COLLECTION_ROOT)
       .doc(projectId)
       .collection("contacts")
@@ -243,6 +258,7 @@ export async function addInteraction(
   email: string,
   interaction: Omit<Interaction, "id">
 ): Promise<string> {
+  const db = getDb();
   const contactRef = db.collection(COLLECTION_ROOT)
     .doc(projectId)
     .collection("contacts")

@@ -3,7 +3,7 @@ import { getProject } from "@/lib/relationship-intel-db";
 import { syncGmailForProject } from "@/lib/gmail-sync";
 import { syncCalendarForProject } from "@/lib/calendar-sync";
 import { createOrUpdateContact, addInteraction } from "@/lib/relationship-intel-db";
-import { adminDb as db } from "@/lib/firebase-admin";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export async function POST(
   request: NextRequest,
@@ -121,12 +121,15 @@ export async function POST(
 
     // Update project's updatedAt timestamp
     try {
-      await db
-        .collection(`dashboard/relationshipIntel/projects`)
-        .doc(projectId)
-        .collection("metadata")
-        .doc("info")
-        .update({ updatedAt: new Date() });
+      const db = getAdminFirestore();
+      if (db) {
+        await db
+          .collection(`dashboard/relationshipIntel/projects`)
+          .doc(projectId)
+          .collection("metadata")
+          .doc("info")
+          .update({ updatedAt: new Date() });
+      }
     } catch (error) {
       console.error("Failed to update project timestamp:", error);
     }
