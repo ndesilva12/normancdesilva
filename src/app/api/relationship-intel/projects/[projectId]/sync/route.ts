@@ -7,10 +7,12 @@ import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { projectId: string } }
+  context: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    const { projectId } = params;
+    const { projectId } = await context.params;
+    console.log(`[sync API] Received projectId: ${projectId}`);
+
     const { daysBack = 60 } = await request.json().catch(() => ({}));
 
     // Get project details

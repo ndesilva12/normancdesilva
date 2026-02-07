@@ -3,10 +3,10 @@ import { getContact, listInteractions } from "@/lib/relationship-intel-db";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { projectId: string; email: string } }
+  context: { params: Promise<{ projectId: string; email: string }> }
 ) {
   try {
-    const { projectId, email } = params;
+    const { projectId, email } = await context.params;
     const decodedEmail = decodeURIComponent(email);
 
     const [contact, interactions] = await Promise.all([
