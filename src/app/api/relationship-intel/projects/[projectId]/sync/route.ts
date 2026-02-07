@@ -1,102 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProject, createOrUpdateContact, addInteraction } from "@/lib/relationship-intel-db";
 import { getAdminFirestore } from "@/lib/firebase-admin";
-import WebSocket from "ws";
 import { Interaction } from "@/types/relationship-intel";
 
-// Gateway configuration
-const GATEWAY_URL = process.env.GATEWAY_URL || 'ws://100.120.206.86:18789';
-const GATEWAY_PASSWORD = process.env.GATEWAY_PASSWORD || 'HowardRoark12!';
+// Clawdbot proxy configuration
+const CLAWDBOT_PROXY_URL = process.env.CLAWDBOT_PROXY_URL || 'http://localhost:8080';
 
-// Helper to connect to Clawdbot gateway and send message
-function connectToClawdbot(message: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    console.log('[Clawdbot Gateway] Attempting to connect to:', GATEWAY_URL);
-    const ws = new WebSocket(GATEWAY_URL);
-    let responseReceived = false;
-    let timeoutHandle: NodeJS.Timeout;
-    let authenticated = false;
-    let nonce: string | null = null;
+// Helper to call Clawdbot via HTTP proxy
+async function callClawdbot(message: string, sessionKey: string = 'relationship-intel', timeoutSeconds: number = 120): Promise<string> {
+  console.log('[sync API] Calling Clawdbot proxy:', CLAWDBOT_PROXY_URL);
 
-    // Set a timeout of 120 seconds for sync operations (they can take longer)
-    timeoutHandle = setTimeout(() => {
-      if (!responseReceived) {
-        console.warn('[Clawdbot Gateway] Request timeout, closing connection');
-        ws.close();
-        reject(new Error('Gateway request timeout after 120 seconds'));
-      }
-    }, 120000);
-
-    ws.on('error', (error: any) => {
-      clearTimeout(timeoutHandle);
-      console.error('[Clawdbot Gateway] WebSocket connection error:', error);
-      reject(new Error(`Gateway connection error: ${error.message || 'Unknown error'}`));
-    });
-
-    ws.on('open', () => {
-      console.log('[Clawdbot Gateway] Connected to gateway, waiting for auth challenge');
-    });
-
-    ws.on('message', (data) => {
-      try {
-        const msg = JSON.parse(data.toString());
-        console.log('[Clawdbot Gateway] Received message:', { type: msg.type, event: msg.event });
-
-        // Handle auth challenge
-        if (msg.type === 'event' && msg.event === 'connect.challenge') {
-          nonce = msg.payload?.nonce;
-          console.log('[Clawdbot Gateway] Received auth challenge, sending password auth');
-          ws.send(JSON.stringify({
-            type: 'auth',
-            method: 'password',
-            password: GATEWAY_PASSWORD,
-            nonce: nonce,
-          }));
-          return;
-        }
-
-        // Handle auth success
-        if (msg.type === 'auth' && msg.payload?.success) {
-          authenticated = true;
-          console.log('[Clawdbot Gateway] Authenticated successfully, sending RPC call');
-
-          // Send the message via RPC
-          const rpcPayload = {
-            type: 'rpc',
-            method: 'agent.message',
-            params: {
-              agent: 'clawdbot',
-              message: message,
-            },
-            id: Date.now(),
-          };
-          console.log('[Clawdbot Gateway] Sending RPC payload');
-          ws.send(JSON.stringify(rpcPayload));
-          return;
-        }
-
-        // Handle RPC response
-        if (msg.type === 'rpc' && msg.result && !responseReceived) {
-          responseReceived = true;
-          clearTimeout(timeoutHandle);
-          console.log('[Clawdbot Gateway] Received RPC response');
-          ws.close();
-          const content = msg.result?.message || msg.result || 'No response content';
-          resolve(content);
-        }
-      } catch (error) {
-        console.error('[Clawdbot Gateway] Failed to parse message:', error);
-      }
-    });
-
-    ws.on('close', (code, reason) => {
-      console.log('[Clawdbot Gateway] Connection closed:', { code, reason: reason?.toString() });
-      if (!responseReceived) {
-        clearTimeout(timeoutHandle);
-        reject(new Error(authenticated ? 'Connection closed without response' : 'Failed to authenticate'));
-      }
-    });
+  const response = await fetch(`${CLAWDBOT_PROXY_URL}/api/clawdbot`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      message,
+      sessionKey,
+      timeout: timeoutSeconds,
+    }),
   });
+
+  if (!response.ok) {
+    throw new Error(`Proxy error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.error || 'Unknown proxy error');
+  }
+
+  return data.response;
 }
 
 export async function POST(
@@ -172,12 +108,12 @@ Focus only on substantive interactions (no automated emails, spam, or calendar h
     // Send to Clawdbot and get response
     let clawdbotResponse: string;
     try {
-      clawdbotResponse = await connectToClawdbot(clawdbotMessage);
+      clawdbotResponse = await callClawdbot(clawdbotMessage, `relationship-intel-${projectId}`, 120);
       console.log('[sync API] Received response from Clawdbot:', clawdbotResponse.substring(0, 200));
     } catch (error) {
-      console.error('[sync API] Clawdbot connection failed:', error);
+      console.error('[sync API] Clawdbot proxy failed:', error);
       return NextResponse.json(
-        { error: "Failed to connect to Clawdbot", details: String(error) },
+        { error: "Failed to connect to Clawdbot proxy", details: String(error) },
         { status: 503 }
       );
     }
