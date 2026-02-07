@@ -252,3 +252,76 @@ body {
     overscroll-behavior: contain;
   }
 }
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Disable pull-to-refresh on iOS */
+  body {
+    overscroll-behavior-y: none;
+  }
+  
+  /* Touch-friendly minimum sizes */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Safe area insets for iOS */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Mobile card styles */
+@media (max-width: 768px) {
+  .card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 16px;
+  }
+  
+  .card:active {
+    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* Disable hover effects on mobile */
+@media (hover: none) and (pointer: coarse) {
+  *:hover {
+    /* Reset hover styles on touch devices */
+  }
+}
+
+/* Bottom navigation spacing */
+.mobile-content {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+}
+
+/* iOS PWA status bar */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+}
